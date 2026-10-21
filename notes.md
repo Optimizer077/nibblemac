@@ -78,7 +78,7 @@ tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
 | Engine | Format | File | Decode tok/s plain | Decode tok/s MTP spec | Prefill tok/s | PPL (c8) |
 |---|---|---|---|---|---|---|
 | pinfer | Q4_G32 + Q4 head | 437 MB | **6.88** | **12.56** (k=3, dv 32768) | 21.3 | **21.61** (as bad as Q4_0) |
-| pinfer | **Q4K_G32 everywhere + Q4K head** | 437 MB | **7.26** | **13.35** (k=3, dv 32768) | 26.1 | **18.48** ← default (final kernels `af06041`, `bench/results/pinfer-final-q4k_20261022_011230.json`; before the kernel follow-up: 6.83 / 11.57 / 19.3) |
+| pinfer | **Q4K_G32 everywhere + Q4K head** | 437 MB | **7.88** | **16.49** (k=3, dv 32768) | 37.4 | **18.48** ← default (vectorized engine `fba8a1a`, `bench/results/pinfer-final2-q4k_20261022_023950.json`; earlier: 7.26 / 13.35 / 26.1 at `af06041`, 6.83 / 11.57 / 19.3 before the kernel follow-up) |
 | pinfer | Q4_G32 layers + Q4K head | 437 MB | — | — | — | 21.58 (loss is in the layers) |
 | pinfer | Q4K (v_proj, mtp.fc Q8) + Q4K head | 439 MB | **6.88** | 10.98 (k=3, dv 32768) | 16.3 | **18.50** |
 | pinfer | same + Q8 head | 567 MB | 5.72 | 9.77 (k=3) | 13.7 | 18.29 |
@@ -109,8 +109,9 @@ Speculative decoding is exact: identical tokens to plain greedy (`tests/test_spe
 on the Pi `engine/bench/spec_exact.sh` 20/20 for both models × 2 prompts × k=0..4 with the final
 NEON kernels, `bench/results/spec-exact-final_20261022_*.json`). The earlier divergence (batched
 verify pass rounding the Q4/Q4K offset term differently from the single-token pass) is fixed.
-Verify-pass cost vs one decode step (Q4K, final): 1.33 (k=2) / 1.48 (k=3); what remains is ~14 ms/token
-of scalar code (conv expf, norms, SiLU, attention) — the next lever, together with prefill (MNN 30.9).
+Verify-pass cost vs one decode step (Q4K, vectorized engine): 1.19 (k=2) / 1.28 (k=3) / 1.61 (k=4);
+per plain step: matmul 118.6 ms, recurrence 6.5, everything else 3.2 → the DRAM floor (~113 ms for
+473 MB/token) is 12% away. Prefill 37.4 now leads MNN (30.9).
 
 ## Custom kernel 6.18.50-pinfer — effect on speed (2026-10-22 01:25–01:29, one-time tryboots)
 Same binary (`pinfer_run_fast` @ `af06041`), same model (`q4k-headq4k`), 4 threads, 64+64 tokens.
@@ -134,3 +135,14 @@ reports prefill ~20 tok/s instead of ~27 because the mmap'd weights fault in fro
 that first prefill (cold page cache) — decode is unaffected; warm-up to be added to `--bench`.
 The Pi runs the stock kernel again (a plain reboot ends the tryboot); the custom kernel stays
 installed side by side (`docs/pi-state.md` #4).
+
+## Context length (2026-10-22 02:13–02:39, Q4K, 32 generated tokens; pre-optimization, see Phase 6)
+| Context | Binary | Plain tok/s | Spec k=3 tok/s (tok/pass) | Prefill tok/s | Peak RSS | Result |
+|---|---|---|---|---|---|---|
+| 64 | vectorized | 7.88 | 16.49 (3.32) | 37.4 | 445 MB | `pinfer-final2-q4k_20261022_023950.json` |
+| 512 | pre-vectorization | 6.20 | 9.04 (3.10) | 21.6 | 463 MB | `pinfer-ctx512-q4k_20261022_021315.json` |
+| 2048 | mixed (binary swapped mid-run) | 4.12 | 2.39 (1.63) | 11.6 | 505 MB | `pinfer-ctx2048-q4k_20261022_022009.json` |
+| 4096 | vectorized | 5.56 | 5.69 (2.38) | 18.1 | 561 MB | `pinfer-ctx4096-q4k_20261022_023914.json` |
+
+Memory is not the issue (KV cache 24 KB/token: +116 MB at 4096); the attention path is. Speculation
+loses its gain on long wikitext (low acceptance + verify cost growing with context × batch) → adaptive k.

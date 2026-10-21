@@ -8,7 +8,7 @@ pinfer runs **Qwen3.5-0.8B** on a Raspberry Pi 4. It ships as
 > **Status 0.1.0 (2026-10-22):** the aarch64 wheel `pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl`
 > contains the NEON kernels (`MATVEC=fast`); the x86-64 wheel contains the scalar reference kernels.
 > Recommended model file: `qwen35-0.8b-q4k-headq4k.pq` (`pinfer convert ... --quant q4k`, 437 MB):
-> 7.3 tok/s plain greedy, 13.3 tok/s with `--speculative --spec-k 3`, perplexity 18.48 (bf16: 17.93). See §7.
+> 7.9 tok/s plain greedy, 16.5 tok/s with `--speculative --spec-k 3`, 37 tok/s prefill, perplexity 18.48 (bf16: 17.93). See §7.
 > Not published anywhere yet; no license chosen.
 
 ---
@@ -214,7 +214,7 @@ result-file paths is the "Scoreboard" in `notes.md`).
 
 | Model file (`pinfer convert` option) | Size | Decode tok/s plain | Decode tok/s `--speculative` | Prefill tok/s | Perplexity (wikitext-2) |
 |---|---|---|---|---|---|
-| `--quant q4k` (**recommended**) | 437 MB | 7.3 | 13.3 (k=3) / 12.1 (k=2) | 26 | 18.48 |
+| `--quant q4k` (**recommended**) | 437 MB | 7.9 | 16.5 (k=3) / 14.5 (k=2) | 37 | 18.48 |
 | `--quant q8` | 823 MB | 4.2 | 8.7 | 12 | 17.96 |
 | bf16 (default) | 1.55 GB | 2.3 | 4.1 | 11 | 17.93 |
 | llama.cpp v0.7.0 Q4_K_M, same Pi | 542 MB | 5.4 | — | 15 | 18.59 |
@@ -225,7 +225,8 @@ result-file paths is the "Scoreboard" in `notes.md`).
   model's MTP head gets past that ceiling by verifying several drafted tokens per weight pass.
 - `--speculative` defaults: k = 2 drafts, draft vocabulary 32768 (drafts only consider the first
   32768 token ids; acceptance is unchanged on English and code, the draft step is 5× cheaper).
-  `--spec-k 3` is ~8% faster on long answers.
+  `--spec-k 3` is ~14% faster than k=2 on predictable text. At long contexts (≥ 2K tokens) the gain
+  shrinks or reverses on unpredictable text; an adaptive policy is in progress (Phase 6).
 - Exactness: speculative output is token-identical to plain greedy, with both the scalar and the
   NEON kernels (the batched verify pass is bit-identical to the single-token pass; checked by
   `engine/bench/spec_exact.sh` on the Pi, 20/20).
