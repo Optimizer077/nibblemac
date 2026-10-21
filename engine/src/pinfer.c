@@ -1,0 +1,160 @@
+/* Public API (pinfer.h): context allocation, state reset, eval. The math is in forward.c. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "forward.h"
+
+#define STR2(x) #x
+#define STR(x) STR2(x)
+
+pinfer_params pinfer_default_params(void) {
+    pinfer_params p = {4, 4096};
+    return p;
+}
+
+const char *pinfer_version(void) {
+    return STR(PINFER_VERSION_MAJOR) "." STR(PINFER_VERSION_MINOR) "." STR(PINFER_VERSION_PATCH);
+}
+
+static size_t max3(size_t a, size_t b, size_t c) {
+    size_t m = a > b ? a : b;
+    return m > c ? m : c;
+}
+
+static void free_layer_state(float **v, int n_layers) {
+    if (!v) return;
+    for (int l = 0; l < n_layers; l++) free(v[l]);
+    free(v);
+}
+
+/* Per-layer state arrays: one calloc per used layer (zero = the reference's initial state). */
+static float **alloc_layer_state(pinfer_ctx *c, int want_full, size_t n_floats) {
+    float **v = calloc((size_t)c->n_layers, sizeof(float *));
+    if (!v) return NULL;
+    for (int l = 0; l < c->n_layers; l++) {
+        if (c->model.layers[l].is_full != want_full) continue;
+        v[l] = calloc(n_floats, sizeof(float));
+        if (!v[l]) { free_layer_state(v, c->n_layers); return NULL; }
+    }
+    return v;
+}
+
+static void set_dims(pinfer_ctx *c) {
+    const pq_header *h = c->model.hdr;
+    c->H = (int)h->hidden;
+    c->ffn = (int)h->ffn;
+    c->n_layers = (int)h->n_layers;
+    c->vocab = (int)h->vocab;
+    c->n_heads = (int)h->n_heads;
+    c->n_kv = (int)h->n_kv_heads;
+    c->hd = (int)h->head_dim;
+    c->rot = (int)h->rot_dim;
+    c->lk_heads = (int)h->lin_k_heads;
+    c->lv_heads = (int)h->lin_v_heads;
+    c->lk_dim = (int)h->lin_k_dim;
+    c->lv_dim = (int)h->lin_v_dim;
+    c->conv_k = (int)h->conv_k;
+    c->kd = c->lk_heads * c->lk_dim;
+    c->vd = c->lv_heads * c->lv_dim;
+    c->conv_dim = 2 * c->kd + c->vd;
+}
+
+static int alloc_buffers(pinfer_ctx *c) {
+    const size_t B = PF_MAX_BATCH, kvw = (size_t)c->n_kv * c->hd;
+    c->conv = alloc_layer_state(c, 0, (size_t)(c->conv_k - 1) * c->conv_dim + 1);
+    c->rec = alloc_layer_state(c, 0, (size_t)c->lv_heads * c->lk_dim * c->lv_dim);
+    c->kc = alloc_layer_state(c, 1, (size_t)c->max_ctx * kvw);
+    c->vc = alloc_layer_state(c, 1, (size_t)c->max_ctx * kvw);
+    if (!c->conv || !c->rec || !c->kc || !c->vc) return PINFER_E_NOMEM;
+    c->x = malloc(B * c->H * sizeof(float));
+    c->xn = malloc(B * c->H * sizeof(float));
+    c->out = malloc(B * c->H * sizeof(float));
+    c->ta = malloc(B * max3(c->conv_dim, (size_t)c->n_heads * c->hd * 2, c->ffn) * sizeof(float));
+    c->tb = malloc(B * max3(c->vd, kvw, c->ffn) * sizeof(float));
+    c->tc = malloc(B * kvw * sizeof(float));
+    c->to = malloc(B * max3(c->vd, (size_t)c->n_heads * c->hd, 1) * sizeof(float));
+    c->ba = malloc(B * c->lv_heads * sizeof(float));
+    c->aa = malloc(B * c->lv_heads * sizeof(float));
+    c->rope_cos = malloc(B * (c->rot / 2 + 1) * sizeof(float));
+    c->rope_sin = malloc(B * (c->rot / 2 + 1) * sizeof(float));
+    c->att = malloc((size_t)c->max_ctx * sizeof(float));
+    if (!c->x || !c->xn || !c->out || !c->ta || !c->tb || !c->tc || !c->to || !c->ba ||
+        !c->aa || !c->rope_cos || !c->rope_sin || !c->att)
+        return PINFER_E_NOMEM;
+    return PINFER_OK;
+}
+
+pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err) {
+    pinfer_params p = params ? *params : pinfer_default_params();
+    if (p.n_threads <= 0) p.n_threads = 4;
+    if (p.max_ctx <= 0) p.max_ctx = 4096;
+    int rc = PINFER_E_NOMEM;
+    pinfer_ctx *c = path ? calloc(1, sizeof *c) : NULL;
+    if (!path) rc = PINFER_E_ARG;
+    if (c) {
+        rc = pf_model_load(&c->model, path);
+        if (rc == PINFER_OK) {
+            set_dims(c);
+            c->max_ctx = p.max_ctx;
+            c->batch = PF_MAX_BATCH;
+            if (c->lv_dim > 512) {  /* forward_lin.c keeps a 512-float stack scratch */
+                fprintf(stderr, "pinfer: lin_v_dim %d > 512 not supported\n", c->lv_dim);
+                rc = PINFER_E_FORMAT;
+            } else {
+                rc = alloc_buffers(c);
+            }
+        }
+        if (rc == PINFER_OK) {
+            c->pool = pf_pool_create(p.n_threads);
+            if (!c->pool) rc = PINFER_E_NOMEM;
+        }
+    }
+    if (rc != PINFER_OK) {
+        pinfer_free(c);
+        c = NULL;
+    }
+    if (err) *err = rc;
+    return c;
+}
+
+void pinfer_free(pinfer_ctx *c) {
+    if (!c) return;
+    int nl = c->n_layers;
+    free_layer_state(c->conv, nl);
+    free_layer_state(c->rec, nl);
+    free_layer_state(c->kc, nl);
+    free_layer_state(c->vc, nl);
+    float *bufs[] = {c->x, c->xn, c->out, c->ta, c->tb, c->tc, c->to, c->ba, c->aa,
+                     c->rope_cos, c->rope_sin, c->att};
+    for (size_t i = 0; i < sizeof bufs / sizeof bufs[0]; i++) free(bufs[i]);
+    if (c->pool) pf_pool_destroy(c->pool);
+    if (c->model.map) pf_model_free(&c->model);
+    free(c);
+}
+
+void pinfer_reset(pinfer_ctx *c) {
+    if (!c) return;
+    for (int l = 0; l < c->n_layers; l++) {
+        if (c->model.layers[l].is_full) continue;  /* KV entries past n_past are never read */
+        memset(c->conv[l], 0, (size_t)(c->conv_k - 1) * c->conv_dim * sizeof(float));
+        memset(c->rec[l], 0, (size_t)c->lv_heads * c->lk_dim * c->lv_dim * sizeof(float));
+    }
+    c->n_past = 0;
+}
+
+int pinfer_eval(pinfer_ctx *c, const int32_t *tokens, int n, float *logits) {
+    return pf_forward(c, tokens, n, logits, NULL, NULL);
+}
+
+int pinfer_n_vocab(const pinfer_ctx *c) { return c ? c->vocab : 0; }
+int pinfer_n_past(const pinfer_ctx *c) { return c ? c->n_past : 0; }
+int pinfer_eos_id(const pinfer_ctx *c) { return c ? (int)c->model.hdr->eos_id : -1; }
+
+int pinfer_argmax(const float *logits, int n) {
+    if (!logits || n <= 0) return -1;
+    int best = 0;
+    for (int i = 1; i < n; i++)
+        if (logits[i] > logits[best]) best = i;  /* first maximum wins, like torch.argmax */
+    return best;
+}

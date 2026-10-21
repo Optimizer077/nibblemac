@@ -1,0 +1,16 @@
+# 2026-10-21T21:48:23 pi@10.42.0.2
+$ python3 -c "import ensurepip, venv; print(\"ensurepip ok\")"; dpkg -l python3-venv python3-pip 2>&1 | tail -3; ls ~/pinfer; df -h ~ | tail -1; ldd --version | head -1
+
+ensurepip ok
++++-==============-============-============-=================================================
+un  python3-pip    <none>       <none>       (no description available)
+ii  python3-venv   3.13.5-1     arm64        venv module for python3 (default python3 version)
+engine
+llama
+llama_bench.sh
+memband
+models
+/dev/sda2       917G  7.1G  873G   1% /
+ldd (Debian GLIBC 2.41-12+rpt1+deb13u4) 2.41
+
+[exit 0]

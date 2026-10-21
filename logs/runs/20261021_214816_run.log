@@ -1,0 +1,7 @@
+# 2026-10-21T21:48:16 pi@10.42.0.2
+$ pgrep -fa llama-bench || echo none; date
+
+2174 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -fa llama-bench || echo none; date
+Wed 21 Oct 21:48:18 KST 2026
+
+[exit 0]

@@ -1,0 +1,18 @@
+# 2026-10-21T21:48:40 pi@10.42.0.2
+$ set -e; for n in ort litert torch; do python3 -m venv venvs/$n; venvs/$n/bin/pip install -q --no-index --find-links wheels/$n wheels/$n/*.whl 2>&1 | tail -3; echo "== $n"; venvs/$n/bin/pip list 2>/dev/null | grep -iE "onnx|litert|torch|transformers|numpy|tokenizers|psutil"; done
+
+== ort
+numpy             2.5.4
+onnxruntime       1.31.0
+onnxruntime-genai 0.18.0
+psutil            7.2.2
+== litert
+litert-lm         0.18.1
+litert-lm-api     0.18.1
+litert-lm-builder 0.18.1
+psutil            7.2.2
+ERROR: Could not find a version that satisfies the requirement cuda-toolkit==13.0.3; platform_system == "Linux" (from torch) (from versions: none)
+ERROR: No matching distribution found for cuda-toolkit==13.0.3; platform_system == "Linux"
+== torch
+
+[exit 1]

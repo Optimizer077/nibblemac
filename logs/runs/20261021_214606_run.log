@@ -1,0 +1,7 @@
+# 2026-10-21T21:46:06 pi@10.42.0.2
+$ md5sum models/qwen35-0.8b-bf16.pq; pgrep -x llama-bench || echo no-llama-bench
+
+0ee125179210eb920b7268de6e11c40e  models/qwen35-0.8b-bf16.pq
+no-llama-bench
+
+[exit 0]

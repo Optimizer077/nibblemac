@@ -1,0 +1,178 @@
+/* .pq loader: mmap + validation + weight views. See engine/FORMAT.md.
+ *
+ * Validation is strict on purpose: a truncated copy on the Pi or a converter/engine version
+ * skew must fail at load time with PINFER_E_FORMAT, not as garbage logits later. */
+#define _GNU_SOURCE
+#include "model.h"
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+#include "pinfer.h"
+
+#define FAIL(...) do { fprintf(stderr, "pinfer: " __VA_ARGS__); fputc('\n', stderr); \
+                       return PINFER_E_FORMAT; } while (0)
+
+static size_t dtype_elem_bytes(uint32_t dtype) {
+    return dtype == PQ_F32 ? 4 : dtype == PQ_BF16 ? 2 : 0;  /* 0: quantized, size not checked */
+}
+
+const pq_tensor_entry *pf_model_find(const pf_model *m, const char *name) {
+    for (uint32_t i = 0; i < m->hdr->n_tensors; i++)
+        if (strcmp(m->dir[i].name, name) == 0) return &m->dir[i];
+    return NULL;
+}
+
+/* Every entry must lie inside the file, be 64-byte aligned and have a self-consistent size. */
+static int check_directory(pf_model *m) {
+    const pq_header *h = m->hdr;
+    uint64_t size = m->map_bytes;
+    if (h->dir_offset < sizeof(pq_header) || h->dir_offset > size ||
+        (uint64_t)h->n_tensors * sizeof(pq_tensor_entry) > size - h->dir_offset)
+        FAIL("tensor directory out of bounds");
+    if (h->data_offset > size) FAIL("data_offset out of bounds");
+    m->dir = (const pq_tensor_entry *)((const char *)m->map + h->dir_offset);
+    for (uint32_t i = 0; i < h->n_tensors; i++) {
+        const pq_tensor_entry *e = &m->dir[i];
+        if (memchr(e->name, 0, PQ_NAME_MAX) == NULL) FAIL("tensor %u: name not terminated", i);
+        if (e->ndim < 1 || e->ndim > 4) FAIL("%s: bad ndim %u", e->name, e->ndim);
+        if (e->offset % PQ_TENSOR_ALIGN || e->offset < h->data_offset ||
+            e->offset > size || e->nbytes > size - e->offset)
+            FAIL("%s: data out of bounds or misaligned", e->name);
+        size_t es = dtype_elem_bytes(e->dtype);
+        if (es) {
+            uint64_t n = 1;
+            for (uint32_t d = 0; d < e->ndim; d++) n *= e->shape[d];
+            if (n * es != e->nbytes) FAIL("%s: nbytes %llu != shape size", e->name,
+                                          (unsigned long long)e->nbytes);
+        }
+    }
+    return PINFER_OK;
+}
+
+static int get_vec(const pf_model *m, const char *name, uint32_t n, const float **out) {
+    const pq_tensor_entry *e = pf_model_find(m, name);
+    if (!e) FAIL("missing tensor %s", name);
+    if (e->dtype != PQ_F32 || e->ndim != 1 || e->shape[0] != n)
+        FAIL("%s: expected F32 [%u]", name, n);
+    *out = (const float *)((const char *)m->map + e->offset);
+    return PINFER_OK;
+}
+
+static int get_mat(const pf_model *m, const char *name, uint32_t rows, uint32_t cols,
+                   pf_mat *out) {
+    const pq_tensor_entry *e = pf_model_find(m, name);
+    if (!e) FAIL("missing tensor %s", name);
+    if (e->ndim != 2 || e->shape[0] != rows || e->shape[1] != cols)
+        FAIL("%s: expected shape [%u, %u]", name, rows, cols);
+    if (!pf_dtype_supported(e->dtype)) FAIL("%s: dtype %u not supported by this build",
+                                            name, e->dtype);
+    out->dtype = e->dtype;
+    out->rows = (int)rows;
+    out->cols = (int)cols;
+    out->data = (const char *)m->map + e->offset;
+    return PINFER_OK;
+}
+
+/* Header fields the forward pass relies on; reject anything it was not written for. */
+static int check_header(const pq_header *h) {
+    if (memcmp(h->magic, PQ_MAGIC, 8) != 0) FAIL("bad magic");
+    if (h->version != PQ_VERSION) FAIL("unsupported version %u", h->version);
+    if (h->arch != PQ_ARCH_QWEN35) FAIL("unsupported arch %u", h->arch);
+    if (!h->hidden || !h->n_layers || h->n_layers > 32 || !h->vocab || !h->ffn)
+        FAIL("bad model dimensions");
+    if (!h->n_heads || !h->n_kv_heads || h->n_heads % h->n_kv_heads || !h->head_dim ||
+        h->rot_dim % 2 || h->rot_dim > h->head_dim)
+        FAIL("bad attention dimensions");
+    if (!h->lin_k_heads || !h->lin_v_heads || h->lin_v_heads % h->lin_k_heads ||
+        !h->lin_k_dim || !h->lin_v_dim || h->conv_k < 1 || h->conv_k > 8)
+        FAIL("bad linear-attention dimensions");
+    if (!h->tied_embeddings) FAIL("untied output head not supported");
+    if (!(h->rms_eps > 0.0f) || !(h->rope_theta > 0.0f)) FAIL("bad eps / rope_theta");
+    return PINFER_OK;
+}
+
+static int build_layer(const pf_model *m, int i, pf_layer *L) {
+    const pq_header *h = m->hdr;
+    char nm[PQ_NAME_MAX + 32];
+    int rc = 0;
+#define NM(s) (snprintf(nm, sizeof nm, "layers.%d.%s", i, s), nm)
+    uint32_t H = h->hidden;
+    L->is_full = (h->full_attn_mask >> i) & 1;
+    rc |= get_vec(m, NM("input_layernorm.weight"), H, &L->in_norm);
+    rc |= get_vec(m, NM("post_attention_layernorm.weight"), H, &L->post_norm);
+    rc |= get_mat(m, NM("mlp.gate_proj.weight"), h->ffn, H, &L->gate);
+    rc |= get_mat(m, NM("mlp.up_proj.weight"), h->ffn, H, &L->up);
+    rc |= get_mat(m, NM("mlp.down_proj.weight"), H, h->ffn, &L->down);
+    if (L->is_full) {
+        uint32_t hd = h->head_dim;
+        rc |= get_mat(m, NM("self_attn.q_proj.weight"), h->n_heads * hd * 2, H, &L->q);
+        rc |= get_mat(m, NM("self_attn.k_proj.weight"), h->n_kv_heads * hd, H, &L->k);
+        rc |= get_mat(m, NM("self_attn.v_proj.weight"), h->n_kv_heads * hd, H, &L->v);
+        rc |= get_mat(m, NM("self_attn.o_proj.weight"), H, h->n_heads * hd, &L->o);
+        rc |= get_vec(m, NM("self_attn.q_norm.weight"), hd, &L->q_norm);
+        rc |= get_vec(m, NM("self_attn.k_norm.weight"), hd, &L->k_norm);
+    } else {
+        uint32_t kd = h->lin_k_heads * h->lin_k_dim, vd = h->lin_v_heads * h->lin_v_dim;
+        uint32_t conv_dim = 2 * kd + vd;
+        rc |= get_mat(m, NM("linear_attn.in_proj_qkv.weight"), conv_dim, H, &L->qkv);
+        rc |= get_mat(m, NM("linear_attn.in_proj_z.weight"), vd, H, &L->z);
+        rc |= get_mat(m, NM("linear_attn.in_proj_b.weight"), h->lin_v_heads, H, &L->b);
+        rc |= get_mat(m, NM("linear_attn.in_proj_a.weight"), h->lin_v_heads, H, &L->a);
+        rc |= get_mat(m, NM("linear_attn.out_proj.weight"), H, vd, &L->out);
+        rc |= get_vec(m, NM("linear_attn.A_log"), h->lin_v_heads, &L->A_log);
+        rc |= get_vec(m, NM("linear_attn.dt_bias"), h->lin_v_heads, &L->dt_bias);
+        rc |= get_vec(m, NM("linear_attn.norm.weight"), h->lin_v_dim, &L->lin_norm);
+        /* conv1d.weight is 2-D F32 [conv_dim, conv_k]: check it by hand. */
+        const pq_tensor_entry *e = pf_model_find(m, NM("linear_attn.conv1d.weight"));
+        if (!e || e->dtype != PQ_F32 || e->ndim != 2 || e->shape[0] != conv_dim ||
+            e->shape[1] != h->conv_k)
+            FAIL("layer %d: bad or missing conv1d.weight", i);
+        L->conv_w = (const float *)((const char *)m->map + e->offset);
+    }
+#undef NM
+    return rc ? PINFER_E_FORMAT : PINFER_OK;
+}
+
+int pf_model_load(pf_model *m, const char *path) {
+    memset(m, 0, sizeof *m);
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) { perror(path); return PINFER_E_IO; }
+    struct stat st;
+    if (fstat(fd, &st) != 0 || st.st_size < (off_t)PQ_HEADER_BYTES) {
+        close(fd);
+        fprintf(stderr, "pinfer: %s: too small for a .pq file\n", path);
+        return PINFER_E_FORMAT;
+    }
+    void *map = mmap(NULL, (size_t)st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    close(fd);  /* the mapping keeps the file referenced */
+    if (map == MAP_FAILED) { perror("mmap"); return PINFER_E_IO; }
+    m->map = map;
+    m->map_bytes = (size_t)st.st_size;
+    m->hdr = (const pq_header *)map;
+
+    int rc = check_header(m->hdr);
+    if (rc == PINFER_OK) rc = check_directory(m);
+    if (rc == PINFER_OK) rc = get_mat(m, "embed_tokens.weight", m->hdr->vocab, m->hdr->hidden,
+                                      &m->embed);
+    if (rc == PINFER_OK) rc = get_vec(m, "norm.weight", m->hdr->hidden, &m->norm);
+    if (rc == PINFER_OK) {
+        m->layers = calloc(m->hdr->n_layers, sizeof(pf_layer));
+        if (!m->layers) rc = PINFER_E_NOMEM;
+    }
+    for (uint32_t i = 0; rc == PINFER_OK && i < m->hdr->n_layers; i++)
+        rc = build_layer(m, (int)i, &m->layers[i]);
+    if (rc != PINFER_OK) pf_model_free(m);
+    return rc;
+}
+
+void pf_model_free(pf_model *m) {
+    if (m->map) munmap(m->map, m->map_bytes);
+    free(m->layers);
+    memset(m, 0, sizeof *m);
+}

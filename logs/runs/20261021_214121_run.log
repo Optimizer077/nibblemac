@@ -1,0 +1,12 @@
+# 2026-10-21T21:41:21 pi@10.42.0.2
+$ uptime; pgrep -fa "llama-bench|kbench|pinfer_run|python3" | cut -c1-120; vcgencmd measure_temp; vcgencmd get_throttled; free -m | head -2
+
+ 21:41:21 up 23 min,  2 users,  load average: 1.51, 1.95, 1.30
+1782 ./llama/llama-bench -m models/Qwen3.5-0.8B-Q8_0.gguf -t 1,2,3,4 -p 64 -n 64 -r 3 -o jsonl
+1795 bash -c mkdir -p pinfer && cd pinfer || exit 1; uptime; pgrep -fa "llama-bench|kbench|pinfer_run|python3" | cut -c1
+temp=49.6'C
+throttled=0x0
+               total        used        free      shared  buff/cache   available
+Mem:            3794         305        1397           8        2168        3489
+
+[exit 0]
