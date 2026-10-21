@@ -1,0 +1,42 @@
+# 2026-10-22T01:14:03 pi@10.42.0.2
+$ ls engine data models; pgrep -fa "pinfer_run|llama" | grep -v pgrep; uptime
+
+data:
+chat27.ids
+prompt64.ids
+wikitext2-qwen35.tokens.bin
+
+engine:
+pinfer_ppl_fast
+pinfer_run
+pinfer_run_fast
+pinfer_run_kern
+pinfer_run_kern2
+pinfer_run_kern3
+pinfer_run_kern4
+pinfer_run_lin
+pinfer_run_lin2
+pinfer_run_lin3
+pinfer_run_lin4
+pinfer_run_pg
+pinfer_run_spec
+pinfer_run_spec_fast
+pinfer_run_spec_fast2
+spec_exact.sh
+
+models:
+qwen35-0.8b-bf16.pq
+qwen35-0.8b-mix-headq4k.pq
+qwen35-0.8b-mix-headq8.pq
+Qwen3.5-0.8B-Q4_0.gguf
+qwen35-0.8b-q4-headq4k.pq
+qwen35-0.8b-q4-headq4.pq
+qwen35-0.8b-q4k-headq4k.pq
+Qwen3.5-0.8B-Q4_K_M.gguf
+Qwen3.5-0.8B-Q8_0.gguf
+qwen35-0.8b-q8-headq8.pq
+Qwen3.5-0.8B.SHA256SUMS
+qwen35-0.8b-tokenizer
+ 01:14:04 up  3:55,  3 users,  load average: 3.39, 2.47, 2.21
+
+[exit 0]
