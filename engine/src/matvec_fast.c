@@ -1,7 +1,11 @@
 /* Fast implementation of ops.h: pinned thread pool + NEON kernels (kern_*.c).
  *
- * Pool: the calling thread is worker 0 (pinned to CPU 0); workers 1..n-1 are pinned to
- * CPUs 1..n-1. A call publishes a job by bumping a generation counter; workers spin on it
+ * Pool: the calling thread is worker 0; workers 1..n-1 are pinned to the 2nd..n-th CPU the
+ * caller may run on (CPUs 1..n-1 normally). The caller itself is not pinned: every thread
+ * the application creates later inherits its affinity mask, so pinning it to CPU 0 (before
+ * 0.2.0) confined e.g. a Python app's later threads to one core. While the workers spin on
+ * the other CPUs the scheduler keeps the caller on the free one (engine/HARDENING.md H4).
+ * A call publishes a job by bumping a generation counter; workers spin on it
  * (a decode step issues ~150 matmuls back to back, so a wake-up must cost well under a
  * microsecond) and fall back to a futex sleep after ~SPIN_ITERS idle polls, so an idle
  * engine does not burn 3 cores. Completion is a shared counter the caller spins on.
@@ -47,6 +51,7 @@ typedef struct {
 typedef struct {
     pf_pool *pool;
     int tid;
+    int cpu; /* pinned to this CPU; -1: not pinned */
 } worker_arg;
 
 struct pf_pool {
@@ -70,6 +75,7 @@ static double now_sec(void) {
 }
 
 static void pin_to(int cpu) {
+    if (cpu < 0) return;
     cpu_set_t set;
     CPU_ZERO(&set);
     CPU_SET(cpu, &set);
@@ -92,7 +98,7 @@ static void run_job(const job_t *j, int tid) {
 static void *worker_main(void *p) {
     worker_arg *a = p;
     pf_pool *pool = a->pool;
-    pin_to(a->tid);
+    pin_to(a->cpu);
     uint32_t seen = 0;
     for (;;) {
         uint32_t g = atomic_load_explicit(&pool->gen, memory_order_acquire);
@@ -124,17 +130,26 @@ static void *worker_main(void *p) {
 }
 
 pf_pool *pf_pool_create(int n_threads) {
+    /* Worker t is pinned to the t-th CPU of the caller's mask (CPU t when the mask holds
+     * every CPU); the caller's own mask is left as it is. */
+    cpu_set_t allowed;
     long ncpu = sysconf(_SC_NPROCESSORS_ONLN);
+    const int have = pthread_getaffinity_np(pthread_self(), sizeof allowed, &allowed) == 0;
+    if (have && CPU_COUNT(&allowed) > 0) ncpu = CPU_COUNT(&allowed);
     /* more threads than cores would make spinning workers share a core */
     if (n_threads <= 0 || n_threads > ncpu) n_threads = (int)ncpu;
     if (n_threads > MAX_THREADS) n_threads = MAX_THREADS;
+    int cpus[MAX_THREADS];
+    for (int t = 0, c = 0; t < n_threads; t++) {
+        while (have && c < CPU_SETSIZE && !CPU_ISSET(c, &allowed)) c++;
+        cpus[t] = !have ? t : c < CPU_SETSIZE ? c++ : -1;
+    }
     pf_pool *pool = aligned_alloc(64, (sizeof(pf_pool) + 63) & ~(size_t)63);
     if (!pool) return NULL;
     memset(pool, 0, sizeof *pool);
     pool->n = n_threads;
-    if (n_threads > 1) pin_to(0);
     for (int t = 1; t < n_threads; t++) {
-        pool->args[t] = (worker_arg){pool, t};
+        pool->args[t] = (worker_arg){pool, t, cpus[t]};
         if (pthread_create(&pool->th[t], NULL, worker_main, &pool->args[t]) != 0) {
             pool->n = t; /* run with what we have */
             break;
