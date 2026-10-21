@@ -103,11 +103,12 @@ pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err)
             c->max_ctx = p.max_ctx;
             c->kv_dtype = p.kv_dtype;
             c->batch = PF_MAX_BATCH;
-            /* forward_lin.c keeps a 512-float stack scratch; forward_attn.c stack rows of
-             * PF_KV_MAX_HD floats; the int8 scales need 4-byte-aligned row data */
-            if (c->lv_dim > 512 || c->hd > PF_KV_MAX_HD || c->hd % 4) {
-                fprintf(stderr, "pinfer: lin_v_dim %d > 512 or head_dim %d not supported\n",
-                        c->lv_dim, c->hd);
+            /* forward_lin.c keeps a 512-float stack scratch and kern_lin.c walks the value
+             * columns in chunks of 32; forward_attn.c stack rows of PF_KV_MAX_HD floats; the
+             * int8 scales need 4-byte-aligned row data */
+            if (c->lv_dim > 512 || c->lv_dim % 32 || c->hd > PF_KV_MAX_HD || c->hd % 4) {
+                fprintf(stderr, "pinfer: lin_v_dim %d (needs <= 512, multiple of 32) or "
+                        "head_dim %d not supported\n", c->lv_dim, c->hd);
                 rc = PINFER_E_FORMAT;
             } else {
                 rc = alloc_buffers(c);

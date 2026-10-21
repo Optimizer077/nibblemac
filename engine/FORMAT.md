@@ -36,6 +36,27 @@ data_offset   tensor data; data_offset is a multiple of 4096, every tensor start
 `u64 nbytes` · 8 bytes reserved. Matrices use PyTorch order: `shape[0]` = output rows,
 `shape[1]` = input columns, row-major, so `y = W x` reads each row contiguously.
 
+## Validation (what `pinfer_load` refuses with `PINFER_E_FORMAT`)
+The loader (`engine/src/model.c`, `pinfer.c`) checks the header and the whole directory against
+the file size before it reads any weight, so a truncated or crafted file fails at load time and
+never inside a kernel (tests: `tests/test_malformed.py`, `engine/HARDENING.md`).
+- Header: magic, version 1, arch 1; every dimension nonzero and at most the limits in
+  `engine/src/pq_format.h` (hidden, ffn ≤ 65536; vocab ≤ 2²¹; n_layers ≤ 32; head counts ≤ 256;
+  head dims ≤ 1024; conv_k ≤ 8), so no product of header fields can wrap; `n_heads % n_kv_heads`,
+  `lin_v_heads % lin_k_heads`, `rot_dim` even and ≤ `head_dim`, `eos_id < vocab`, `rms_eps` and
+  `rope_theta` positive and finite, tied embeddings.
+- Engine limits (`pinfer_load`): `lin_v_dim` ≤ 512 and a multiple of 32 (the DeltaNet kernel
+  works in 32-column chunks), `head_dim` ≤ 512 and a multiple of 4.
+- Directory: `dir_offset` ≥ the header size and 8-byte aligned, all entries inside the file.
+- Every entry: NUL-terminated name, `ndim` 1–4, `offset` 64-byte aligned, ≥ `data_offset`,
+  `offset + nbytes` ≤ file size, a known dtype, and `nbytes` exactly the size its dtype and shape
+  imply: elements × 4 / × 2 for F32 / BF16 (no zero dimension; the product is checked factor by
+  factor against the file size, so it cannot wrap), and for a quantized dtype a 2-D shape that
+  obeys the shape rule below with `nbytes = rows/4 · cols/256 · SB`. This covers tensors the
+  engine maps only later (the `mtp.*` head).
+- Each tensor the forward pass uses: the exact dtype class (F32 vectors) and shape it expects,
+  and a dtype the build supports (the scalar `MATVEC=ref` build: F32 and BF16 only).
+
 ## dtypes
 | id | name | layout |
 |---|---|---|
@@ -77,7 +98,8 @@ packers: `tools/quant.py` (`quantize_pack(dtype, w)`); kernels: `engine/src/kern
 Rationale and measurements: `engine/bench/KERNELS.md`.
 
 **Shape rule.** `rows % 4 == 0` and `cols % 256 == 0` (true for every Qwen3.5 matrix).
-`nbytes = rows/4 · cols/256 · SB` with `SB` the superblock size below.
+`nbytes = rows/4 · cols/256 · SB` with `SB` the superblock size below. The loader enforces
+both (since 0.2.0; before, a short `nbytes` let the kernels read past the tensor).
 
 **Tiling (all quantized dtypes).** Rows are taken 4 at a time: tile `t` = rows `4t..4t+3`.
 Tiles are stored in order; each tile is `cols/256` superblocks in column order; superblock

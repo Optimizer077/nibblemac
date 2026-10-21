@@ -2,36 +2,8 @@
  * See mtp.h for the semantics and engine/SPEC.md for the sources they were taken from. */
 #include "mtp.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* Same checks as model.c's loaders (kept local: model.c belongs to the base loader). */
-static int vec(const pf_model *m, const char *name, uint32_t n, const float **out) {
-    const pq_tensor_entry *e = pf_model_find(m, name);
-    if (!e || e->dtype != PQ_F32 || e->ndim != 1 || e->shape[0] != n) {
-        fprintf(stderr, "pinfer: MTP tensor %s missing or not F32 [%u]\n", name, n);
-        return PINFER_E_FORMAT;
-    }
-    *out = (const float *)((const char *)m->map + e->offset);
-    return PINFER_OK;
-}
-
-static int mat(const pf_model *m, const char *name, uint32_t rows, uint32_t cols,
-               pf_mat *out) {
-    const pq_tensor_entry *e = pf_model_find(m, name);
-    if (!e || e->ndim != 2 || e->shape[0] != rows || e->shape[1] != cols ||
-        !pf_dtype_supported(e->dtype)) {
-        fprintf(stderr, "pinfer: MTP tensor %s missing, not [%u, %u] or unsupported dtype\n",
-                name, rows, cols);
-        return PINFER_E_FORMAT;
-    }
-    out->dtype = e->dtype;
-    out->rows = (int)rows;
-    out->cols = (int)cols;
-    out->data = (const char *)m->map + e->offset;
-    return PINFER_OK;
-}
 
 static int map_tensors(const pinfer_ctx *ctx, pf_mtp *t) {
     const pf_model *m = &ctx->model;
@@ -40,22 +12,24 @@ static int map_tensors(const pinfer_ctx *ctx, pf_mtp *t) {
     pf_layer *L = &t->layer;
     int rc = 0;
     if (!m->hdr->has_mtp) return PINFER_E_FORMAT;
+    /* model.c's typed views: every entry's bounds and size (quantized dtypes included)
+     * were checked at load, so a malformed mtp.* tensor fails here, never in a kernel */
     L->is_full = 1;
-    rc |= mat(m, "mtp.fc.weight", H, 2 * H, &t->fc);
-    rc |= vec(m, "mtp.pre_fc_norm_embedding.weight", H, &t->norm_emb);
-    rc |= vec(m, "mtp.pre_fc_norm_hidden.weight", H, &t->norm_hid);
-    rc |= vec(m, "mtp.norm.weight", H, &t->norm_out);
-    rc |= vec(m, "mtp.layers.0.input_layernorm.weight", H, &L->in_norm);
-    rc |= vec(m, "mtp.layers.0.post_attention_layernorm.weight", H, &L->post_norm);
-    rc |= mat(m, "mtp.layers.0.self_attn.q_proj.weight", nq * hd * 2, H, &L->q);
-    rc |= mat(m, "mtp.layers.0.self_attn.k_proj.weight", nkv * hd, H, &L->k);
-    rc |= mat(m, "mtp.layers.0.self_attn.v_proj.weight", nkv * hd, H, &L->v);
-    rc |= mat(m, "mtp.layers.0.self_attn.o_proj.weight", H, nq * hd, &L->o);
-    rc |= vec(m, "mtp.layers.0.self_attn.q_norm.weight", hd, &L->q_norm);
-    rc |= vec(m, "mtp.layers.0.self_attn.k_norm.weight", hd, &L->k_norm);
-    rc |= mat(m, "mtp.layers.0.mlp.gate_proj.weight", ffn, H, &L->gate);
-    rc |= mat(m, "mtp.layers.0.mlp.up_proj.weight", ffn, H, &L->up);
-    rc |= mat(m, "mtp.layers.0.mlp.down_proj.weight", H, ffn, &L->down);
+    rc |= pf_model_mat(m, "mtp.fc.weight", H, 2 * H, &t->fc);
+    rc |= pf_model_vec(m, "mtp.pre_fc_norm_embedding.weight", H, &t->norm_emb);
+    rc |= pf_model_vec(m, "mtp.pre_fc_norm_hidden.weight", H, &t->norm_hid);
+    rc |= pf_model_vec(m, "mtp.norm.weight", H, &t->norm_out);
+    rc |= pf_model_vec(m, "mtp.layers.0.input_layernorm.weight", H, &L->in_norm);
+    rc |= pf_model_vec(m, "mtp.layers.0.post_attention_layernorm.weight", H, &L->post_norm);
+    rc |= pf_model_mat(m, "mtp.layers.0.self_attn.q_proj.weight", nq * hd * 2, H, &L->q);
+    rc |= pf_model_mat(m, "mtp.layers.0.self_attn.k_proj.weight", nkv * hd, H, &L->k);
+    rc |= pf_model_mat(m, "mtp.layers.0.self_attn.v_proj.weight", nkv * hd, H, &L->v);
+    rc |= pf_model_mat(m, "mtp.layers.0.self_attn.o_proj.weight", H, nq * hd, &L->o);
+    rc |= pf_model_vec(m, "mtp.layers.0.self_attn.q_norm.weight", hd, &L->q_norm);
+    rc |= pf_model_vec(m, "mtp.layers.0.self_attn.k_norm.weight", hd, &L->k_norm);
+    rc |= pf_model_mat(m, "mtp.layers.0.mlp.gate_proj.weight", ffn, H, &L->gate);
+    rc |= pf_model_mat(m, "mtp.layers.0.mlp.up_proj.weight", ffn, H, &L->up);
+    rc |= pf_model_mat(m, "mtp.layers.0.mlp.down_proj.weight", H, ffn, &L->down);
     return rc ? PINFER_E_FORMAT : PINFER_OK;
 }
 
