@@ -6,6 +6,7 @@
 #   make -C engine install PREFIX=/opt/pinfer [TARGET=host|pi] [DESTDIR=...]
 #   make -C engine examples        -> build/{host,aarch64}/examples/pinfer_example
 #   make -C engine wheel-host | wheel-pi   -> build/dist/pinfer-<ver>-py3-none-<plat>.whl
+#   make -C engine host SAN=address,undefined -> build/host-san/engine/ (sanitizer build)
 # Host and Pi objects of different MATVEC choices go to separate directories, so switching
 # MATVEC never links a stale kernel object.
 ROOT    := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/..)
@@ -32,6 +33,14 @@ HOST_CC     := gcc
 HOST_CFLAGS := -O2 -std=c11 -ffp-contract=off -Wall -Wextra -g
 HOST_LIBS   := -lm -pthread
 HOST_OUT    := $(ROOT)/build/host/engine
+# Sanitizer build of the host tools: make -C engine host SAN=address,undefined
+# -> build/host-san/engine/ (separate objects; the tests take --bin). Host only.
+SAN ?=
+ifneq ($(SAN),)
+HOST_CFLAGS += -fsanitize=$(SAN) -fno-omit-frame-pointer
+HOST_LIBS   += -fsanitize=$(SAN)
+HOST_OUT    := $(ROOT)/build/host-san/engine
+endif
 HOST_OBJ    := $(HOST_OUT)/obj-$(MATVEC)
 
 PI_CC     := aarch64-linux-gnu-gcc
@@ -138,7 +147,7 @@ $(HOST_LIB)/libpinfer.a: $(addprefix $(HOST_PIC)/,$(CORE:.c=.o)) | $(HOST_LIB)
 	$(call build_static,,$(filter %.o,$^),$@)
 
 $(HOST_LIB)/libpinfer.so: $(addprefix $(HOST_PIC)/,$(CORE:.c=.o)) $(MAP) | $(HOST_LIB)
-	$(HOST_CC) $(SO_FLAGS) $(filter %.o,$^) -o $@ -lm -pthread
+	$(HOST_CC) $(SO_FLAGS) $(filter %.o,$^) -o $@ -lm -pthread $(if $(SAN),-fsanitize=$(SAN))
 	$(call build_info,$(HOST_CC),x86_64,$(HOST_LIB))
 	ln -sf libpinfer.so $(HOST_LIB)/$(SONAME)
 

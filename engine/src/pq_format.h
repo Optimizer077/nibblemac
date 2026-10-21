@@ -10,6 +10,17 @@
 #define PQ_TENSOR_ALIGN 64u
 #define PQ_NAME_MAX 80
 
+/* Loader limits on header dimensions (engine/FORMAT.md "Validation"). Far above Qwen3.5-0.8B
+ * and the larger Qwen3.5 sizes, and low enough that every product the loader and pinfer_load
+ * form from header fields (projection rows such as n_heads * head_dim * 2 or 2*kd + vd,
+ * scratch-buffer sizes) stays far inside uint32 and int, so a crafted header cannot wrap. */
+#define PQ_MAX_DIM 65536u        /* hidden, ffn */
+#define PQ_MAX_VOCAB (1u << 21)  /* vocab */
+#define PQ_MAX_LAYERS 32u        /* n_layers: full_attn_mask has 32 bits */
+#define PQ_MAX_HEADS 256u        /* n_heads, n_kv_heads, lin_k_heads, lin_v_heads */
+#define PQ_MAX_HEAD_DIM 1024u    /* head_dim, lin_k_dim, lin_v_dim */
+#define PQ_MAX_CONV_K 8u         /* conv_k */
+
 enum pq_dtype {
     PQ_F32 = 0,
     PQ_BF16 = 1,

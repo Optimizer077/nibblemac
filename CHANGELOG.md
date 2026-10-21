@@ -3,7 +3,41 @@
 All changes to this project **and to the Pi** are recorded here, newest first.
 Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `docs/pi-state.md`.
 
+## 0.2.0 (unreleased)
+- ABI: `pinfer_params.kv_dtype` and `pinfer_spec_params.adaptive` (added after 0.1.0) make this
+  0.2.0, SONAME `libpinfer.so.0.2`; binaries built against the 0.1 header must be rebuilt.
+- State blobs are format 2 and carry a fingerprint of the model file; 0.1 blobs are refused.
+- Stricter `.pq` validation (every tensor's size, header bounds); the caller's CPU affinity is
+  no longer changed. Details: `engine/HARDENING.md`. `docs/release-0.1.0.md` stays the 0.1.0 note.
+
 ## 2026-10-22
+
+### Hardening (issue #11, hardening agent, 07:00–; notebook `engine/HARDENING.md`)
+- Fixed (loader): every directory entry's `nbytes` must equal the size its dtype and shape
+  imply, quantized dtypes included (rows % 4, cols % 256); unknown dtypes refused; header
+  dimensions bounded (`PQ_MAX_*`), element counts and products cannot wrap; `eos_id`, finite
+  `rms_eps` / `rope_theta`, 8-byte-aligned directory; `lin_v_dim % 32` (`kern_lin.c` chunks).
+  `mtp.c` uses `model.c`'s tensor views. Before, on the Pi: a short quantized tensor loaded and
+  the matmul read past it; `lin_v_dim 80` crashed (SIGSEGV).
+- Fixed (thread pool): `pf_pool_create` no longer pins the calling thread to CPU 0 (later
+  threads of the application inherited that single core); workers are pinned to the 2nd..n-th
+  CPU of the caller's mask, at most that many threads.
+- Fixed (state): blobs carry `pf_model_fingerprint` (header, directory, sampled weights), state
+  format 2; a state of another model file with the same dimensions is refused. Python
+  `pinfer.state` names the cause (version, kv_dtype, other file).
+- Fixed (`pinfer_ppl`): token ids validated before use (out-of-bounds logit read), `--chunks 0`
+  refused (printed NaN), odd-sized token files refused.
+- Fixed: `PF_FWD_STATS` / `PF_KERN_STATS` flags set atomically, tables under a mutex.
+- Changed: version 0.2.0 (`pinfer.h`, SONAME `libpinfer.so.0.2`, Python package, wheel names).
+- Added: `make -C engine host SAN=address,undefined`; `tests/test_malformed.py` (43 cases;
+  baseline 18/43, now 43/43 under ASan+UBSan and on the Pi); `tests/test_long_context.py` +
+  `ref/long_context_reference.py`; pytest `test_affinity.py`, `test_version.py`, 5 state cases.
+- Measured: long context vs fp32 transformers to 8192 tokens: worst rel. error 2.0e-6, top-1
+  18/18 (no RoPE or position bug). Speed unchanged: prompt64 plain / `--spec 3` 7.888 / 16.713 tok/s vs
+  `pinfer_run_fast` 7.891 / 16.717 (3 interleaved rounds, `speed-ab-hard2_20261022_081251.json`);
+  output bit-identical (spec_exact 20/20, dumps 5/5 identical).
+- Pi: experimental binaries `engine/pinfer_run_hard2`, `pinfer_ppl_hard2` (scratch `tmp/hard/`
+  removed at the end); `engine/pinfer_run_fast` untouched.
 
 ### Merged (lead, 06:50)
 - Context-window work merged to `main` after the full gate (host golden / spec 81/81 / state /

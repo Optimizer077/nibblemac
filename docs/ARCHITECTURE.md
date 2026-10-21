@@ -238,7 +238,7 @@ per cycle with `SMULL`/`SMLAL` but 4 fp32 MACs with `FMLA` (`engine/bench/KERNEL
 
 | Aspect | Behaviour | Source |
 |---|---|---|
-| Pool | `n_threads` threads (default 4): workers 1..n−1 are pinned to CPUs 1..n−1; the calling thread does worker 0's share, and the thread that creates the pool (the one calling `pinfer_load`) is pinned to CPU 0 | `matvec_fast.c` `pf_pool_create` |
+| Pool | `n_threads` threads (default 4, at most the CPUs in the caller's mask): workers 1..n−1 are pinned to the 2nd..n-th CPU of the caller's mask (CPUs 1..n−1 normally); the calling thread does worker 0's share and is not pinned (until 0.1.0 it was pinned to CPU 0, which every thread the application created later inherited; `engine/HARDENING.md` H4) | `matvec_fast.c` `pf_pool_create` |
 | Dispatch | Publish the job, bump a generation counter (the futex word), wake sleepers, run worker 0's share on the caller, spin until all are done | `dispatch()` |
 | Idle workers | Spin up to 50 ms (`SPIN_SEC`), then sleep on the futex: a decode step issues ~150 matmuls back to back | `worker_main()` |
 | Dispatch cost | Empty job: 11 / 238 / 369 / 478 ns for 1 / 2 / 3 / 4 threads | `engine/bench/KERNELS.md` v9 |
