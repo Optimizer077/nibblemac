@@ -45,6 +45,17 @@
 |---|---|---|---|
 | 2026-10-21 | memband read, 256 MB | 1 thr 4.20 / 2 thr 4.08 / 4 thr 4.07 GB/s | 38 °C, not throttled, governor ondemand |
 
+### llama.cpp v0.7.0 (`620d2225`), Qwen3.5-0.8B, llama-bench pp64/tg64, 3 reps, governor ondemand
+| Quant | File | tg64 tok/s t=1/2/3/4 | pp64 tok/s t=1/2/3/4 | Best tg vs ceiling (4.2 GB/s ÷ file) | Result |
+|---|---|---|---|---|---|
+| Q4_0 | 513 MB | 2.32 / 4.20 / 5.58 / **5.59** | 4.28 / 8.33 / 12.08 / 15.68 | 5.59 / 8.2 = 68% | `bench/results/llamacpp-qwen35-0.8b-Q4_0_20261021_213343.json` |
+| Q4_K_M | 542 MB | 2.26 / 4.06 / 5.38 / **5.41** | 4.03 / 7.84 / 11.35 / 14.82 | 5.41 / 7.7 = 70% | `…Q4_K_M_20261021_213929.json` |
+| Q8_0 | 834 MB | 2.83 / **4.12** / 4.04 / 3.60 | 4.73 / 9.22 / 13.22 / 17.06 | 4.12 / 5.0 = 82% | `…Q8_0_20261021_214506.json` |
+
+Observations: decode stops scaling at 3 threads (4-bit) and **gets slower beyond 2 threads at
+8-bit** (memory contention); prefill scales ~linearly with threads (compute-bound). All runs
+valid (no throttling, ≤55 °C).
+
 **Key finding:** one core already saturates DRAM (~4.2 GB/s). Extra cores add no bandwidth;
 they are only useful for the compute (dequantization, math) that must keep pace with it.
 Decode ceiling ≈ 4.2 GB/s ÷ weight bytes per token, e.g. ~0.4 GB of 4-bit weights → ~10 tok/s.
