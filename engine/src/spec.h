@@ -5,16 +5,19 @@
  * fed to the main model):
  *   1. draft d1..dk: d1 comes from the previous MTP pass; d2..dk by chaining the MTP head on
  *      its own output hidden state (one row each, positions P..P+k-2);
- *   2. verify [cur, d1..dk] in ONE batched main-model pass (positions P..P+k), with the
- *      linear-attention states run on scratch copies (pf_lin_log);
+ *   2. verify [cur, d1..dk] in ONE batched main-model pass (positions P..P+k); the
+ *      linear-attention states advance by cur (always committed) and run d1..dk on copies
+ *      while the pass logs their updates (pf_lin_log);
  *   3. accept the longest prefix d1..da that equals the main model's argmax, plus the
  *      main model's token after it (the bonus); emit them until a stop condition, commit
  *      the e emitted tokens (e = a+1 without a stop) to the linear-attention states
- *      (pf_lin_commit) and set n_past = P+e (stale KV rows are overwritten later);
+ *      (pf_lin_commit: conv now, the e-1 recurrent updates deferred to the next pass) and
+ *      set n_past = P+e (stale KV rows are overwritten later);
  *   4. one batched MTP pass over the e newly committed positions with the main model's
  *      hidden states (this also replaces the MTP KV rows the chain wrote) -> next d1.
  * Every emitted token is a main-model argmax given the exact committed state, so the output
- * equals plain greedy decoding.
+ * equals plain greedy decoding. Before returning, pf_spec_decode applies the deferred
+ * updates (pf_lin_flush), so the states are complete outside the loop.
  *
  * Adaptive mode (pinfer_spec_params.adaptive, spec_adapt.c): k becomes an upper bound. The
  * loop measures a plain step (one at the start, one every RECAL rounds), every pass of a

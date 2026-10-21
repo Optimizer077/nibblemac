@@ -44,18 +44,29 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n);
  *   S *= decay;  kv = S^T k;  delta = (v - kv) * beta;  S += k delta^T;  o = S^T q
  * Both implementations perform exactly these per-element fp32 operations (no fused
  * multiply-add) in the same order, so they agree bit-for-bit with each other and with the
- * commit replay below. */
+ * commit replay below.
+ *
+ * Speculative verification (log != NULL): token 0 updates S in place like any token (the
+ * caller always commits the first token of a verify pass); tokens 1..n-1 run on a private
+ * copy, so S ends as the state after token 0, and their log rows t >= 1 receive
+ * k | delta | decay (row 0 is not written). Deferred commit (keep > 0): before the tokens, S
+ * first advances by the first `keep` updates of `pend` (rows laid out like `log`), with
+ * pf_lin_apply's arithmetic, while it is in cache anyway. A logged pass needs
+ * dk <= PF_LIN_MAX_DK. */
+#define PF_LIN_MAX_DK 256
 typedef struct {
     int n, heads, rep, dk, dv;  /* tokens, v-heads, v-heads per k-head, head dims */
     int qkv_stride, o_stride;   /* row strides in floats of qkv and o */
     const float *qkv;           /* [n][qkv_stride]: q | k (heads/rep heads of dk) | v (heads x dv) */
     const float *decay, *beta;  /* [n][heads] */
     float *S;                   /* [heads][dk * dv] committed state, updated in place; its
-                                   layout is private to the implementation (zero = reset)... */
+                                   layout is private to the implementation (zero = reset) */
     float *o;                   /* [n][o_stride]: outputs before the gated norm */
-    float *log;                 /* ...unless log != NULL: then S stays untouched (the kernel
-                                   works on a copy) and per (t, head) the log row
-                                   [dk + dv + 1] receives k | delta | decay (pf_lin_log) */
+    float *log;                 /* NULL, or [n][heads][dk + dv + 1] rollback log (pf_lin_log) */
+    const float *pend;          /* [keep][heads][dk + dv + 1] updates to apply first */
+    int keep;
+    float *work;                /* [dk * dv] per-context scratch for a logged pass (the ref
+                                   keeps its head copy there; the NEON kernel needs none) */
 } pf_lin_args;
 void pf_lin_rule(pf_pool *pool, const pf_lin_args *a);
 
