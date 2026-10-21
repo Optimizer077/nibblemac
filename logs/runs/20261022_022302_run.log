@@ -1,0 +1,89 @@
+# 2026-10-22T02:23:02 pi@10.42.0.2
+$ ls -la ~/pinfer ~/pinfer/data ~/pinfer/engine ~/pinfer/llama ~/pinfer/models 2>&1 | head -80; ls /tmp/pinfer-bench.lock; pgrep -a pinfer_run; pgrep -a llama; free -m
+
+/home/pi/pinfer:
+total 1104
+drwxrwxr-x 16 pi pi   4096 Oct 22 01:38 .
+drwx------  6 pi pi   4096 Oct 21 21:56 ..
+drwxrwxr-x  5 pi pi   4096 Oct 21 21:58 baselines
+drwxrwxr-x  2 pi pi   4096 Oct 22 02:11 data
+drwxrwxr-x  2 pi pi   4096 Oct 22 02:19 engine
+drwxrwxr-x  2 pi pi   4096 Oct 21 22:20 examples
+-rw-rw-r--  1 pi pi 264259 Oct 22 00:27 gmon.out
+drwxrwxr-x  3 pi pi   4096 Oct 21 22:15 golden
+drwxrwxr-x  2 pi pi   4096 Oct 22 00:59 kbench
+drwxrwxr-x  3 pi pi   4096 Oct 22 01:24 kernel
+drwxrwxr-x  2 pi pi   4096 Oct 21 21:27 llama
+-rwxr-xr-x  1 pi pi    461 Oct 21 21:26 llama_bench.sh
+-rwxr-xr-x  1 pi pi 792232 Oct 21 20:47 memband
+drwxrwxr-x  3 pi pi   4096 Oct 22 00:10 models
+drwxrwxr-x  3 pi pi   4096 Oct 22 00:07 .pytest_cache
+drwxrwxr-x  3 pi pi   4096 Oct 21 22:15 tests
+drwxrwxr-x  2 pi pi   4096 Oct 22 02:09 tmp
+drwxrwxr-x  6 pi pi   4096 Oct 21 22:16 venvs
+drwxrwxr-x  6 pi pi   4096 Oct 21 22:15 wheels
+
+/home/pi/pinfer/data:
+total 180
+drwxrwxr-x  2 pi pi   4096 Oct 22 02:11 .
+drwxrwxr-x 16 pi pi   4096 Oct 22 01:38 ..
+-rw-rw-r--  1 pi pi    137 Oct 22 00:30 chat27.ids
+-rwxr-xr-x  1 pi pi   9531 Oct 22 02:11 ctx2048.ids
+-rwxr-xr-x  1 pi pi  18999 Oct 22 02:11 ctx4096.ids
+-rwxr-xr-x  1 pi pi   2335 Oct 22 02:11 ctx512.ids
+-rwxr-xr-x  1 pi pi    276 Oct 21 23:48 prompt64.ids
+-rwxr-xr-x  1 pi pi 131072 Oct 21 23:39 wikitext2-qwen35.tokens.bin
+
+/home/pi/pinfer/engine:
+total 16576
+drwxrwxr-x  2 pi pi   4096 Oct 22 02:19 .
+drwxrwxr-x 16 pi pi   4096 Oct 22 01:38 ..
+-rwxr-xr-x  1 pi pi   1679 Oct 22 01:33 core2_check.sh
+-rwxr-xr-x  1 pi pi 708424 Oct 22 01:37 exptest_pi
+-rwxr-xr-x  1 pi pi 934120 Oct 22 02:19 pinfer_ppl_fast
+-rwxr-xr-x  1 pi pi 779792 Oct 21 21:47 pinfer_run
+-rwxr-xr-x  1 pi pi 932632 Oct 22 02:07 pinfer_run_core2
+-rwxr-xr-x  1 pi pi 932568 Oct 22 02:07 pinfer_run_core2_noneon
+-rwxr-xr-x  1 pi pi 932632 Oct 22 02:19 pinfer_run_fast
+-rwxr-xr-x  1 pi pi 930952 Oct 22 00:05 pinfer_run_kern
+-rwxr-xr-x  1 pi pi 865344 Oct 22 00:15 pinfer_run_kern2
+-rwxr-xr-x  1 pi pi 930904 Oct 22 00:35 pinfer_run_kern3
+-rwxr-xr-x  1 pi pi 865824 Oct 22 00:46 pinfer_run_kern4
+-rwxr-xr-x  1 pi pi 931304 Oct 22 00:41 pinfer_run_lin
+-rwxr-xr-x  1 pi pi 931360 Oct 22 00:46 pinfer_run_lin2
+-rwxr-xr-x  1 pi pi 931336 Oct 22 00:49 pinfer_run_lin3
+-rwxr-xr-x  1 pi pi 931384 Oct 22 00:59 pinfer_run_lin4
+-rwxr-xr-x  1 pi pi 932680 Oct 22 00:15 pinfer_run_pg
+-rwxr-xr-x  1 pi pi 780952 Oct 21 22:11 pinfer_run_spec
+-rwxr-xr-x  1 pi pi 864832 Oct 21 22:43 pinfer_run_spec_fast
+-rwxr-xr-x  1 pi pi 864856 Oct 21 23:36 pinfer_run_spec_fast2
+-rwxr-xr-x  1 pi pi 931472 Oct 22 01:32 pinfer_run_thp
+-rwxr-xr-x  1 pi pi   1037 Oct 22 00:42 spec_exact.sh
+
+/home/pi/pinfer/llama:
+total 49588
+drwxrwxr-x  2 pi pi     4096 Oct 21 21:27 .
+drwxrwxr-x 16 pi pi     4096 Oct 22 01:38 ..
+-rwxr-xr-x  1 pi pi      637 Oct 21 21:25 BUILD_INFO.txt
+-rwxr-xr-x  1 pi pi 13966608 Oct 21 21:25 llama-bench
+-rwxr-xr-x  1 pi pi 13824696 Oct 21 21:25 llama-completion
+-rwxr-xr-x  1 pi pi 13892224 Oct 21 21:25 llama-perplexity
+-rwxr-xr-x  1 pi pi  9076488 Oct 21 21:25 llama-simple
+
+/home/pi/pinfer/models:
+total 6419364
+drwxrwxr-x  3 pi pi       4096 Oct 22 00:10 .
+drwxrwxr-x 16 pi pi       4096 Oct 22 01:38 ..
+-rwxr-xr-x  1 pi pi 1546749184 Oct 21 21:36 qwen35-0.8b-bf16.pq
+-rwxr-xr-x  1 pi pi  439391488 Oct 21 23:46 qwen35-0.8b-mix-headq4k.pq
+-rwxr-xr-x  1 pi pi  566531328 Oct 21 23:47 qwen35-0.8b-mix-headq8.pq
+-rwxr-xr-x  1 pi pi  512977920 Oct 21 21:26 Qwen3.5-0.8B-Q4_0.gguf
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:09 qwen35-0.8b-q4-headq4k.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 21 23:37 qwen35-0.8b-q4-headq4.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:08 qwen35-0.8b-q4k-headq4k.pq
+/tmp/pinfer-bench.lock
+               total        used        free      shared  buff/cache   available
+Mem:            3794         487         594           9        2809        3307
+Swap:           2047           0        2047
+
+[exit 0]

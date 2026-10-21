@@ -1,0 +1,7 @@
+# 2026-10-22T02:19:57 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; $V/pip install -q --no-index --find-links ~/pinfer/wheels/pinfer --force-reinstall --no-deps ~/pinfer/wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl && PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=golden/qwen35-0.8b/meta.json $V/python -m pytest -q tests/python 2>&1 | tail -2
+
+........                                                                 [100%]
+80 passed in 81.73s (0:01:21)
+
+[exit 0]

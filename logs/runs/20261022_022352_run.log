@@ -1,0 +1,22 @@
+# 2026-10-22T02:23:52 pi@10.42.0.2
+$ ./llama/llama-bench --help 2>&1 | grep -iE 'depth|-d,|n-depth|-p,|-n,|-o,' ; ls -la models/*.gguf; cat llama/BUILD_INFO.txt
+
+  -o, --output <csv|json|jsonl|md|sql>        output format printed to stdout (default: md)
+  -p, --n-prompt <n>                                (default: 512)
+  -n, --n-gen <n>                                   (default: 128)
+  -d, --n-depth <n>                                 (default: 0)
+-rwxr-xr-x 1 pi pi 512977920 Oct 21 21:26 models/Qwen3.5-0.8B-Q4_0.gguf
+-rwxr-xr-x 1 pi pi 541903872 Oct 21 21:26 models/Qwen3.5-0.8B-Q4_K_M.gguf
+-rwxr-xr-x 1 pi pi 833592320 Oct 21 21:25 models/Qwen3.5-0.8B-Q8_0.gguf
+llama.cpp tag: v0.7.0
+commit: 620d2225cc436ab0b001e3200e590e3b286ef9ab
+built: 2026-10-21T21:25:05+09:00
+pi flags: -mcpu=cortex-a72, static, GGML_NATIVE=OFF, GGML_CPU_ARM_ARCH=armv8-a, OpenMP
+cross compiler: aarch64-linux-gnu-gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+host compiler: gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+e8ba7404cd38d757ef6892a74454dde370405f1c25b6b437598e136f56630560  llama-bench
+2a15156f8fafc4d460657742b3d5152635c050b8e14c17ff3e27e7a10fcbe82b  llama-completion
+ea67c8c8b598bcdfbe715ac9f89cd651df9d0c6898c19099978a0f00198382df  llama-perplexity
+3e66d81731d4a88593680fbb7783c9bd72f20bc3f58f488e2faa852d6e6d59bc  llama-simple
+
+[exit 0]
