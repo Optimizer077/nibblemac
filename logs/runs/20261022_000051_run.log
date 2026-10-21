@@ -1,0 +1,8 @@
+# 2026-10-22T00:00:51 pi@10.42.0.2
+$ ps -eo pid,etime,pcpu,args --sort=start_time | grep -E "pinfer_|kbench|run_bench|llm_|litert|python3" | grep -v grep | cut -c1-120
+
+  11622       03:44  0.0 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_ppl_fast -m m
+  11624       03:44  0.0 timeout --kill-after=30 1200 bash -c ./engine/pinfer_ppl_fast -m models/qwen35-0.8b-q4-headq4.p
+  11625       03:44  243 ./engine/pinfer_ppl_fast -m models/qwen35-0.8b-q4-headq4.pq -f data/wikitext2-qwen35.tokens.bin
+
+[exit 0]

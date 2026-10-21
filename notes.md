@@ -77,9 +77,9 @@ tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
 
 | Engine | Format | File | Decode tok/s plain | Decode tok/s MTP spec | Prefill tok/s | PPL (c8) |
 |---|---|---|---|---|---|---|
-| pinfer | Q4_G32 + Q4 head | 437 MB | **6.88** | **12.56** (k=3, dv 32768) | 21.3 | pending |
+| pinfer | Q4_G32 + Q4 head | 437 MB | **6.88** | **12.56** (k=3, dv 32768) | 21.3 | **21.61** (as bad as Q4_0) |
 | pinfer | Q4K (v_proj, mtp.fc Q8) + Q4K head | 439 MB | **6.88** | 10.98 (k=3, dv 32768) | 16.3 | **18.50** |
-| pinfer | same + Q8 head | 567 MB | 5.72 | 9.77 (k=3) | 13.7 | pending |
+| pinfer | same + Q8 head | 567 MB | 5.72 | 9.77 (k=3) | 13.7 | 18.29 |
 | pinfer | Q8_G32 + Q8 head | 823 MB | 4.22 | 8.73 (k=4, dv 16384) | 12.2 | pending |
 | pinfer | bf16 | 1.55 GB | 2.27 | 4.13 (k=2) | 11.0 | = reference |
 | MNN 3.6 | int4 HQQ block64 | ~450 MB | 6.67 (t=2) | — | **30.9** | — |
@@ -88,6 +88,11 @@ tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
 | llama.cpp v0.7.0 | Q8_0 | 834 MB | 4.12 (t=2) | — | 17.1 | 17.97 |
 | llama.cpp v0.7.0 | bf16 | 1.56 GB | — | — | — | 17.93 |
 | ONNX Runtime GenAI 0.18 | int4 rtn acc4 | — | 3.10 | — | 9.9 | — |
+
+**Quality verdict:** pure Q4_G32 loses as much as llama.cpp Q4_0 (21.6 vs 21.3); the mixed
+Q4K file (v_proj + mtp.fc at Q8, Q4K head) matches Q4_K_M quality (18.50 vs 18.59) at 2.0×
+its speed with speculation (10.98 vs 5.41 tok/s). A Q8 head buys only −0.2 PPL for −11% speed.
+**Recommended default: `mix-headq4k`.**
 
 Speculative decoding is exact (identical tokens to plain greedy, `tests/test_spec.py`).
 Verify-pass cost vs one decode step (bf16): 1.07 / 1.27 / 1.38 / 1.61 for k=1..4 — the

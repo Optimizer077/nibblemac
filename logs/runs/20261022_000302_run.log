@@ -1,0 +1,19 @@
+# 2026-10-22T00:03:02 pi@10.42.0.2
+$ which perf gprof valgrind; nproc; ls -la engine/; pgrep -fa flock | cut -c1-100
+
+/usr/bin/gprof
+4
+total 4992
+drwxrwxr-x  2 pi pi   4096 Oct 21 23:48 .
+drwxrwxr-x 13 pi pi   4096 Oct 21 23:48 ..
+-rwxr-xr-x  1 pi pi 932000 Oct 21 23:47 pinfer_ppl_fast
+-rwxr-xr-x  1 pi pi 779792 Oct 21 21:47 pinfer_run
+-rwxr-xr-x  1 pi pi 864856 Oct 21 23:47 pinfer_run_fast
+-rwxr-xr-x  1 pi pi 780952 Oct 21 22:11 pinfer_run_spec
+-rwxr-xr-x  1 pi pi 864832 Oct 21 22:43 pinfer_run_spec_fast
+-rwxr-xr-x  1 pi pi 864856 Oct 21 23:36 pinfer_run_spec_fast2
+11790 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_ppl_fast -m 
+11806 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c set -e; V=~/pinfer/venvs/pin
+11817 bash -c mkdir -p pinfer && cd pinfer || exit 1; which perf gprof valgrind; nproc; ls -la engin
+
+[exit 0]

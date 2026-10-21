@@ -1,0 +1,11 @@
+# 2026-10-22T00:02:22 pi@10.42.0.2
+$ set -e; V=~/pinfer/venvs/pinfer; $V/bin/pip install -q --no-index --find-links ~/pinfer/wheels/pinfer --force-reinstall --no-deps ~/pinfer/wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl && $V/bin/python -c "import pinfer, json, pathlib; print(\"pinfer\", pinfer.__version__ if hasattr(pinfer, \"__version__\") else \"?\"); p = pathlib.Path(pinfer.__file__).parent; print([x.name for x in p.glob(\"*.so*\")], (p / \"BUILD_INFO.json\").read_text() if (p / \"BUILD_INFO.json\").exists() else \"no BUILD_INFO\")" && cd ~/pinfer && PINFER_MODEL=models/qwen35-0.8b-q4-headq4.pq $V/bin/python -m pytest -q tests/python 2>&1 | tail -5
+
+pinfer 0.1.0
+['libpinfer.so'] {"version": "0.1.0", "matvec": "fast", "arch": "aarch64", "cc": "aarch64-linux-gnu 15.2.0", "soname": "libpinfer.so.0.1"}
+
+.......ssssssssssssss.ssssssssssss.....s.ssss..ssss...........ssss..ssss [ 90%]
+sssssss.                                                                 [100%]
+30 passed, 50 skipped in 3.71s
+
+[exit 0]

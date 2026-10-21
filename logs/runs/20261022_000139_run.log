@@ -1,0 +1,30 @@
+# 2026-10-22T00:01:39 pi@10.42.0.2
+$ ls engine data models | head -40; pgrep -fa "flock" | cut -c1-120
+
+data:
+prompt64.ids
+wikitext2-qwen35.tokens.bin
+
+engine:
+pinfer_ppl_fast
+pinfer_run
+pinfer_run_fast
+pinfer_run_spec
+pinfer_run_spec_fast
+pinfer_run_spec_fast2
+
+models:
+qwen35-0.8b-bf16.pq
+qwen35-0.8b-mix-headq4k.pq
+qwen35-0.8b-mix-headq8.pq
+Qwen3.5-0.8B-Q4_0.gguf
+qwen35-0.8b-q4-headq4.pq
+Qwen3.5-0.8B-Q4_K_M.gguf
+Qwen3.5-0.8B-Q8_0.gguf
+qwen35-0.8b-q8-headq8.pq
+Qwen3.5-0.8B.SHA256SUMS
+qwen35-0.8b-tokenizer
+11622 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_ppl_fast -m models/qwen35-0.8b-q
+11666 bash -c mkdir -p pinfer && cd pinfer || exit 1; ls engine data models | head -40; pgrep -fa "flock" | cut -c1-120
+
+[exit 0]
