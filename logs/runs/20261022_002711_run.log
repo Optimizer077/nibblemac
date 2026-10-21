@@ -1,0 +1,23 @@
+# 2026-10-22T00:27:11 pi@10.42.0.2
+$ cd ~/pinfer && for M in q4k-headq4k bf16; do for S in 0 2 3; do echo "== $M spec=$S"; ./engine/pinfer_run_fast -m models/qwen35-0.8b-$M.pq -t 4 -n 48 --ids-file data/prompt64.ids --spec $S --draft-vocab 32768 2>/dev/null | grep -viE "^RESULT|tok/s|prefill|decode|^$" | head -3 | cut -c1-300; done; done
+
+== q4k-headq4k spec=0
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314
+spec k=0 draft_vocab=32768 | rounds 0 drafted 0 accepted 0 | mean accepted 0.000, 1.000 tok/pass | per pass: mtp 0.0 ms verify 0.0 ms commit 0.0 ms
+== q4k-headq4k spec=2
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314
+spec k=2 draft_vocab=32768 | rounds 18 drafted 35 accepted 29 | mean accepted 1.611, 2.611 tok/pass | per pass: mtp 18.5 ms verify 201.7 ms commit 19.6 ms
+== q4k-headq4k spec=3
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314
+spec k=3 draft_vocab=32768 | rounds 15 drafted 42 accepted 32 | mean accepted 2.133, 3.133 tok/pass | per pass: mtp 27.4 ms verify 228.9 ms commit 22.4 ms
+== bf16 spec=0
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092
+spec k=0 draft_vocab=32768 | rounds 0 drafted 0 accepted 0 | mean accepted 0.000, 1.000 tok/pass | per pass: mtp 0.0 ms verify 0.0 ms commit 0.0 ms
+== bf16 spec=2
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092
+spec k=2 draft_vocab=32768 | rounds 20 drafted 40 accepted 27 | mean accepted 1.350, 2.350 tok/pass | per pass: mtp 59.8 ms verify 511.5 ms commit 20.3 ms
+== bf16 spec=3
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092
+spec k=3 draft_vocab=32768 | rounds 18 drafted 52 accepted 29 | mean accepted 1.611, 2.611 tok/pass | per pass: mtp 86.3 ms verify 594.5 ms commit 21.8 ms
+
+[exit 0]

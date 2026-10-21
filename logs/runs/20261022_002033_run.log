@@ -1,0 +1,8 @@
+# 2026-10-22T00:20:33 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; for S in "" "--spec-k 2" "--spec-k 3"; do $V/pinfer bench -m models/qwen35-0.8b-mix-headq4k.pq --prompt-tokens 64 -n 64 --json $S 2>&1 | tail -1 | cut -c1-300; done
+
+{"engine": "pinfer-fast", "version": "0.1.0", "model": "models/qwen35-0.8b-mix-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "spec_k": null, "runs": [{"prefill_tps": 20.743944986851083, "decode_tps": 6.768198343066524}], "prefill_tps": 20.743944986851083, "decode_tps": 6.768198343066524}
+{"engine": "pinfer-fast", "version": "0.1.0", "model": "models/qwen35-0.8b-mix-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "spec_k": 2, "runs": [{"total_tps": 11.893144806571154, "n_gen": 64, "seconds": 5.381251220000195, "k": 2, "rounds": 22, "drafted": 43, "accepted": 41}], "total_tps"
+{"engine": "pinfer-fast", "version": "0.1.0", "model": "models/qwen35-0.8b-mix-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "spec_k": 3, "runs": [{"total_tps": 13.094205795889, "n_gen": 64, "seconds": 4.887658022000323, "k": 3, "rounds": 17, "drafted": 49, "accepted": 46}], "total_tps": 1
+
+[exit 0]

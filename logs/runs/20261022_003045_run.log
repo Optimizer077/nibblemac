@@ -1,0 +1,19 @@
+# 2026-10-22T00:30:45 pi@10.42.0.2
+$ cd ~/pinfer && ~/pinfer/venvs/pinfer/bin/python - <<"EOF"
+from pinfer.tokenizer import Tokenizer
+from pinfer.chat import apply_chat_template
+tok = Tokenizer.from_path("models/qwen35-0.8b-tokenizer")
+text = apply_chat_template([{"role": "user", "content": "Explain in three sentences why a Raspberry Pi 4 generates text slowly."}], tok.chat_template)
+ids = tok.encode(text, add_special_tokens=False)
+open("data/chat27.ids", "w").write(",".join(map(str, ids)))
+print("chat prompt ids:", len(ids))
+EOF
+for M in mix-headq4k q4k-headq4k; do for S in 0 2; do printf "%s k=%s: " $M $S; ./engine/pinfer_run_fast -m models/qwen35-0.8b-$M.pq -t 4 -n 40 --ids-file data/chat27.ids --spec $S --draft-vocab 32768 2>/dev/null | grep "^generated" | md5sum | cut -c1-12; done; done
+
+chat prompt ids: 27
+mix-headq4k k=0: 0d45f4c6e8b6
+mix-headq4k k=2: c4644585d177
+q4k-headq4k k=0: 08c27da6eecf
+q4k-headq4k k=2: 08c27da6eecf
+
+[exit 0]

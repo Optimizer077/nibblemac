@@ -1,0 +1,12 @@
+# 2026-10-22T00:31:52 pi@10.42.0.2
+$ cd ~/pinfer && for S in 0 2; do ./engine/pinfer_run_fast -m models/qwen35-0.8b-mix-headq4k.pq -t 4 -n 40 --ids-file data/chat27.ids --spec $S --draft-vocab 32768 2>/dev/null | grep "^generated" | sed "s/generated: //" > /tmp/gen$S.txt; done; python3 - <<"EOF"
+a = open("/tmp/gen0.txt").read().strip().split(","); b = open("/tmp/gen2.txt").read().strip().split(",")
+i = next((i for i, (x, y) in enumerate(zip(a, b)) if x != y), None)
+print("first divergence at generated index", i, "plain:", a[i:i+4], "spec:", b[i:i+4]); print("common prefix:", a[:i])
+EOF
+
+
+first divergence at generated index 18 plain: ['13001', '279', '4478', '506'] spec: ['3254', '424', '628', '1132']
+common prefix: ['760', '45980', '20010', '220', '19', '26023', '1414', '13569', '1521', '1141', '17128', '369', '264', '3074', '22728', '13540', '11', '864']
+
+[exit 0]

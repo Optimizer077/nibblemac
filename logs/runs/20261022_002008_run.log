@@ -1,0 +1,15 @@
+# 2026-10-22T00:20:08 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; $V/pip install -q --no-index --find-links ~/pinfer/wheels/pinfer --force-reinstall --no-deps ~/pinfer/wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl && $V/pinfer chat -m models/qwen35-0.8b-mix-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer -p "Explain in three sentences why a Raspberry Pi 4 generates text slowly." -n 120 --speculative --stats 2>&1; echo "--- plain for comparison ---"; $V/pinfer chat -m models/qwen35-0.8b-mix-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer -p "Explain in three sentences why a Raspberry Pi 4 generates text slowly." -n 120 --stats 2>&1 | tail -2
+
+The Raspberry Pi 4 generates text slowly because its processor is a single-core CPU, which means it can only execute one instruction at a time, causing the entire system to become a bottleneck.
+
+Additionally, the device lacks the high-speed memory and dedicated graphics processing units found in modern chips, so it struggles to handle the heavy computational load required for text generation.
+
+Finally, the lack of a dedicated GPU means it cannot efficiently parallelize the tasks needed to render text, resulting in a very slow rendering speed.
+[27 prompt tok (0 cached), 102 new, finish=stop, prefill 14.32 tok/s, decode 7.72 tok/s]
+[speculative k=2: 55 passes, 47/110 drafts accepted, 1.85 tok/pass, 7.79 tok/s incl. prefill]
+--- plain for comparison ---
+The Raspberry Pi 4 generates text slowly because its processor is a single-core CPU, which limits the speed at which it can execute the code that creates text. This single-core architecture means the device cannot keep up with the high throughput required for modern web applications, resulting in a noticeable delay between the user's input and the appearance of text.
+[27 prompt tok (0 cached), 68 new, finish=stop, prefill 20.66 tok/s, decode 6.80 tok/s]
+
+[exit 0]

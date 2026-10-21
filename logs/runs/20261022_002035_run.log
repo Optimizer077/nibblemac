@@ -1,0 +1,47 @@
+# 2026-10-22T00:20:35 pi@10.42.0.2
+$ rm -f gmon.out; ./engine/pinfer_run_pg -m models/qwen35-0.8b-q4-headq4.pq -t 1 -n 24 --ids-file data/prompt64.ids --spec 0 --bench | tail -2; gprof -b -p engine/pinfer_run_pg gmon.out | head -40
+
+spec k=0 draft_vocab=0 | rounds 0 drafted 0 accepted 0 | mean accepted 0.000, 1.000 tok/pass | per pass: mtp 0.0 ms verify 0.0 ms commit 0.0 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-q4-headq4.pq", "threads": 1, "n_prompt": 64, "n_gen": 24, "prefill_tps": 7.9188, "decode_tps": 5.1775, "peak_rss_mb": 433.3, "spec_k": 0, "draft_vocab": 0, "rounds": 0, "drafted": 0, "accepted": 0, "mean_accepted": 0.0000, "accept_rate": 0.0000, "tokens_per_pass": 1.0000, "mtp_ms_per_pass": 0.00, "verify_ms_per_pass": 0.00, "commit_ms_per_pass": 0.00}
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls   s/call   s/call  name    
+ 81.31      9.92     9.92     4488     0.00     0.00  kern_q4
+ 10.16     11.16     1.24      432     0.00     0.01  pf_linear_attn
+  3.52     11.59     0.43                             __aarch64_cas8_acq
+  1.64     11.79     0.20                             expf32
+  1.31     11.95     0.16      144     0.00     0.01  pf_full_attn
+  0.57     12.02     0.07     4488     0.00     0.00  kern_quant_act
+  0.41     12.07     0.05       24     0.00     0.48  pf_mlp
+  0.25     12.10     0.03 12828672     0.00     0.00  pf_silu
+  0.25     12.13     0.03    25056     0.00     0.00  pf_rmsnorm
+  0.16     12.15     0.02                             __memset_zva64
+  0.16     12.17     0.02                             munmap
+  0.08     12.18     0.01     4464     0.00     0.00  pf_matmul
+  0.08     12.19     0.01       87     0.00     0.00  kern_get_row_q
+  0.08     12.20     0.01                             __memcpy_generic
+  0.00     12.20     0.00    25056     0.00     0.00  pf_sigmoid
+  0.00     12.20     0.00     8976     0.00     0.00  kern_stats_enabled
+  0.00     12.20     0.00     4488     0.00     0.00  weight_bytes
+  0.00     12.20     0.00      187     0.00     0.00  get_mat
+  0.00     12.20     0.00      187     0.00     0.00  pf_dtype_supported
+  0.00     12.20     0.00      115     0.00     0.00  get_vec
+  0.00     12.20     0.00       87     0.00     0.00  pf_get_row
+  0.00     12.20     0.00       24     0.00     0.00  pf_forward
+  0.00     12.20     0.00       24     0.00     0.00  pf_matvec
+  0.00     12.20     0.00       24     0.00     0.00  pf_rope_tables
+  0.00     12.20     0.00       24     0.00     0.00  pinfer_argmax
+  0.00     12.20     0.00        1     0.00    11.52  main
+  0.00     12.20     0.00        1     0.00     0.00  pf_lin_log_free
+  0.00     12.20     0.00        1     0.00     0.00  pf_model_free
+  0.00     12.20     0.00        1     0.00     0.00  pf_model_load
+  0.00     12.20     0.00        1     0.00     0.00  pf_mtp_forward
+  0.00     12.20     0.00        1     0.00     0.00  pf_mtp_free
+  0.00     12.20     0.00        1     0.00     0.00  pf_pool_create
+  0.00     12.20     0.00        1     0.00     0.00  pf_pool_destroy
+  0.00     12.20     0.00        1     0.00     0.00  pf_set_batch
+  0.00     12.20     0.00        1     0.00    11.04  pf_spec_decode
+
+[exit 0]

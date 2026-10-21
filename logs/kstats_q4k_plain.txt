@@ -1,0 +1,25 @@
+KSTATS     rows   cols dtype   n    calls   ms_total   us/call     GB/s
+KSTATS     6144   1024     4  64       18      341.8   18990.5     0.19
+KSTATS     2048   1024     4  64       18      116.7    6482.4     0.18
+KSTATS     1024   2048     4  64       24      170.1    7085.8     0.17
+KSTATS     3584   1024     4  64       48      537.5   11198.9     0.18
+KSTATS     1024   3584     4  64       24      309.9   12911.7     0.16
+KSTATS     4096   1024     4  64        6       78.4   13074.7     0.18
+KSTATS      512   1024     4  64       12       20.7    1726.1     0.17
+KSTATS       16   1024     4  64       36        6.7     187.0     0.05
+KSTATS   248320   1024     4   1       64     2381.2   37206.9     3.84
+KSTATS     6144   1024     4   1     1134     1063.5     937.8     3.77
+KSTATS     2048   1024     4   1     1134      369.0     325.4     3.63
+KSTATS     1024   2048     4   1     1512      837.9     554.2     2.13
+KSTATS     3584   1024     4   1     3024     1646.4     544.4     3.79
+KSTATS     1024   3584     4   1     1512      816.6     540.1     3.82
+KSTATS     4096   1024     4   1      378      247.2     654.1     3.61
+KSTATS      512   1024     4   1      756       59.3      78.5     3.76
+KSTATS       16   1024     4   1     2268       16.1       7.1     1.30
+KSTATS total calls=11968 ms=9019.2
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314,8394,11,424,557,279,3098,314,51895,11,424,557,279,10151,314,279,1814
+load 0.004 s | prefill 64 tok in 3.086 s = 20.736 tok/s | decode 63 tok in 9.138 s = 6.894 tok/s | peak RSS 433.2 MB | matvec=fast threads=4
+spec k=0 draft_vocab=0 | rounds 0 drafted 0 accepted 0 | mean accepted 0.000, 1.000 tok/pass | per pass: mtp 0.0 ms verify 0.0 ms commit 0.0 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-q4k-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 20.7364, "decode_tps": 6.8942, "peak_rss_mb": 433.2, "spec_k": 0, "draft_vocab": 0, "rounds": 0, "drafted": 0, "accepted": 0, "mean_accepted": 0.0000, "accept_rate": 0.0000, "tokens_per_pass": 1.0000, "mtp_ms_per_pass": 0.00, "verify_ms_per_pass": 0.00, "commit_ms_per_pass": 0.00}
+
+saved bench/results/pinfer-kstats-q4k-plain_20261022_003014.json  valid=True  temp 51.6'C -> 52.1'C

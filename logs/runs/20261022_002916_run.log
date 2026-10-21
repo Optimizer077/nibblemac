@@ -1,0 +1,21 @@
+# 2026-10-22T00:29:16 pi@10.42.0.2
+$ cd ~/pinfer && ~/pinfer/venvs/pinfer/bin/pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer -p "Explain in three sentences why a Raspberry Pi 4 generates text slowly." -n 120 --speculative --spec-k 0 --stats 2>&1 | head -c 400; echo; echo "--- k=2 ---"; ~/pinfer/venvs/pinfer/bin/pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer -p "Explain in three sentences why a Raspberry Pi 4 generates text slowly." -n 120 --speculative --spec-k 2 --stats 2>&1 | head -c 400; echo; echo "--- python plain ---"; ~/pinfer/venvs/pinfer/bin/pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer -p "Explain in three sentences why a Raspberry Pi 4 generates text slowly." -n 120 --stats 2>&1 | head -c 400
+
+The Raspberry Pi 4 generates text slowly because its CPU is significantly slower than the modern processors found in modern laptops, which limits the speed of the text processing engine.
+
+Additionally, the Pi's lack of a dedicated graphics card means it cannot efficiently handle the rendering of complex text, resulting in a noticeable lag in the display.
+
+Finally, the Pi's limited RAM restricts th
+--- k=2 ---
+The Raspberry Pi 4 generates text slowly because its CPU is significantly slower than the modern processors found in modern laptops, which limits the speed of the text processing engine.
+
+Additionally, the Pi's lack of a dedicated graphics card means it cannot efficiently handle the rendering of complex text, resulting in a noticeable lag in the display.
+
+Finally, the Pi's limited RAM restricts th
+--- python plain ---
+The Raspberry Pi 4 generates text slowly because its CPU is significantly slower than the modern processors found in modern laptops, which limits the speed of the text processing engine.
+
+Additionally, the Pi's lack of a dedicated graphics card means it cannot efficiently handle the rendering of complex text, resulting in a noticeable lag in the display.
+
+Finally, the Pi's limited RAM restricts th
+[exit 0]

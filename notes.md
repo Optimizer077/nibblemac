@@ -99,6 +99,9 @@ Q4 layers + Q4K head scores 21.58, so the symmetric Q4_G32 *layers* are what los
 (like llama.cpp's Q4_0); Q4K_G32's asymmetric 32-column groups fix it at the same 4.5 bits.
 **Recommended default: `q4k-headq4k` (11.57 tok/s with speculation, PPL 18.48 ≈ Q4_K_M).**
 
-Speculative decoding is exact (identical tokens to plain greedy, `tests/test_spec.py`).
+Speculative decoding is exact by construction (identical tokens to plain greedy with the scalar
+kernels, `tests/test_spec.py`); with the NEON kernels the batched verify pass currently rounds
+differently from single-token decode, so near-tie argmaxes can flip (seen on `mix-headq4k`,
+chat prompt, token 18; not on `q4k-headq4k`) — being fixed by making batched == single bitwise.
 Verify-pass cost vs one decode step (bf16): 1.07 / 1.27 / 1.38 / 1.61 for k=1..4 — the
 remaining lever together with prefill (MNN leads there).

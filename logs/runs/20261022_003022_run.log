@@ -1,0 +1,14 @@
+# 2026-10-22T00:30:22 pi@10.42.0.2
+$ cd ~/pinfer && ~/pinfer/venvs/pinfer/bin/python - <<"EOF"
+from pinfer.tokenizer import Tokenizer
+from pinfer.chat import ChatTemplate
+import inspect, pinfer.chat as c
+print([n for n in dir(c) if not n.startswith("_")])
+EOF
+
+
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+ImportError: cannot import name 'ChatTemplate' from 'pinfer.chat' (/home/pi/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/chat.py)
+
+[exit 1]
