@@ -122,7 +122,9 @@ def chain_drafts(mtp: MTPHead, head_w: torch.Tensor, h: torch.Tensor, x: torch.T
                  K: int, nvoc: int, swap: bool = False) -> torch.Tensor:
     """Drafts [K, T-1]: draft s for base row i predicts x_{i+s+1}. Rows use x_{i+1}."""
     T = h.shape[0] - 1                    # rows 0..T-1 need x_{i+1}
-    drafts, prev_m, prev_d = [], None, None
+    drafts: list[torch.Tensor] = []
+    prev_m: list[torch.Tensor] = []
+    prev_d: list[torch.Tensor] = []
     for s in range(K):
         mask, pos = chain_rows(T, s)
         hs, ts = [h[:T]], [x[1:T + 1]]
@@ -133,8 +135,8 @@ def chain_drafts(mtp: MTPHead, head_w: torch.Tensor, h: torch.Tensor, x: torch.T
         mb = m[T * s:]
         d = (mb @ head_w[:nvoc].T).argmax(-1)
         drafts.append(d)
-        prev_m = (prev_m or []) + [mb]
-        prev_d = (prev_d or []) + [d]
+        prev_m.append(mb)
+        prev_d.append(d)
     return torch.stack(drafts)
 
 
@@ -174,7 +176,7 @@ def main() -> None:
     mtp.load(next(mdir.glob("*.safetensors")))
     mtp.eval()
     head_w = lm.embed_tokens.weight
-    pre_norm = {}
+    pre_norm: dict[str, torch.Tensor] = {}
     lm.norm.register_forward_hook(lambda mod, inp, out: pre_norm.__setitem__("h", inp[0][0]))
 
     def main_hidden(ids: torch.Tensor) -> torch.Tensor:
@@ -209,7 +211,8 @@ def main() -> None:
 
     # ---- acceptance on varied text ---------------------------------------------------
     vocabs = [int(v) for v in a.vocabs.split(",")]
-    per_prompt, agg = [], {}
+    per_prompt: list[dict] = []
+    agg: dict[str, dict] = {}
     for text in PROMPTS:
         pids = tokz(text, return_tensors="pt").input_ids[0]
         with torch.no_grad():
@@ -240,21 +243,22 @@ def main() -> None:
     summary = {name: {"n_rows": g["n"], "p_cond": (g["ok"] / np.maximum(g["den"], 1)).tolist(),
                       "mean_accept_by_k": (g["acc"] / max(g["n"], 1)).tolist()}
                for name, g in agg.items()}
-    for name, s in summary.items():
-        logger.info("%-22s rows %4d  p_cond %s  E[accepted] k=1..%d %s", name, s["n_rows"],
-                    [round(v, 3) for v in s["p_cond"]], a.k,
-                    [round(v, 3) for v in s["mean_accept_by_k"]])
+    for name, row in summary.items():
+        logger.info("%-22s rows %4d  p_cond %s  E[accepted] k=1..%d %s", name, row["n_rows"],
+                    [round(v, 3) for v in row["p_cond"]], a.k,
+                    [round(v, 3) for v in row["mean_accept_by_k"]])
     (OUT / "prompts.json").write_text(json.dumps(   # token ids for tests/test_spec.py
         [{"text": r["prompt"], "ids": r["ids"]} for r in per_prompt], indent=1,
         ensure_ascii=False), encoding="utf-8")
-    (OUT / "acceptance.json").write_text(json.dumps(
+    (OUT / "acceptance.json").write_text(json.dumps(   # holds the Chinese prompt: UTF-8
         {"k": a.k, "new_tokens": a.new_tokens, "summary": summary, "per_prompt": per_prompt},
-        indent=1, ensure_ascii=False))
+        indent=1, ensure_ascii=False), encoding="utf-8")
     meta = {"model": a.model, "golden_prompt_ids": ids.tolist(), "first_greedy": int(greedy[0]),
             "draft_ids": drafts, "greedy_next": gold_next, "k": a.k,
             "semantics": "see module docstring / engine/SPEC.md",
             "torch": torch.__version__}
-    (OUT / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    (OUT / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False),
+                                   encoding="utf-8")
     logger.info("wrote %s", OUT)
 
 

@@ -32,7 +32,10 @@ def test_missing_model(lib: Any, tmp_path: Path) -> None:
         pinfer.Model.load(tmp_path, tokenizer=False)  # a directory
 
 
-@pytest.mark.parametrize("content", [b"tiny", b"\0" * 8192, b"PINFERQ\0" + b"\xff" * 8184])
+# Explicit ids: the default ones spell out all 8 KB of each content, which bloats reports and
+# exceeds Windows' 32767-character limit for PYTEST_CURRENT_TEST (setup error there).
+@pytest.mark.parametrize("content", [b"tiny", b"\0" * 8192, b"PINFERQ\0" + b"\xff" * 8184],
+                         ids=["tiny", "zeros", "bad-header"])
 def test_bad_model_file(lib: Any, tmp_path: Path, content: bytes) -> None:
     bad = tmp_path / "bad.pq"
     bad.write_bytes(content)

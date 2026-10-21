@@ -3,7 +3,7 @@
 # harness/pi.py bench (each holds the Pi-wide lock; results land in bench/results/).
 # Usage: bash bench/common/run_baselines.sh <group> ...   groups: mnn ort-int4 ort-int8 ort-acc1 torch
 set -uo pipefail
-cd "$(dirname "$0")/../.."
+cd "$(dirname "$0")/../.." || exit 1
 B() { echo "=== $1  $(date +%T)"; python harness/pi.py bench "$1" -- "cd baselines && $2" | grep -E "^saved|^RESULT" | cut -c1-400; }
 
 for g in "$@"; do

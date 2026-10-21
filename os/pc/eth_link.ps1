@@ -9,6 +9,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Start-Transcript -Path $LogPath -Force | Out-Null
+$exitCode = 0
 try {
     if ($Undo) {
         Get-NetIPAddress -InterfaceAlias $Alias -AddressFamily IPv4 -ErrorAction SilentlyContinue |
@@ -24,5 +25,6 @@ try {
     }
     Get-NetIPAddress -InterfaceAlias $Alias -AddressFamily IPv4 | Format-Table IPAddress, PrefixLength, PrefixOrigin -AutoSize | Out-String | Write-Output
 }
-catch { Write-Output "ERROR: $_" }
+catch { Write-Output "ERROR: $_"; $exitCode = 1 }
 finally { Stop-Transcript | Out-Null }
+exit $exitCode   # non-zero on failure, for callers that check it

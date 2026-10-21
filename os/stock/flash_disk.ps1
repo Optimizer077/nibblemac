@@ -12,6 +12,8 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 Start-Transcript -Path $LogPath -Force | Out-Null
+$exitCode = 0
+$tookOffline = $false
 try {
     $disk = Get-Disk -Number $DiskNumber
     if ($disk.FriendlyName -ne $ExpectedName -or $disk.Size -ne $ExpectedSize -or $disk.BusType -ne 'USB' -or $disk.IsBoot -or $disk.IsSystem) {
@@ -22,6 +24,7 @@ try {
     Write-Output "Target OK: disk $DiskNumber $($disk.FriendlyName). Image $imgLen bytes."
 
     Set-Disk -Number $DiskNumber -IsOffline $true   # dismounts volumes so raw writes are allowed
+    $tookOffline = $true
     $chunk = 4MB
     $buf = New-Object byte[] $chunk
     if (-not $VerifyOnly) {
@@ -56,8 +59,16 @@ try {
 }
 catch {
     Write-Output "ERROR: $_"
+    $exitCode = 1
 }
 finally {
-    try { Set-Disk -Number $DiskNumber -IsOffline $false } catch { Write-Output "could not bring disk online: $_" }
+    # Release the raw handles first (an exception can leave them open), then bring the disk
+    # back online only if this script took it offline: after a failed identity check
+    # $DiskNumber may name another disk, which must be left exactly as it was.
+    foreach ($s in @($src, $dst, $rd)) { if ($s) { $s.Dispose() } }
+    if ($tookOffline) {
+        try { Set-Disk -Number $DiskNumber -IsOffline $false } catch { Write-Output "could not bring disk online: $_" }
+    }
     Stop-Transcript | Out-Null
 }
+exit $exitCode   # non-zero on any failure (VERIFY FAILED included), for callers that check it

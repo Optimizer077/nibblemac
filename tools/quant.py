@@ -70,6 +70,7 @@ def quant_sym(w: np.ndarray, g: int, bits: int, search: bool = True
             best_q = np.where(m, q, best_q)
             best_d = np.where(m, d, best_d)
             best_e = np.where(m, e, best_e)
+    assert best_q is not None and best_d is not None  # factors is never empty
     r, c = w.shape
     return best_q.reshape(r, c).astype(np.int8), best_d[..., 0].astype(np.float16)
 
@@ -289,8 +290,7 @@ def tensor_type(name: str) -> str:
     return re.sub(r"layers\.\d+\.", "", name).replace(".weight", "")
 
 
-def report(model_dir: Path, sample_embed: int, rows_per_chunk: int,
-           only: list[str] | None = None) -> dict:
+def report(model_dir: Path, sample_embed: int, rows_per_chunk: int) -> dict:
     files = sorted(model_dir.glob("*.safetensors"))
     acc: dict[str, dict] = {}
     for path in files:

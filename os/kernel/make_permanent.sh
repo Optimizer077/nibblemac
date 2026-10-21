@@ -17,7 +17,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || die "run as root (sudo)"
 [ "$(running_krel)" = "$KREL" ] || die "running $(running_krel), not $KREL: tryboot the pinfer kernel first (sudo reboot '0 tryboot')"
 [ -s "$FW/$PREFIX_DIR/$IMG_NAME" ] && [ -s "$FW/$PREFIX_DIR/bcm2711-rpi-4-b.dtb" ] || die "$FW/$PREFIX_DIR incomplete"
-tb=$(od -An -tu4 --endian=big $R/proc/device-tree/chosen/bootloader/tryboot 2>/dev/null | tr -d ' ' || echo "?")
+tb=$(od -An -tu4 --endian=big "$R/proc/device-tree/chosen/bootloader/tryboot" 2>/dev/null | tr -d ' ' || echo "?")
 [ "$tb" = 1 ] || echo "note: current boot was not a tryboot (tryboot=$tb); continuing because uname -r matches"
 if grep -q '^# pinfer-kernel BEGIN' "$FW/config.txt"; then
     echo "config.txt already has a pinfer-kernel block:"; sed -n '/^# pinfer-kernel BEGIN/,/^# pinfer-kernel END/p' "$FW/config.txt"; exit 0

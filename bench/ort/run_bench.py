@@ -20,7 +20,7 @@ import statistics
 import time
 from pathlib import Path
 
-import onnxruntime  # noqa: F401  (must load before onnxruntime_genai, or its dlopen fails)
+import onnxruntime  # must load before onnxruntime_genai, or its dlopen fails
 import onnxruntime_genai as og
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -78,8 +78,11 @@ def main() -> int:
     model = build_model(args.model, args.threads, args.mtp)
     load_s = time.perf_counter() - t_load
 
-    pre, dec, matches, info = [], [], [], {}
-    first = []
+    pre: list[float] = []
+    dec: list[float] = []
+    matches: list[int] = []
+    info: dict = {}
+    first: list[int] = []
     for i in range(args.reps + 1):  # rep 0 = warm-up, excluded
         p, d, seq, info = one_run(model, prompt, args.n_gen)
         m = next((k for k, (a, b) in enumerate(zip(seq, ref)) if a != b), min(len(seq), len(ref)))

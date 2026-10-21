@@ -100,7 +100,8 @@ def ssh(cfg: PiConfig, command: str, capture: bool = False, stdin: bytes | None 
     """Run a shell command on the Pi. Use retries only for read-only commands:
     exit 255 means "ssh failed", which can also happen after the command already started."""
     for attempt in range(retries + 1):
-        proc = subprocess.run(ssh_base(cfg) + [command], input=stdin, capture_output=capture)
+        proc = subprocess.run(ssh_base(cfg) + [command], input=stdin, capture_output=capture,
+                              check=False)  # callers inspect returncode (255 = ssh failure)
         if proc.returncode != 255 or attempt == retries:
             return proc
         print(f"(ssh failed, retrying in 5 s — attempt {attempt + 2}/{retries + 1})", file=sys.stderr)

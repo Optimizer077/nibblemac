@@ -64,7 +64,8 @@ def main() -> None:
         "greedy_text": tok.decode(greedy), "hidden_shape": list(hidden.shape),
         "logits_shape": list(logits.shape),
     }
-    (out / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    (out / "meta.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False),
+                                   encoding="utf-8")
     logger.info("wrote %s: T=%d, hidden %s, logits %s", out, ids.shape[1], hidden.shape, logits.shape)
     logger.info("greedy: %r", meta["greedy_text"])
 

@@ -58,7 +58,7 @@ def run_engine(binary: Path, model: Path, ids: np.ndarray, n_gen: int, batch: in
             "--dump-hidden", wsl_path(hid_f), "--dump-logits", wsl_path(log_f)]
     if os.name == "nt":
         args = ["wsl.exe", "-d", "Ubuntu", "--"] + args
-    proc = subprocess.run(args, capture_output=True, text=True,
+    proc = subprocess.run(args, capture_output=True, text=True, check=False,
                           env={**os.environ, "MSYS_NO_PATHCONV": "1"})
     if proc.returncode != 0:
         sys.exit(f"engine failed ({proc.returncode}):\n{proc.stdout}\n{proc.stderr}")

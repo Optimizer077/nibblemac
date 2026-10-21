@@ -11,18 +11,17 @@
 set -euo pipefail
 FWSRC=$1; TARBALL=$2; KREL=6.18.50-pinfer
 T=/root/src/pinfer-installtest; rm -rf $T; mkdir -p $T/boot/firmware/overlays $T/proc/device-tree/chosen/bootloader $T/work
-cp $FWSRC/config.txt $FWSRC/cmdline.txt $T/boot/firmware/
+cp "$FWSRC/config.txt" "$FWSRC/cmdline.txt" $T/boot/firmware/
 head -c 1000000 /dev/urandom > $T/boot/firmware/kernel8.img; echo stockdtb > $T/boot/firmware/bcm2711-rpi-4-b.dtb; echo r > $T/boot/firmware/overlays/README
 (cd $T/boot/firmware && find . -type f | sort | xargs sha256sum) > $T/stock.sums
-tar xzf $TARBALL -C $T/work; cd $T/work/$KREL
+tar xzf "$TARBALL" -C $T/work; cd $T/work/$KREL
 export PINFER_TEST_ROOT=$T
 pass() { echo "PASS: $*"; }; fail() { echo "FAIL: $*"; exit 1; }
-NPASS=0
 echo "## dry run"; ./install_tryboot.sh --dry-run > $T/dry.log || fail "dry-run exit"; if [ ! -e $T/boot/firmware/tryboot.txt ] && [ ! -e $T/boot/firmware/pinfer ]; then pass "dry-run wrote nothing"; else fail "dry-run wrote files"; fi
 echo "## install"; ./install_tryboot.sh | tail -25
 if (cd $T/boot/firmware && sha256sum -c --quiet $T/stock.sums); then pass "stock files unchanged after install"; else fail "stock files unchanged after install"; fi
 if [ -s $T/lib/modules/$KREL/modules.dep ]; then pass "depmod produced modules.dep ($(wc -l < $T/lib/modules/$KREL/modules.dep) lines)"; else fail "depmod produced modules.dep ($(wc -l < $T/lib/modules/$KREL/modules.dep) lines)"; fi
-if diff <(head -n $(wc -l < $T/boot/firmware/config.txt) $T/boot/firmware/tryboot.txt) $T/boot/firmware/config.txt; then pass "tryboot.txt starts with config.txt verbatim"; else fail "tryboot.txt starts with config.txt verbatim"; fi
+if diff <(head -n "$(wc -l < $T/boot/firmware/config.txt)" $T/boot/firmware/tryboot.txt) $T/boot/firmware/config.txt; then pass "tryboot.txt starts with config.txt verbatim"; else fail "tryboot.txt starts with config.txt verbatim"; fi
 if grep -qx 'os_prefix=pinfer/' $T/boot/firmware/tryboot.txt && grep -qx 'kernel=kernel8-pinfer.img' $T/boot/firmware/tryboot.txt; then pass "tryboot.txt selects pinfer"; else fail "tryboot.txt selects pinfer"; fi
 echo "## make_permanent while running stock -> must refuse"
 if PINFER_TEST_KREL=6.18.50+rpt-rpi-v8 ./make_permanent.sh; then fail "should refuse"; else pass "refused"; fi
@@ -40,7 +39,7 @@ if out=$(PINFER_TEST_KREL=$KREL ./make_permanent.sh); echo "$out" | sed -n 1p; e
 if [ "$(grep -c '^# pinfer-kernel BEGIN' $T/boot/firmware/config.txt)" = 1 ]; then pass "permanent block added once"; else fail "permanent block added once"; fi
 echo "## rollback"
 ./rollback.sh
-if diff $T/boot/firmware/config.txt $FWSRC/config.txt; then pass "config.txt byte-identical to original after rollback"; else fail "config.txt byte-identical to original after rollback"; fi
+if diff $T/boot/firmware/config.txt "$FWSRC/config.txt"; then pass "config.txt byte-identical to original after rollback"; else fail "config.txt byte-identical to original after rollback"; fi
 if [ ! -e $T/boot/firmware/tryboot.txt ]; then pass "tryboot.txt moved aside"; else fail "tryboot.txt moved aside"; fi
 if PINFER_TEST_KREL=$KREL ./rollback.sh --purge; then fail "purge should refuse"; else pass "purge refused while running pinfer"; fi
 PINFER_TEST_KREL=6.18.50+rpt-rpi-v8 ./rollback.sh --purge | tail -2

@@ -25,6 +25,9 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 _ELF_MACHINES = {62: "x86_64", 183: "aarch64"}
 _GLIBC_RE = re.compile(rb"GLIBC_2\.(\d+)(?:\.\d+)?\x00")
+# The converter and the module it imports; tools/ also holds dev-only scripts (figures)
+# that must not ship in the wheel.
+_BUNDLED_TOOLS = ("convert.py", "quant.py")
 
 
 def elf_arch(data: bytes) -> str:
@@ -72,6 +75,9 @@ class PinferBuildHook(BuildHookInterface):
         inc[str(so)] = "pinfer/libpinfer.so"
         if (lib_dir / "BUILD_INFO.json").is_file():
             inc[str(lib_dir / "BUILD_INFO.json")] = "pinfer/BUILD_INFO.json"
-        for script in sorted((root / "tools").glob("*.py")):
-            inc[str(script)] = f"pinfer/_tools/{script.name}"
+        for name in _BUNDLED_TOOLS:
+            script = root / "tools" / name
+            if not script.is_file():
+                raise RuntimeError(f"{script} missing: the wheel's `pinfer convert` needs it")
+            inc[str(script)] = f"pinfer/_tools/{name}"
         self.app.display_info(f"pinfer wheel: {so} -> {tag}")

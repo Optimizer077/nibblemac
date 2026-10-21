@@ -8,3 +8,15 @@ __pycache__/
 images/
 *.secret
 ref/golden/
+# Claude Code local state and agent worktrees
+.claude/
+# Python tool caches and packaging output (wheels go to build/dist/)
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+*.egg-info/
+dist/
+# cloud-init first-boot files (os/stock/render_firstboot.py): Wi-Fi PSK hash, password hash
+user-data
+network-config

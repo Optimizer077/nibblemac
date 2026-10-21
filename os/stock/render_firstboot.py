@@ -2,7 +2,9 @@
 
 Writes user-data, network-config and meta-data into --out. Copy them onto the image's boot
 partition (FAT) before first boot. Only a WPA PSK hash and a SHA-512 crypt password hash
-are written — no plaintext secrets.
+are written, never the passphrase or the password. The PSK hash still joins the Wi-Fi network
+as well as the passphrase does, and the crypt hash can be attacked offline: treat --out as
+secret, keep it outside the repository and never commit it.
 
     python os/stock/render_firstboot.py --out DIR --ssid NAME --psk-file FILE \
         --pubkey ~/.ssh/key.pub --country KR --password-hash-file FILE
