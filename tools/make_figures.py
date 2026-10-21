@@ -2,29 +2,20 @@
 
 Numbers are the verified ones from notes.md ("Scoreboard", "Context length") with their
 result files in bench/results/; each dataset below names its source so a figure can be
-traced back. Colors follow the validated dataviz palette (light surface #fcfcfb):
-series 1 blue #2a78d6, 2 orange #eb6834, 3 aqua #1baf7a; ink #0b0b0b / #52514e / #898781.
+traced back. Style and palette: tools/figstyle.py.
 
     uv run --no-project --with matplotlib python tools/make_figures.py
 """
 from __future__ import annotations
 
 import logging
-from pathlib import Path
 
-import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.patches import Patch  # noqa: E402
+from figstyle import AQUA, AXIS, BLUE, GRID, INK, INK2, MUTED, ORANGE, SURFACE, new_fig, save, setup, style, title
 
 logger = logging.getLogger(__name__)
-ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "docs" / "figures"
-
-SURFACE, INK, INK2, MUTED, GRID, AXIS = "#fcfcfb", "#0b0b0b", "#52514e", "#898781", "#e1e0d9", "#c3c2b7"
-BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"
-FONT = {"family": ["Segoe UI", "DejaVu Sans", "sans-serif"]}
 
 # ---------------------------------------------------------------- data (Pi 4, 4 threads, 64+64 tokens)
 # (label, plain tok/s, speculative tok/s or None, perplexity or None, source)
@@ -54,37 +45,10 @@ CONTEXT = [(64, 7.88, 16.49, 37.4), (512, 6.20, 9.04, 21.6), (2048, 4.12, 2.39, 
 KSWEEP = [(0, 1.00, 7.88), (2, 2.63, 14.51), (3, 3.32, 16.49), (4, 3.94, 15.65)]
 
 
-def style(ax: plt.Axes, ylabel: str = "", xlabel: str = "") -> None:
-    ax.set_facecolor(SURFACE)
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(False)
-    for side in ("left", "bottom"):
-        ax.spines[side].set_color(AXIS)
-    ax.tick_params(colors=MUTED, labelcolor=INK2, length=0)
-    ax.grid(axis="y", color=GRID, linewidth=0.8)
-    ax.set_axisbelow(True)
-    ax.set_ylabel(ylabel, color=INK2)
-    ax.set_xlabel(xlabel, color=INK2)
-
-
-def new_fig(w: float = 8.0, h: float = 4.2) -> tuple[plt.Figure, plt.Axes]:
-    fig, ax = plt.subplots(figsize=(w, h), dpi=160)
-    fig.patch.set_facecolor(SURFACE)
-    return fig, ax
-
-
-def save(fig: plt.Figure, name: str) -> None:
-    OUT.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout()
-    fig.savefig(OUT / name, facecolor=SURFACE)
-    plt.close(fig)
-    logger.info("wrote %s", OUT / name)
-
-
 def fig_decode() -> None:
     """Grouped horizontal bars: plain vs speculative decode, fastest at the top."""
     rows = sorted(ENGINES, key=lambda r: r[1])
-    fig, ax = new_fig(8.0, 4.6)
+    fig, ax = new_fig(8.0, 4.8)
     y = range(len(rows))
     h = 0.36
     ax.barh([i + h / 2 for i in y], [r[1] for r in rows], height=h, color=BLUE, label="plain greedy")
@@ -100,7 +64,7 @@ def fig_decode() -> None:
     ax.grid(axis="y", visible=False)
     ax.set_xlim(0, 19)
     ax.legend(frameon=False, loc="lower right", labelcolor=INK2)
-    ax.set_title("Qwen3.5-0.8B decode speed on a Raspberry Pi 4 (4 threads)", color=INK, loc="left")
+    title(ax, "Decode speed: pinfer vs standard runtimes", "Qwen3.5-0.8B on a Raspberry Pi 4 (4 GB), 4 threads, 64-token prompt, 64 generated tokens, no throttling")
     save(fig, "decode_speed.png")
 
 
@@ -131,7 +95,7 @@ def fig_speed_quality() -> None:
     ax.set_xlim(17.5, 22.5)
     ax.set_ylim(0, 18.5)
     ax.legend(frameon=False, loc="upper right", labelcolor=INK2)
-    ax.set_title("Speed vs quality at 4- and 8-bit weights", color=INK, loc="left")
+    title(ax, "Speed vs quality", "Perplexity on wikitext-2 (8 × 512 tokens, llama-perplexity protocol); pinfer Q4K sits at Q4_K_M quality")
     save(fig, "speed_vs_quality.png")
 
 
@@ -156,7 +120,7 @@ def fig_progress() -> None:
     style(ax, ylabel="tokens / s")
     ax.set_ylim(0, 19)
     ax.legend(frameon=False, loc="upper left", labelcolor=INK2)
-    ax.set_title("pinfer decode speed after each optimization step (Q4K unless noted)", color=INK, loc="left")
+    title(ax, "How the speed was built up", "Each step verified against the fp32 reference (per-layer error ≤ 3e-6) and, for speculation, token-identical to plain greedy")
     save(fig, "progress.png")
 
 
@@ -176,7 +140,7 @@ def fig_context() -> None:
     style(ax, ylabel="tokens / s", xlabel="context length (tokens in the prompt)")
     ax.set_ylim(0, 40)
     ax.legend(frameon=False, loc="upper right", labelcolor=INK2)
-    ax.set_title("Speed vs context length — before the context-window work", color=INK, loc="left")
+    title(ax, "Speed vs context length (before the context-window work)", "Decode fell 29% at 4096 tokens and speculation lost its gain on wikitext; the attention path, not KV traffic, was the cause")
     save(fig, "context_length.png")
 
 
@@ -197,7 +161,7 @@ def fig_kspeed() -> None:
     a2.set_xticks(ks, ["plain", "k=2", "k=3", "k=4"])
     style(a2, ylabel="decode tokens / s")
     a2.set_ylim(0, 19)
-    fig.suptitle("MTP speculative decoding: drafts per round (k) — Q4K model", color=INK, x=0.02, ha="left")
+    fig.suptitle("Drafts per round (k): more drafts raise tokens per pass, but verifying them costs more", color=INK, x=0.02, ha="left", fontweight="semibold")
     save(fig, "speculative_k.png")
 
 
@@ -213,15 +177,13 @@ def fig_prefill() -> None:
     ax.set_xlim(0, 42)
     ax.legend(handles=[Patch(color=BLUE, label="pinfer (ours)"), Patch(color=ORANGE, label="standard runtimes")],
               frameon=False, loc="lower right", labelcolor=INK2)
-    ax.set_title("Prefill (prompt processing) speed", color=INK, loc="left")
+    title(ax, "Prefill (prompt processing) speed", "64-token prompt; pinfer processes prompts in batches of up to 64 positions per weight pass")
     save(fig, "prefill_speed.png")
 
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
-    plt.rcParams["font.family"] = FONT["family"]
-    plt.rcParams["text.color"] = INK
-    plt.rcParams["axes.titleweight"] = "semibold"
+    setup()
     fig_decode()
     fig_speed_quality()
     fig_progress()
