@@ -3,6 +3,23 @@
 All changes to this project **and to the Pi** are recorded here, newest first.
 Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `docs/pi-state.md`.
 
+## 2026-10-22
+
+### Added
+- `tools/convert.py --quant {bf16,q8,q4,q4k} --head ... --override REGEX=DTYPE` (quantized
+  `.pq` files via `tools/quant.py`); `engine/tools/pinfer_ppl` (llama-perplexity-compatible
+  perplexity, cross-checked vs llama.cpp); `bench/quality/make_tokens.py`, `ppl_pc_c8.sh`.
+- Pi wheel with the fast kernels (`manylinux_2_34_aarch64`), installed into `~/pinfer/venvs/pinfer`.
+
+### Measured (Pi 4, Qwen3.5-0.8B, 64+64 tokens)
+- pinfer Q4+Q4 head: 6.88 tok/s plain, **12.56 tok/s with exact MTP speculation** (k=3,
+  draft vocab 32768) — vs MNN int4 6.67, llama.cpp Q4_0 5.59.
+- Perplexity (wikitext-2, 8 chunks): pinfer mix-Q4K 18.50; llama.cpp bf16 17.93, Q8_0 17.97,
+  Q4_K_M 18.59, Q4_0 21.25.
+
+### Fixed
+- Harness: locked Pi jobs are killed after 20 min (a 38-min ORT run had stalled four agents).
+
 ## 2026-10-21
 
 ### Added (MTP self-speculative decoding — details `engine/SPEC.md`)

@@ -36,6 +36,10 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | `~/pinfer/models/` | Qwen3.5-0.8B GGUF Q8_0 / Q4_0 / Q4_K_M + `SHA256SUMS` (verified on Pi) |
 | `~/pinfer/wheels/pinfer/` | 25 aarch64/cp313 wheels for the pinfer venv (pinfer 0.1.0 + numpy, tokenizers, jinja2, pytest and deps) + `SHA256SUMS` (verified on Pi). Release work 2026-10-21 |
 | `~/pinfer/venvs/pinfer/` | user-level venv (`python3 -m venv`, offline `pip install --no-index --find-links ~/pinfer/wheels/pinfer "pinfer[test]"`); exact package list in `~/pinfer/venvs/pinfer.freeze.txt`. Undo: `rm -rf ~/pinfer/venvs/pinfer ~/pinfer/venvs/pinfer.freeze.txt` |
+| `~/pinfer/engine/pinfer_run_fast`, `pinfer_ppl_fast` (+ agents' `pinfer_run_spec*`) | pinfer tools, static aarch64 NEON build (`make -C engine pi MATVEC=fast`) |
+| `~/pinfer/models/qwen35-0.8b-{bf16,q8-headq8,q4-headq4,mix-headq4k,mix-headq8}.pq` | pinfer models from `tools/convert.py` (0.44–1.55 GB) |
+| `~/pinfer/data/prompt64.ids`, `wikitext2-qwen35.tokens.bin` | benchmark prompt ids; 32768 wikitext-2 token ids for `pinfer_ppl` |
+| `~/pinfer/wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl` | fast-kernel wheel, installed into the venv 2026-10-22 00:05 (`pip --force-reinstall --no-deps`) |
 | `~/pinfer/models/qwen35-0.8b-tokenizer/` | `tokenizer.json`, `tokenizer_config.json`, `chat_template.jinja` from `models/Qwen3.5-0.8B` @ `2fc06364` |
 | `~/pinfer/golden/qwen35-0.8b/meta.json` | golden prompt / ids for the Python tests (copy of `ref/golden/qwen35-0.8b/meta.json`) |
 | `~/pinfer/tests/python/` | Python test suite (copy of `tests/python/`) |
