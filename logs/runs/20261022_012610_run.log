@@ -1,0 +1,16 @@
+# 2026-10-22T01:26:10 pi@10.42.0.2
+$ uname -r; echo "tryboot flag: $(od -An -tu4 --endian=big /proc/device-tree/chosen/bootloader/tryboot 2>/dev/null)"; uptime -s; ip -br addr show wlan0 eth0 | cut -c1-60; cat /sys/devices/system/cpu/isolated | sed "s/^/isolated: /"; cat /sys/devices/system/cpu/nohz_full | sed "s/^/nohz_full: /"; grep -E "HugePages_Total|Hugepagesize" /proc/meminfo; cat /sys/kernel/mm/transparent_hugepage/enabled; dmesg --level=err,crit,alert,emerg | tail -5; vcgencmd measure_temp
+
+6.18.50-pinfer
+tryboot flag:           1
+2026-10-22 01:25:28
+Error: either "dev" is duplicate, or "eth0" is garbage.
+isolated: 
+nohz_full: 
+HugePages_Total:       0
+Hugepagesize:       2048 kB
+always [madvise] never
+[    1.185488] mmc1: Controller never released inhibit bit(s).
+temp=41.3'C
+
+[exit 0]

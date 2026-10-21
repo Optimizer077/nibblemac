@@ -1,0 +1,22 @@
+# 2026-10-22T01:26:40 pi@10.42.0.2
+$ ip -br addr show wlan0; ip -br addr show eth0; nmcli -t -f DEVICE,STATE dev | grep -E "wlan0|eth0"; ping -c2 -W2 1.1.1.1 | tail -1; echo "== dmesg err/warn (new kernel) =="; dmesg --level=err,warn | grep -vE "^\[\s*[0-9.]+\] (mmc1: Controller never|hdmi|vc4|EDID)" | tail -8; echo "== config check =="; zcat /proc/config.gz 2>/dev/null | grep -E "^CONFIG_(NO_HZ_FULL|RCU_NOCB_CPU|HUGETLBFS|TRANSPARENT_HUGEPAGE|READ_ONLY_THP_FOR_FS|CPU_ISOLATION)=" ; cat /proc/cmdline
+
+wlan0            UP             192.168.1.166/24 fe80::dea6:32ff:fe25:a7d8/64 
+eth0             UP             10.42.0.2/24 fe80::dea6:32ff:fe25:a7d7/64 
+wlan0:connected
+eth0:connected
+p2p-dev-wlan0:disconnected
+rtt min/avg/max/mdev = 7.264/7.320/7.376/0.056 ms
+== dmesg err/warn (new kernel) ==
+[    6.339082] snd_bcm2835: module is from the staging directory, the quality is unknown, you have been warned.
+[    6.510883] vc_sm_cma: module is from the staging directory, the quality is unknown, you have been warned.
+[    6.543181] bcm2835_mmal_vchiq: module is from the staging directory, the quality is unknown, you have been warned.
+[    6.568729] bcm2835_v4l2: module is from the staging directory, the quality is unknown, you have been warned.
+[    6.570391] bcm2835_isp: module is from the staging directory, the quality is unknown, you have been warned.
+[    6.576176] bcm2835_codec: module is from the staging directory, the quality is unknown, you have been warned.
+[    6.681506] hci_uart_bcm serial0-0: supply vbat not found, using dummy regulator
+[    6.683704] hci_uart_bcm serial0-0: supply vddio not found, using dummy regulator
+== config check ==
+coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR panic=10
+
+[exit 0]

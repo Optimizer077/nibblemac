@@ -1,0 +1,27 @@
+# 2026-10-22T01:18:50 pi@10.42.0.2
+$ ls data; cat data/prompt64.ids | head -c 200; echo; ls engine; nproc; uptime
+
+chat27.ids
+prompt64.ids
+wikitext2-qwen35.tokens.bin
+2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,55
+pinfer_ppl_fast
+pinfer_run
+pinfer_run_fast
+pinfer_run_kern
+pinfer_run_kern2
+pinfer_run_kern3
+pinfer_run_kern4
+pinfer_run_lin
+pinfer_run_lin2
+pinfer_run_lin3
+pinfer_run_lin4
+pinfer_run_pg
+pinfer_run_spec
+pinfer_run_spec_fast
+pinfer_run_spec_fast2
+spec_exact.sh
+4
+ 01:18:50 up  4:00,  1 user,  load average: 1.56, 2.50, 2.34
+
+[exit 0]

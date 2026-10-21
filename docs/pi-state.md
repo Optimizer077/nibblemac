@@ -21,6 +21,7 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | 2 | 2026-10-21 | eth0 static `10.42.0.2/24`, no gateway (`never-default`), IPv6 link-local only — for the direct cable to the PC | `netplan-eth0` (persisted to `/etc/netplan/90-NM-75a1216a-….yaml`) | `sudo nmcli con modify netplan-eth0 ipv4.method auto ipv4.addresses "" ipv4.never-default no ipv6.method ignore && sudo nmcli con up netplan-eth0` | snapshot `20261021_211516_before-eth-static`, `logs/runs/` ~21:15 |
 
 | 3 | 2026-10-21 | Bootloader EEPROM updated 2026-05-17 → **2026-09-23** (default channel; VL805 already current `000138c0`); applied by reboot at 21:17:45 | SPI EEPROM | `sudo rpi-eeprom-update -d -f /usr/lib/firmware/raspberrypi/bootloader-2711/default/pieeprom-2026-05-17.bin` (if that file is still shipped) then reboot | snapshot `20261021_211734_before-eeprom`; boot_id after: `c9020b3d…` |
+| 4 | 2026-10-22 01:25 | Custom kernel **6.18.50-pinfer** installed side by side (`os/kernel/install_tryboot.sh`): `/boot/firmware/pinfer/{kernel8-pinfer.img, cmdline.txt (+panic=10), initramfs8-pinfer, bcm2711 DTBs, overlays/}`, `/lib/modules/6.18.50-pinfer/`, `/boot/{config,System.map}-6.18.50-pinfer`, `/boot/firmware/tryboot.txt`. Stock `kernel8.img` (md5 6c6c9100…), `config.txt`, `cmdline.txt` untouched. Booted ONCE via `reboot '0 tryboot'` at 01:25:30 (back in 40 s, tryboot flag 1); a plain reboot returns to stock | `/boot/firmware/pinfer/`, `/lib/modules/6.18.50-pinfer` | `sudo ~/pinfer/kernel/6.18.50-pinfer/rollback.sh --purge` | snapshot `20261022_012440_before-pinfer-kernel`, `logs/runs/20261022_0125*` |
 
 ## PC-side changes
 | # | Date | Change | Undo |
@@ -51,3 +52,4 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | `logs/snapshots/20261021_210923_stock-baseline/` | stock OS after first boot, before change #1 |
 | `logs/snapshots/20261021_211516_before-eth-static/` | after change #1, before change #2 |
 | `logs/snapshots/20261021_211734_before-eeprom/` | after change #2, before change #3 |
+| `logs/snapshots/20261022_012440_before-pinfer-kernel/` | before change #4 (custom kernel) |

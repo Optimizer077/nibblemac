@@ -1,0 +1,32 @@
+# 2026-10-22T01:25:16 pi@10.42.0.2
+$ cd ~/pinfer/kernel/6.18.50-pinfer && sudo ./install_tryboot.sh 2>&1 | grep -vE "^\+ cp .*overlays" | tail -8 && ls -la /boot/firmware/pinfer/ | head -12 && ls -la /boot/firmware/tryboot.txt /boot/firmware/kernel8.img && md5sum /boot/firmware/kernel8.img && grep -c . /boot/firmware/tryboot.txt && tail -3 /boot/firmware/tryboot.txt
+
+NEXT (one-time test boot of 6.18.50-pinfer):
+    sudo reboot '0 tryboot'
+then check:   uname -r   (expect 6.18.50-pinfer)
+              od -An -tu4 --endian=big /proc/device-tree/chosen/bootloader/tryboot   (expect 1)
+If it does not come back within ~3 minutes: power-cycle -> stock kernel.
+Keep it:      sudo ./make_permanent.sh   (only while running 6.18.50-pinfer)
+Undo:         sudo ./rollback.sh [--purge]
+Split-core:   sudo ./splitcore_cmdline.sh on   (edits /boot/firmware/pinfer/cmdline.txt only)
+total 37079
+drwxr-xr-x 3 root root     1024 Oct 22 01:25 .
+drwxr-xr-x 5 root root     4608 Jan  1  1970 ..
+-rwxr-xr-x 1 root root    56411 Oct 22 01:25 bcm2711-rpi-400.dtb
+-rwxr-xr-x 1 root root    56407 Oct 22 01:25 bcm2711-rpi-4-b.dtb
+-rwxr-xr-x 1 root root    56928 Oct 22 01:25 bcm2711-rpi-cm4.dtb
+-rwxr-xr-x 1 root root    39913 Oct 22 01:25 bcm2711-rpi-cm4-io.dtb
+-rwxr-xr-x 1 root root    53824 Oct 22 01:25 bcm2711-rpi-cm4s.dtb
+-rwxr-xr-x 1 root root      141 Oct 22 01:25 cmdline.txt
+-rwxr-xr-x 1 root root 11864954 Oct 22 01:25 initramfs8-pinfer
+-rwxr-xr-x 1 root root 25799168 Oct 22 01:25 kernel8-pinfer.img
+drwxr-xr-x 2 root root    33280 Oct 22 01:25 overlays
+-rwxr-xr-x 1 root root 10192324 Oct  6 09:20 /boot/firmware/kernel8.img
+-rwxr-xr-x 1 root root     1427 Oct 22 01:25 /boot/firmware/tryboot.txt
+6c6c9100dfbaedb547f7c611235bbd16  /boot/firmware/kernel8.img
+44
+os_prefix=pinfer/
+kernel=kernel8-pinfer.img
+# pinfer-kernel END
+
+[exit 0]
