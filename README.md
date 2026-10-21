@@ -18,7 +18,10 @@ Repository: private, `github.com/Optimizer077/piquant` · engine and package: `p
 *Raspberry Pi 4 Model B Rev 1.1, stock Raspberry Pi OS kernel, 4 threads, 64-token prompt, 64 generated
 tokens. Every number has a result file in `bench/results/` listed in [notes.md](notes.md).*
 
-![Decode speed by engine](docs/figures/decode_speed.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/decode_speed-dark.png">
+  <img alt="On a Raspberry Pi 4, pinfer Q4K decodes 7.9 tokens/s plain and 16.5 tokens/s with exact speculative decoding, ahead of MNN int4 (6.7), llama.cpp (4.1–5.6) and ONNX Runtime GenAI int4 (3.1)." src="docs/figures/decode_speed.png">
+</picture>
 
 ## Contents
 1. [Why the Pi 4 is hard, and what follows from it](#1-why-the-pi-4-is-hard-and-what-follows-from-it)
@@ -37,8 +40,9 @@ Three hardware facts decided the whole design.
 
 - **One core saturates the memory bus.** A 256 MB streaming read runs at 4.20 GB/s on one core and
   4.07 GB/s on four (`bench/memband`). Generating a token means reading *every* weight once, so decode
-  speed is simply `bandwidth ÷ bytes of weights per token`. With 437 MB of 4.5-bit weights that ceiling
-  is about 8.9 tokens/s; nothing done on the cores can move it.
+  speed is simply `bandwidth ÷ bytes of weights per token`. A plain decode step of the 4.5-bit model
+  reads 424.9 MB (the 11.5 MB MTP head is only read when drafting), so that ceiling is about 9.9 tokens/s
+  at 4.2 GB/s; nothing done on the cores can move it.
 - **The Cortex-A72 has NEON but none of the newer instructions** (`asimddp` dot-product, `fp16`,
   `i8mm`). Every modern ARM inference library — llama.cpp, MNN, ONNX Runtime, LiteRT — keeps its fast
   paths behind those features and falls back to plain NEON on this chip. LiteRT-LM's prebuilt binaries
@@ -47,11 +51,22 @@ Three hardware facts decided the whole design.
   19 MB recurrent state; only 6 are full attention with a KV cache. Memory barely grows with context —
   but every token has to update that recurrent state, and the model ships a one-layer MTP draft head.
 
-So: the only two ways past ~8 tokens/s are (a) fewer bytes per token, i.e. a quantization format that
+So: the only two ways past that ceiling are (a) fewer bytes per token, i.e. a quantization format that
 loses no quality, and (b) producing more than one token per read of the weights — speculative decoding.
 pinfer does both, and spends the rest of its effort making sure the core streams weights at the wall.
 
-![Kernel bandwidth](docs/figures/kernel_bandwidth.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/kernel_bandwidth-dark.png">
+  <img alt="Every matrix kernel streams weights at 3.86–4.33 GB/s, at the Pi 4's 4.2 GB/s DRAM read ceiling, so decode speed is set by the bytes read per token." src="docs/figures/kernel_bandwidth.png">
+</picture>
+
+A third of those bytes is the output head — the 248K-token vocabulary times 1024, shared with the
+input embedding — which is why the draft step only scores the first 32K tokens (143 MB → 19 MB).
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/bytes_per_token-dark.png">
+  <img alt="Of the 437 MB Q4K model, the MLPs take 148.7 MB, the tied output head 143.0 MB, the 18 linear-attention layers 108.4 MB, the 6 full-attention layers 24.8 MB and the MTP draft head 11.5 MB; a plain decode step streams 424.9 MB." src="docs/figures/bytes_per_token.png">
+</picture>
 
 ## 2. How pinfer works
 
@@ -61,7 +76,10 @@ Weights are converted once (`tools/convert.py`) into a `.pq` file: rows are tile
 contiguous range and every scale line lands on a cache-line boundary. Three quantized formats exist;
 their quality decided the default:
 
-![Quantization](docs/figures/quantization.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/quantization-dark.png">
+  <img alt="Q4K and symmetric Q4 both spend 4.5 bits per weight, but Q4K keeps wikitext-2 perplexity at 18.50 (bf16: 17.93) while symmetric Q4 rises to 21.61." src="docs/figures/quantization.png">
+</picture>
 
 - **Q4K** (4.5 bits/weight; asymmetric 32-column groups with 6-bit sub-scales under per-row fp16
   super-scales, llama.cpp "k-quant" style) matches Q4_K_M quality and is the shipped default.
@@ -80,24 +98,36 @@ one thread — the hardware prefetcher already keeps up), 8-wide passes (registe
 accumulators per row (no gain). Lab notebook: `engine/bench/KERNELS.md`.
 
 ### 2.3 Exact speculative decoding with the model's own draft head
-![Speculative decoding](docs/figures/speculative_schematic.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speculative_schematic-dark.png">
+  <img alt="In one speculative round the MTP head drafts 3 tokens, the full model checks all 4 positions in a single weight pass, and the matching prefix plus one of its own tokens is kept: 3.3 tokens per round on average, identical to plain greedy output." src="docs/figures/speculative_schematic.png">
+</picture>
 
 Because the Pi is bandwidth-bound, scoring four positions in one pass costs 1.24× scoring one
 (160 ms vs 128 ms). Qwen3.5's MTP head drafts 3 tokens for ~27 ms; the full model verifies all of them
 in one batched pass and keeps the longest correct prefix plus one token of its own. Every kept token is
 the full model's own greedy choice, so the output is token-for-token identical to plain decoding.
 
-![MTP acceptance](docs/figures/mtp_acceptance.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/mtp_acceptance-dark.png">
+  <img alt="The full model accepts 87–94% of the MTP head's drafts at every draft position, while two deliberately mis-wired controls drop first-draft acceptance to 54.5% and 0.3%." src="docs/figures/mtp_acceptance.png">
+</picture>
 
 Two details matter in practice. The draft step only considers the first 32,768 token ids (where
 English and code live): acceptance is unchanged and the draft is 5× cheaper. And rejected drafts must
 roll back the 19 MB recurrent state exactly — pinfer logs each rank-1 state update during the verify
 pass and replays only the accepted ones, instead of copying state.
 
-![Speculative k](docs/figures/speculative_k.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speculative_k-dark.png">
+  <img alt="More drafts per round raise tokens per weight pass from 2.63 at k=2 to 3.94 at k=4, but decode speed peaks at k=3 with 16.5 tokens/s." src="docs/figures/speculative_k.png">
+</picture>
 
 ### 2.4 Where the remaining time goes
-![Step breakdown](docs/figures/step_breakdown.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/step_breakdown-dark.png">
+  <img alt="A plain decode step takes 128 ms, 119 ms of it streaming weights, and a speculative verify pass over 4 positions takes 160 ms, only 1.24× one token." src="docs/figures/step_breakdown.png">
+</picture>
 
 After vectorizing the recurrence (a NEON gated-delta-rule kernel, chunk-major so a 16 KB state chunk
 stays in L1) and the per-token ops (norms, SiLU with a 1-ulp `exp`, RoPE, attention, argmax), a plain
@@ -105,11 +135,20 @@ step is 119 ms of weight streaming plus 10 ms of everything else — about 12% f
 
 ## 3. Results
 
-![Progress](docs/figures/progress.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/progress-dark.png">
+  <img alt="Each verified optimization step raised decode speed, from 1.6 tokens/s in scalar C to 7.9 tokens/s plain and 16.5 tokens/s speculative after vectorizing the per-token ops." src="docs/figures/progress.png">
+</picture>
 
-![Speed vs quality](docs/figures/speed_vs_quality.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speed_vs_quality-dark.png">
+  <img alt="pinfer Q4K decodes faster than every llama.cpp format at Q4_K_M quality (perplexity 18.50 vs 18.59), and exact speculative decoding doubles its speed at unchanged quality." src="docs/figures/speed_vs_quality.png">
+</picture>
 
-![Prefill](docs/figures/prefill_speed.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/prefill_speed-dark.png">
+  <img alt="pinfer reads a 64-token prompt at 37.4 tokens/s, ahead of MNN int4 (30.9), llama.cpp (14.8–17.1) and ONNX Runtime GenAI int4 (9.9)." src="docs/figures/prefill_speed.png">
+</picture>
 
 **Standard runtimes on the same board** (`bench/BASELINES.md`): MNN 3.6.1 is the strongest, 6.67 tok/s
 decode and 30.9 prefill; llama.cpp v0.7.0 reaches 5.4–5.6 decode; ONNX Runtime GenAI 0.18 int4 3.1;
@@ -121,13 +160,19 @@ speculative gain vanishing at 4096 tokens because the attention path, not the KV
 bottleneck; the rewritten attention (in progress, bit-exact) holds 6.5 tok/s at 4096 and 32 tok/s
 prefill at 2048.
 
-![Context length](docs/figures/context_length.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/context_length-dark.png">
+  <img alt="Before the context-window work, plain decode fell from 7.9 to 5.6 tokens/s at a 4096-token context and speculative decoding, at 5.7 tokens/s, lost its advantage." src="docs/figures/context_length.png">
+</picture>
 
 ## 4. What did not help
 
 Measured, logged and kept for the record:
 
-![OS experiment](docs/figures/os_experiment.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/os_experiment-dark.png">
+  <img alt="A custom tickless split-core kernel with huge pages kept decode speed within 1% of the stock kernel (7.21–7.30 tokens/s plain, 13.35–13.51 speculative) because decoding is DRAM-bound." src="docs/figures/os_experiment.png">
+</picture>
 
 - **A custom kernel** (6.18.50-pinfer: `NO_HZ_FULL`, isolated tickless cores 1–3, 2 MB huge pages for
   the weights) — all within 1%. The engine is DRAM-bound and the A72 already hides the page-walk cost of
