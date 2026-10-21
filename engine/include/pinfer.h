@@ -1,4 +1,4 @@
-/* pinfer â€” Raspberry-Pi-4-native inference for Qwen3.5. Public C API.
+/* pinfer — Raspberry-Pi-4-native inference for Qwen3.5. Public C API.
  *
  * The API works on token ids; tokenization lives in the Python package (HF `tokenizers`).
  * All functions return 0 on success and a negative PINFER_E* code on failure unless noted.
@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 #define PINFER_VERSION_MAJOR 0
-#define PINFER_VERSION_MINOR 1
+#define PINFER_VERSION_MINOR 2
 #define PINFER_VERSION_PATCH 0
 
 enum {
@@ -40,7 +40,7 @@ enum {
 typedef struct {
     int n_threads; /* worker threads for matrix ops; <= 0 means 4 */
     int max_ctx;   /* max tokens kept in the KV cache; <= 0 means 4096 */
-    int kv_dtype;  /* PINFER_KV_*; 0 = fp32 (added in 0.1: zero-initialised means fp32) */
+    int kv_dtype;  /* PINFER_KV_*; 0 = fp32 (added in 0.2: zero-initialised means fp32) */
 } pinfer_params;
 
 pinfer_params pinfer_default_params(void);
@@ -70,7 +70,7 @@ typedef struct {
                         of its passes and uses the k (down to plain decoding) with the best
                         expected tokens per second, probing again as the text changes, so
                         speculation never runs slower than plain decoding for long
-                        (engine/CONTEXT.md). 0 (added in 0.1; zero-initialised): fixed k. */
+                        (engine/CONTEXT.md). 0 (added in 0.2; zero-initialised): fixed k. */
 } pinfer_spec_params;
 
 typedef struct {
@@ -105,7 +105,7 @@ typedef struct {
 /* pinfer_generate_greedy with stop tokens, a per-token callback, and no lost tokens: returns
  * the number of tokens written to out (>= 0, the stop token included) and sets *status (may
  * be NULL) to PINFER_OK when it ended normally (n_max, EOS, stop token or callback) or to the
- * error that ended it early, e.g. PINFER_E_CTX_FULL when the context filled up â€” out[0..ret)
+ * error that ended it early, e.g. PINFER_E_CTX_FULL when the context filled up — out[0..ret)
  * is valid either way. Returns a negative PINFER_E* code (and the same *status) only when no
  * token could be generated (bad arguments, prompt does not fit, k > 0 without an MTP head). */
 int pinfer_generate_greedy_ex(pinfer_ctx *ctx, const int32_t *prompt, int n_prompt,

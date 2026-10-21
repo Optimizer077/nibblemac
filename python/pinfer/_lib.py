@@ -32,7 +32,7 @@ _cache: dict[str, Lib] = {}
 
 
 class Params(ctypes.Structure):
-    """Mirror of ``pinfer_params`` in pinfer.h (``kv_dtype`` added in 0.1: 0 fp32, 1 fp16,
+    """Mirror of ``pinfer_params`` in pinfer.h (``kv_dtype`` added in 0.2: 0 fp32, 1 fp16,
     2 int8; older libraries ignore the extra field, which is zero-initialised)."""
 
     _fields_ = [("n_threads", ctypes.c_int), ("max_ctx", ctypes.c_int),
@@ -41,7 +41,7 @@ class Params(ctypes.Structure):
 
 class SpecParams(ctypes.Structure):
     """Mirror of ``pinfer_spec_params`` (speculative decoding, optional API; ``adaptive``
-    added in 0.1, zero-initialised = fixed k)."""
+    added in 0.2, zero-initialised = fixed k)."""
 
     _fields_ = [("k", ctypes.c_int), ("draft_vocab", ctypes.c_int), ("adaptive", ctypes.c_int)]
 
