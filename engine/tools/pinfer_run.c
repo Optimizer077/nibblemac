@@ -3,13 +3,17 @@
  *
  *   pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] [-b prefill_batch]
  *              (--ids 1,2,3 | --ids-file f) [--dump-logits out.bin] [--dump-hidden out.bin]
- *              [--bench] [--spec k [--draft-vocab N]] [--dump-mtp out.bin]
+ *              [--bench] [--warmup | --no-warmup] [--spec k [--draft-vocab N]]
+ *              [--dump-mtp out.bin]
  *
  * Token ids only: tokenization lives in the Python package. --dump-* write raw little-endian
  * fp32 for the PROMPT tokens: logits [T][vocab], hidden [n_layers+1][T][hidden] (same layout
  * as ref/golden). Decode speed counts the N-1 single-token evals after the first generated
  * token (that one comes from the prefill logits). --bench adds one `RESULT {json}` line for
- * harness/pi.py.
+ * harness/pi.py and, unless --no-warmup, first runs an untimed prefill + 4 tokens in the same
+ * mode and resets: the first prefill after a reboot pages 0.5-1.5 GB of mmap'd weights in
+ * from the SSD (measured 20 vs 27 tok/s), which must not depend on run order. --warmup
+ * enables it without --bench.
  * --spec k: greedy decoding with MTP self-speculation (k drafts per batched verification
  * pass; k = 0 runs the plain loop through the same code path). The output must equal the
  * plain run; RESULT also carries rounds / drafted / accepted and per-pass timings. The MTP
@@ -84,7 +88,8 @@ static void usage(void) {
     fprintf(stderr, "usage: pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] "
                     "[-b batch] (--ids 1,2,3 | --ids-file f)\n"
                     "                  [--dump-logits f] [--dump-hidden f] [--bench]\n"
-                    "                  [--spec k [--draft-vocab N]] [--dump-mtp f]\n");
+                    "                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n"
+                    "                  [--dump-mtp f]\n");
 }
 
 /* --dump-mtp: see the header comment. normed = the prompt's final-normed hiddens [T][H]. */
@@ -125,7 +130,7 @@ int main(int argc, char **argv) {
     const char *model = NULL, *ids_arg = NULL, *ids_file = NULL;
     const char *dump_logits = NULL, *dump_hidden = NULL, *dump_mtp_f = NULL;
     int threads = 4, n_gen = 32, max_ctx = 0, batch = PF_MAX_BATCH, bench = 0;
-    int spec_k = -1, draft_vocab = 0;
+    int spec_k = -1, draft_vocab = 0, warmup = -1;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : NULL;
         int used = 1;
@@ -142,6 +147,8 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--draft-vocab") && v) draft_vocab = atoi(v);
         else if (!strcmp(a, "--dump-mtp") && v) dump_mtp_f = v;
         else if (!strcmp(a, "--bench")) { bench = 1; used = 0; }
+        else if (!strcmp(a, "--warmup")) { warmup = 1; used = 0; }
+        else if (!strcmp(a, "--no-warmup")) { warmup = 0; used = 0; }
         else { usage(); return 2; }
         i += used;
     }
@@ -183,8 +190,29 @@ int main(int argc, char **argv) {
     pinfer_spec_params sp = {spec_k, draft_vocab};
     pinfer_spec_stats st = {0, 0, 0};
     pf_spec_times tm = {0, 0, 0};
-    double t_prefill, t_decode;
+    double t_prefill, t_decode, t_warm = 0.0;
     int rc;
+    if (warmup < 0) warmup = bench;
+    if (warmup) {  /* untimed prefill + up to 4 tokens, same mode, then forget everything */
+        const int w = n_gen < 4 ? n_gen : 4;
+        t0 = now_sec();
+        if (spec_k >= 0) {
+            pf_stop no_stop = {-1, NULL, 0, NULL, NULL};
+            int status;
+            rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp);
+            if (rc >= 0 && w > 0)
+                rc = pf_spec_decode(ctx, gen, w, &sp, &no_stop, NULL, NULL, &status);
+        } else {
+            rc = pf_forward(ctx, prompt, n_prompt, logits, NULL, NULL);
+            for (int i = 0; rc == PINFER_OK && i < w; i++) {
+                gen[0] = pinfer_argmax(logits, V);
+                rc = pinfer_eval(ctx, gen, 1, logits);
+            }
+        }
+        if (rc < 0) { fprintf(stderr, "warm-up failed: %d\n", rc); return 1; }
+        pinfer_reset(ctx);
+        t_warm = now_sec() - t0;
+    }
     if (spec_k >= 0) {  /* speculative path (k = 0: plain loop inside the same code) */
         t0 = now_sec();
         rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp);
@@ -231,10 +259,10 @@ int main(int argc, char **argv) {
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
     double rss_mb = ru.ru_maxrss / 1024.0;  /* Linux reports KiB */
-    printf("load %.3f s | prefill %d tok in %.3f s = %.3f tok/s | decode %d tok in %.3f s = "
-           "%.3f tok/s | peak RSS %.1f MB | matvec=%s threads=%d\n",
-           t_load, n_prompt, t_prefill, prefill_tps, n_gen > 1 ? n_gen - 1 : 0, t_decode,
-           decode_tps, rss_mb, PF_MATVEC_NAME, threads);
+    printf("load %.3f s | warm-up %.3f s | prefill %d tok in %.3f s = %.3f tok/s | decode %d tok "
+           "in %.3f s = %.3f tok/s | peak RSS %.1f MB | matvec=%s threads=%d\n",
+           t_load, t_warm, n_prompt, t_prefill, prefill_tps, n_gen > 1 ? n_gen - 1 : 0,
+           t_decode, decode_tps, rss_mb, PF_MATVEC_NAME, threads);
     /* spec: tokens per verification pass = 1 + mean accepted; timings per pass in ms */
     double R = st.rounds > 0 ? (double)st.rounds : 1.0;
     double mean_acc = (double)st.accepted / R;

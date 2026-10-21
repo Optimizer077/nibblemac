@@ -44,14 +44,16 @@ struct pinfer_ctx {
     /* per-layer state; NULL where the layer type does not use it */
     float **conv;       /* [conv_k-1][conv_dim]: previous inputs, oldest first */
     float **rec;        /* [lv_heads][lk_dim][lv_dim]: Gated DeltaNet state S */
-    float **kc, **vc;   /* [max_ctx][n_kv*hd]: KV cache (post-norm, post-RoPE keys) */
+    float **kc, **vc;   /* [n_kv][max_ctx][hd]: KV cache (post-norm, post-RoPE keys); one
+                           contiguous stream per KV group, so a head's pass over the cache
+                           is sequential for the prefetcher (forward.c pf_full_attn) */
 
     /* scratch, PF_MAX_BATCH rows each */
     float *x, *xn, *out;        /* [B][H]: residual stream, normed input, sublayer output */
     float *ta, *tb, *tc, *to;   /* projections: qkv|q_proj|gate, z|k|up, v, mix output */
     float *ba, *aa;             /* [B][lv_heads]: in_proj_b / in_proj_a outputs */
     float *rope_cos, *rope_sin; /* [B][rot/2] */
-    float *att;                 /* [max_ctx]: attention scores of one head */
+    float *att;                 /* [n_heads][max_ctx]: attention scores per head */
 
     /* speculative decoding (spec.c); all NULL / 0 until first used */
     pf_lin_log *lin_log;
@@ -95,9 +97,33 @@ void pf_add_rows(pinfer_ctx *ctx, int n);                     /* x += out */
 void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0);
 void pf_mlp(pinfer_ctx *ctx, const pf_layer *L, int n);
 
-/* Shared elementwise helpers (forward.c). */
-void pf_rmsnorm(float *y, const float *x, const float *w, int n, float eps);
+/* Phase profile (forward_stats.c), active with PF_FWD_STATS=1: t = pf_stats_now() before a
+ * section, pf_stats_add(phase, kind, t) after it. kind: PFS_K1 single-token call, PFS_KB
+ * batched (prefill / MTP rows), PFS_KV logged verify pass (ctx->lin_log_on). */
+enum { PFS_EMBED, PFS_NORM, PFS_LIN_PRE, PFS_LIN_RULE, PFS_LIN_POST, PFS_LIN_LOG, PFS_ATTN,
+       PFS_MLP_ACT, PFS_ARGMAX, PFS_ROPE, PFS_N };
+enum { PFS_K1, PFS_KB, PFS_KV, PFS_KINDS };
+#define PFS_KIND(ctx, n) ((ctx)->lin_log_on ? PFS_KV : (n) > 1 ? PFS_KB : PFS_K1)
+extern int pf_stats_on;
+double pf_stats_now(void);
+void pf_stats_add(int phase, int kind, double t0);
+
+/* Vectorized primitives (forward_ops.c): NEON on aarch64, a bit-identical scalar mirror
+ * elsewhere. Per-element results never depend on the row count of the call. */
+float pf_expf(float x);                       /* exp approximation used by every SiLU / sigmoid */
 float pf_silu(float x);
 float pf_sigmoid(float x);
+void pf_silu_mul(float *a, const float *b, int n);     /* a = silu(a) * b */
+void pf_mul_silu(float *y, const float *z, int n);     /* y *= silu(z) */
+void pf_mul_sigmoid(float *y, const float *g, int n);  /* y *= sigmoid(g) */
+void pf_add(float *y, const float *x, int n);          /* y += x */
+void pf_rope(float *v, const float *c, const float *s, int rot);
+void pf_rmsnorm(float *y, const float *x, const float *w, int n, float eps);
+void pf_l2norm_scale(float *x, int n, float eps, float scale);
+void pf_conv_silu(float *x, float *state, const float *w, int C, int K, int c0, int c1);
+float pf_dot(const float *a, const float *b, int n);
+float pf_softmax_exp(float *a, int n, float mx);       /* a = exp(a - mx); returns sum */
+void pf_attn_pv(float *o, const float *p, int np, const float *v, int stride, int hd);
+int pf_argmax(const float *v, int n);
 
 #endif

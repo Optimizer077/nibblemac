@@ -24,6 +24,14 @@ pf_pool *pf_pool_create(int n_threads);
 void pf_pool_destroy(pf_pool *pool);
 int pf_pool_threads(const pf_pool *pool);
 
+/* Generic parallel job: fn(arg, tid, nthr) runs on nthr = min(pool threads, max_threads)
+ * threads (tid 0 = the caller) and returns when all are done. The reference pool runs it on
+ * the calling thread (nthr = 1). forward.c uses it for the per-token work outside the
+ * matmuls (attention heads, conv channel ranges, activations); the split must not change
+ * any per-element arithmetic. */
+typedef void (*pf_task)(void *arg, int tid, int nthr);
+void pf_pool_run(pf_pool *pool, pf_task fn, void *arg, int max_threads);
+
 /* y[r] = sum_c W[r][c] * x[c] for all rows. */
 void pf_matvec(pf_pool *pool, const pf_mat *W, const float *x, float *y);
 

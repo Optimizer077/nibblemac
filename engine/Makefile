@@ -26,14 +26,16 @@ INCS    := -I$(ROOT)/engine/include -I$(SRC_DIR)
 DEFS    := -DPF_MATVEC_NAME=\"$(MATVEC)\"
 HDRS    := $(wildcard $(SRC_DIR)/*.h) $(ROOT)/engine/include/pinfer.h
 
+# -ffp-contract=off is already implied by -std=c11, stated explicitly: the forward pass and
+# the kernels rely on separate multiply and add roundings for bit-exactness (ops.h, SPEC.md).
 HOST_CC     := gcc
-HOST_CFLAGS := -O2 -std=c11 -Wall -Wextra -g
+HOST_CFLAGS := -O2 -std=c11 -ffp-contract=off -Wall -Wextra -g
 HOST_LIBS   := -lm -pthread
 HOST_OUT    := $(ROOT)/build/host/engine
 HOST_OBJ    := $(HOST_OUT)/obj-$(MATVEC)
 
 PI_CC     := aarch64-linux-gnu-gcc
-PI_CFLAGS := -O3 -mcpu=cortex-a72 -std=c11 -Wall -Wextra
+PI_CFLAGS := -O3 -mcpu=cortex-a72 -std=c11 -ffp-contract=off -Wall -Wextra
 PI_LIBS   := -static -pthread -lm
 PI_OUT    := $(ROOT)/build/aarch64/engine
 PI_OBJ    := $(PI_OUT)/obj-$(MATVEC)

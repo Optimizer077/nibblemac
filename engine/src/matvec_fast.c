@@ -279,6 +279,10 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
         kern_stats_add(W->rows, W->cols, W->dtype, n, now_sec() - t0, weight_bytes(W));
 }
 
+void pf_pool_run(pf_pool *pool, pf_task fn, void *arg, int max_threads) {
+    kern_pool_run(pool, fn, arg, max_threads);
+}
+
 void pf_lin_rule(pf_pool *pool, const pf_lin_args *a) { kern_lin_rule(pool, a); }
 
 void pf_lin_apply(pf_pool *pool, float *S, const float *log, int keep, int heads, int dk,

@@ -15,37 +15,60 @@
 
 #include "forward.h"
 
-/* torch.nn.functional.softplus (beta 1, threshold 20). */
+/* torch.nn.functional.softplus (beta 1, threshold 20). libm here: 16 values per layer. */
 static float softplus(float x) { return x > 20.0f ? x : log1pf(expf(x)); }
 
-/* x * rsqrt(sum(x^2) + eps), as the FLA-compatible l2norm in the reference. */
-static void l2norm(float *x, int n) {
-    float ss = 0.0f;
-    for (int i = 0; i < n; i++) ss += x[i] * x[i];
-    float r = 1.0f / sqrtf(ss + 1e-6f);
-    for (int i = 0; i < n; i++) x[i] *= r;
+typedef struct {
+    pinfer_ctx *ctx;
+    const pf_layer *L;
+    float *conv;
+    int n;
+} lin_job;
+
+/* Conv + SiLU on a channel range per thread (channels are independent; the range bounds
+ * are multiples of lk_dim, so every q/k head lies inside one range and its L2 norm can
+ * follow in the same thread), then the per-head gates on thread 0. Token order inside a
+ * channel is kept (the conv state is sequential per channel). */
+static void pre_task(void *arg, int tid, int nthr) {
+    const lin_job *j = arg;
+    pinfer_ctx *ctx = j->ctx;
+    const int C = ctx->conv_dim, dk = ctx->lk_dim, nv = ctx->lv_heads, units = C / dk;
+    const int c0 = units * tid / nthr * dk, c1 = tid + 1 == nthr ? C : units * (tid + 1) / nthr * dk;
+    const float qscale = 1.0f / sqrtf((float)dk);
+    for (int t = 0; t < j->n; t++) {
+        float *qkv = ctx->ta + (size_t)t * C;
+        pf_conv_silu(qkv, j->conv, j->L->conv_w, C, ctx->conv_k, c0, c1);
+        /* q heads 0..lk_heads-1 then k heads: head u covers channels [u*dk, (u+1)*dk) */
+        for (int u = c0 / dk; u < 2 * ctx->lk_heads && (u + 1) * dk <= c1; u++)
+            pf_l2norm_scale(qkv + u * dk, dk, 1e-6f, u < ctx->lk_heads ? qscale : 1.0f);
+    }
+    if (tid != 0) return;
+    for (int t = 0; t < j->n; t++)
+        for (int h = 0; h < nv; h++) {  /* beta = sigmoid(b); decay = exp(g), libm (16/layer) */
+            float *b = ctx->ba + (size_t)t * nv + h, *a = ctx->aa + (size_t)t * nv + h;
+            *b = 1.0f / (1.0f + expf(-*b));
+            *a = expf(-expf(j->L->A_log[h]) * softplus(*a + j->L->dt_bias[h]));
+        }
 }
 
-/* Causal depthwise conv (kernel conv_k) + SiLU, in place on one token's qkv vector.
- * state holds the previous conv_k-1 raw inputs, oldest first; it is shifted per channel. */
-static void conv_step(float *qkv, float *state, const float *w, int C, int K) {
-    const int S = K - 1;
-    for (int c = 0; c < C; c++) {
-        const float *wc = w + (size_t)c * K;
-        float x = qkv[c], acc = 0.0f;
-        for (int j = 0; j < S; j++) acc += wc[j] * state[(size_t)j * C + c];
-        acc += wc[S] * x;
-        for (int j = 0; j + 1 < S; j++) state[(size_t)j * C + c] = state[(size_t)(j + 1) * C + c];
-        if (S > 0) state[(size_t)(S - 1) * C + c] = x;
-        qkv[c] = pf_silu(acc);
-    }
+/* Gated RMSNorm: rmsnorm(o) * w * silu(z) per (token, head), heads split over threads. */
+static void post_task(void *arg, int tid, int nthr) {
+    const lin_job *j = arg;
+    pinfer_ctx *ctx = j->ctx;
+    const int vd = ctx->vd, dv = ctx->lv_dim;
+    const float eps = ctx->model.hdr->rms_eps;
+    for (int h = tid; h < ctx->lv_heads; h += nthr)
+        for (int t = 0; t < j->n; t++) {
+            float *oh = ctx->to + (size_t)t * vd + h * dv;
+            pf_rmsnorm(oh, oh, j->L->lin_norm, dv, eps);
+            pf_mul_silu(oh, ctx->tb + (size_t)t * vd + h * dv, dv);
+        }
 }
 
 void pf_linear_attn(pinfer_ctx *ctx, int layer, int n) {
     const pf_layer *L = &ctx->model.layers[layer];
-    const int C = ctx->conv_dim, kd = ctx->kd, vd = ctx->vd, nv = ctx->lv_heads;
+    const int C = ctx->conv_dim, vd = ctx->vd, nv = ctx->lv_heads;
     const int dk = ctx->lk_dim, dv = ctx->lv_dim, rep = nv / ctx->lk_heads;
-    const float eps = ctx->model.hdr->rms_eps, qscale = 1.0f / sqrtf((float)dk);
     float *rec = ctx->rec[layer], *conv = ctx->conv[layer];
     pf_lin_log *lg = ctx->lin_log_on ? ctx->lin_log : NULL;
 
@@ -54,28 +77,22 @@ void pf_linear_attn(pinfer_ctx *ctx, int layer, int n) {
     pf_matmul(ctx->pool, &L->b, ctx->xn, ctx->ba, n);
     pf_matmul(ctx->pool, &L->a, ctx->xn, ctx->aa, n);
 
+    double ts = pf_stats_now();
     if (lg) {  /* verification pass: work on a copy, keep the raw inputs for pf_lin_commit */
         memcpy(lg->conv, conv, (size_t)(ctx->conv_k - 1) * C * sizeof(float));
         conv = lg->conv;
         memcpy(lg->xin[layer], ctx->ta, (size_t)n * C * sizeof(float));
         lg->n = n;
+        pf_stats_add(PFS_LIN_LOG, PFS_KV, ts);
+        ts = pf_stats_now();
     }
 
-    /* Per token: conv + SiLU, q/k L2 norm, q scale; beta and decay overwrite ba / aa. */
-    for (int t = 0; t < n; t++) {
-        float *qkv = ctx->ta + (size_t)t * C;
-        conv_step(qkv, conv, L->conv_w, C, ctx->conv_k);
-        for (int h = 0; h < ctx->lk_heads; h++) {
-            l2norm(qkv + h * dk, dk);
-            l2norm(qkv + kd + h * dk, dk);
-            for (int i = 0; i < dk; i++) qkv[h * dk + i] *= qscale;
-        }
-        for (int h = 0; h < nv; h++) {
-            float *b = ctx->ba + (size_t)t * nv + h, *a = ctx->aa + (size_t)t * nv + h;
-            *b = pf_sigmoid(*b);
-            *a = expf(-expf(L->A_log[h]) * softplus(*a + L->dt_bias[h]));  /* exp(g) */
-        }
-    }
+    /* Per token: conv + SiLU (shifts the conv state), q/k L2 norm (eps 1e-6 as in the
+     * reference's l2norm), q scale; beta and decay overwrite ba / aa. */
+    lin_job job = {ctx, L, conv, n};
+    pf_pool_run(ctx->pool, pre_task, &job, C / dk);
+    pf_stats_add(PFS_LIN_PRE, PFS_KIND(ctx, n), ts);
+    ts = pf_stats_now();
 
     /* Recurrence of every head over all tokens (pf_lin_rule: scalar reference or the
      * threaded NEON kernel); with the log on it leaves `rec` untouched and records
@@ -83,14 +100,10 @@ void pf_linear_attn(pinfer_ctx *ctx, int layer, int n) {
     pf_lin_args a = {n, nv, rep, dk, dv, C, vd, ctx->ta, ctx->aa, ctx->ba, rec, ctx->to,
                      lg ? lg->upd[layer] : NULL};
     pf_lin_rule(ctx->pool, &a);
-    /* gated RMSNorm: rmsnorm(o) * w * silu(z), per head, plain weight */
-    for (int t = 0; t < n; t++)
-        for (int h = 0; h < nv; h++) {
-            float *oh = ctx->to + (size_t)t * vd + h * dv;
-            const float *z = ctx->tb + (size_t)t * vd + h * dv;
-            pf_rmsnorm(oh, oh, L->lin_norm, dv, eps);
-            for (int j = 0; j < dv; j++) oh[j] *= pf_silu(z[j]);
-        }
+    pf_stats_add(PFS_LIN_RULE, PFS_KIND(ctx, n), ts);
+    ts = pf_stats_now();
+    pf_pool_run(ctx->pool, post_task, &job, nv);  /* gated RMSNorm, plain weight */
+    pf_stats_add(PFS_LIN_POST, PFS_KIND(ctx, n), ts);
     pf_matmul(ctx->pool, &L->out, ctx->to, ctx->out, n);
 }
 

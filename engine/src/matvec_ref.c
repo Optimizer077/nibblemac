@@ -23,6 +23,12 @@ void pf_pool_destroy(pf_pool *pool) { free(pool); }
 
 int pf_pool_threads(const pf_pool *pool) { (void)pool; return 1; }
 
+void pf_pool_run(pf_pool *pool, pf_task fn, void *arg, int max_threads) {
+    (void)pool;
+    (void)max_threads;
+    fn(arg, 0, 1);
+}
+
 int pf_dtype_supported(uint32_t dtype) { return dtype == PQ_F32 || dtype == PQ_BF16; }
 
 static inline float bf16_to_f32(uint16_t b) {

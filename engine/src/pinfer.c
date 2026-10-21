@@ -79,7 +79,7 @@ static int alloc_buffers(pinfer_ctx *c) {
     c->aa = malloc(B * c->lv_heads * sizeof(float));
     c->rope_cos = malloc(B * (c->rot / 2 + 1) * sizeof(float));
     c->rope_sin = malloc(B * (c->rot / 2 + 1) * sizeof(float));
-    c->att = malloc((size_t)c->max_ctx * sizeof(float));
+    c->att = malloc((size_t)c->n_heads * c->max_ctx * sizeof(float));
     if (!c->x || !c->xn || !c->out || !c->ta || !c->tb || !c->tc || !c->to || !c->ba ||
         !c->aa || !c->rope_cos || !c->rope_sin || !c->att)
         return PINFER_E_NOMEM;
@@ -153,10 +153,10 @@ int pinfer_n_vocab(const pinfer_ctx *c) { return c ? c->vocab : 0; }
 int pinfer_n_past(const pinfer_ctx *c) { return c ? c->n_past : 0; }
 int pinfer_eos_id(const pinfer_ctx *c) { return c ? (int)c->model.hdr->eos_id : -1; }
 
+/* first maximum wins, like torch.argmax (forward_ops.c) */
 int pinfer_argmax(const float *logits, int n) {
-    if (!logits || n <= 0) return -1;
-    int best = 0;
-    for (int i = 1; i < n; i++)
-        if (logits[i] > logits[best]) best = i;  /* first maximum wins, like torch.argmax */
-    return best;
+    const double ts = pf_stats_now();
+    const int i = pf_argmax(logits, n);
+    pf_stats_add(PFS_ARGMAX, PFS_K1, ts);
+    return i;
 }
