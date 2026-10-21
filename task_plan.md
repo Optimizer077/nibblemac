@@ -32,11 +32,12 @@ Toolchain, harness, flash, first boot, direct cable, EEPROM, logging system. See
 - [x] tok/s logged; [ ] perplexity for 3 of 4 formats (running)
 
 ## Phase 4 — beyond the bandwidth ceiling (in progress)
-- [ ] Kernels follow-up (running): verify-pass cost 1.07–1.61× → ≤1.15×; prefill 21 → ≥30 tok/s
+- [x] Kernels follow-up: bit-exact batched kernels, NEON recurrence (23054c6→af06041)
+- [x] Engine-core vectorization (fba8a1a): 7.88 plain / 16.49 spec / 37.4 prefill; verify ratio 1.28; DRAM floor 12% away
 - [x] MTP self-speculative decoding, exact: Q4 6.88 → 12.56 tok/s (k=3, draft vocab 32768)
 - [x] Draft-vocab restriction (32768 ids) for the draft head — same acceptance, draft step 140→30 ms; [ ] two-stage exact head: deferred (low gain left)
 - [ ] Prompt-lookup / n-gram drafting
-- [x] Own kernel 6.18.50-pinfer built + tryboot scripts (818efcf); [ ] tryboot test + measure (needs quiet Pi); [ ] governor; [ ] overclock (needs user ok)
+- [x] Own kernel 6.18.50-pinfer: tryboot K1–K3 — isolation, nohz_full, THP all < 1% (DRAM-bound); not made permanent. [ ] overclock (needs user ok; only prefill/compute would gain)
 
 ## Phase 5 — release (in progress)
 - [x] C API, libpinfer.a/.so, Python package, CLI, docs, 80 tests (9c58a81); fast wheel built
@@ -47,7 +48,7 @@ Facts: only the 6 full-attention layers have a KV cache (2 KV heads × 256 × K+
 24 KB/token → 96 MB at 4096, 768 MB at 32K); the 18 linear-attention layers have fixed state
 (19 MB), so memory grows slowly but attention reads 24 KB × context per token (at 8K context
 that is 192 MB/token — comparable to the 437 MB of weights).
-- [ ] Measure decode/prefill tok/s vs context length (64 / 512 / 2048 / 4096 / 8192) — running
+- [x] First sweep (notes.md "Context length"): 4096 ctx → 5.56 plain / 5.69 spec / 18.1 prefill (from 7.88 / 16.49 / 37.4); context agent redoing it cleanly + 8192
 - [ ] KV cache precision: fp16 (halves traffic; bit-exact?) and int8 (quarter); quality check
       (PPL at 512 ctx + logit diff at long positions); make it the default if lossless enough
 - [ ] NEON attention for long contexts (dot products over the cache, softmax, GQA 4:1 sharing of
