@@ -78,7 +78,7 @@ tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
 | Engine | Format | File | Decode tok/s plain | Decode tok/s MTP spec | Prefill tok/s | PPL (c8) |
 |---|---|---|---|---|---|---|
 | pinfer | Q4_G32 + Q4 head | 437 MB | **6.88** | **12.56** (k=3, dv 32768) | 21.3 | **21.61** (as bad as Q4_0) |
-| pinfer | **Q4K_G32 everywhere + Q4K head** | 437 MB | 6.83 | **11.57** (k=3, dv 32768) | 19.3 | **18.48** ← default |
+| pinfer | **Q4K_G32 everywhere + Q4K head** | 437 MB | **7.26** | **13.35** (k=3, dv 32768) | 26.1 | **18.48** ← default (final kernels `af06041`, `bench/results/pinfer-final-q4k_20261022_011230.json`; before the kernel follow-up: 6.83 / 11.57 / 19.3) |
 | pinfer | Q4_G32 layers + Q4K head | 437 MB | — | — | — | 21.58 (loss is in the layers) |
 | pinfer | Q4K (v_proj, mtp.fc Q8) + Q4K head | 439 MB | **6.88** | 10.98 (k=3, dv 32768) | 16.3 | **18.50** |
 | pinfer | same + Q8 head | 567 MB | 5.72 | 9.77 (k=3) | 13.7 | 18.29 |
@@ -99,9 +99,9 @@ Q4 layers + Q4K head scores 21.58, so the symmetric Q4_G32 *layers* are what los
 (like llama.cpp's Q4_0); Q4K_G32's asymmetric 32-column groups fix it at the same 4.5 bits.
 **Recommended default: `q4k-headq4k` (11.57 tok/s with speculation, PPL 18.48 ≈ Q4_K_M).**
 
-Speculative decoding is exact by construction (identical tokens to plain greedy with the scalar
-kernels, `tests/test_spec.py`); with the NEON kernels the batched verify pass currently rounds
-differently from single-token decode, so near-tie argmaxes can flip (seen on `mix-headq4k`,
-chat prompt, token 18; not on `q4k-headq4k`) — being fixed by making batched == single bitwise.
-Verify-pass cost vs one decode step (bf16): 1.07 / 1.27 / 1.38 / 1.61 for k=1..4 — the
-remaining lever together with prefill (MNN leads there).
+Speculative decoding is exact: identical tokens to plain greedy (`tests/test_spec.py` on the host;
+on the Pi `engine/bench/spec_exact.sh` 20/20 for both models × 2 prompts × k=0..4 with the final
+NEON kernels, `bench/results/spec-exact-final_20261022_*.json`). The earlier divergence (batched
+verify pass rounding the Q4/Q4K offset term differently from the single-token pass) is fixed.
+Verify-pass cost vs one decode step (Q4K, final): 1.33 (k=2) / 1.48 (k=3); what remains is ~14 ms/token
+of scalar code (conv expf, norms, SiLU, attention) — the next lever, together with prefill (MNN 30.9).

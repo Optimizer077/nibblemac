@@ -5,7 +5,7 @@ instructions, ~4.2 GB/s DRAM), with its own 4-/8-bit weight formats and exact se
 decoding through Qwen3.5's built-in MTP head. Everything is measured on the real board against
 llama.cpp, MNN and ONNX Runtime, and every change to the Pi is logged with an undo command.
 
-**Current result (2026-10-22, Qwen3.5-0.8B, 4 threads):** 6.8 tok/s plain greedy, **11.6 tok/s with
+**Current result (2026-10-22, Qwen3.5-0.8B, 4 threads):** 7.3 tok/s plain greedy, **13.3 tok/s with
 speculative decoding**, at llama.cpp-Q4_K_M quality (perplexity 18.48 vs 18.59). llama.cpp Q4_K_M:
 5.4 tok/s; MNN int4: 6.7 tok/s. Full table: [notes.md](notes.md) → "Scoreboard".
 

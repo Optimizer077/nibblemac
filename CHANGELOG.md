@@ -12,12 +12,17 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Pi wheel with the fast kernels (`manylinux_2_34_aarch64`), installed into `~/pinfer/venvs/pinfer`.
 
 ### Measured (Pi 4, Qwen3.5-0.8B, 64+64 tokens)
+- **Final kernels (01:10):** Q4K default 7.26 tok/s plain, **13.35 tok/s speculative (k=3)**, prefill
+  26.1 tok/s, perplexity 18.48; speculative == greedy 20/20 on the Pi.
 - pinfer Q4+Q4 head: 6.88 tok/s plain, **12.56 tok/s with exact MTP speculation** (k=3,
   draft vocab 32768) — vs MNN int4 6.67, llama.cpp Q4_0 5.59.
 - Perplexity (wikitext-2, 8 chunks): pinfer mix-Q4K 18.50; llama.cpp bf16 17.93, Q8_0 17.97,
   Q4_K_M 18.59, Q4_0 21.25.
 
 ### Fixed
+- Speculative decoding diverged from plain greedy at near-ties with the NEON kernels (batched
+  verify pass rounded the Q4/Q4K offset term differently): kernels made bit-identical for every
+  batch size, checked by kbench and `engine/bench/spec_exact.sh`.
 - Harness: locked Pi jobs are killed after 20 min (a 38-min ORT run had stalled four agents).
 
 ## 2026-10-21
