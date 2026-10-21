@@ -22,6 +22,18 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   (Wi-Fi drops every few minutes with reason=7 — kept only for the Pi's internet).
 - PC change P1: Windows Ethernet static 10.42.0.1/24 (`os/pc/eth_link.ps1`, has `-Undo`).
 
+- Change #3: bootloader EEPROM 2026-05-17 → 2026-09-23.
+- Placed llama.cpp v0.7.0 binaries and Qwen3.5-0.8B GGUFs under `~/pinfer`.
+
+### Decided
+- Target model: **Qwen3.5-0.8B** (hybrid linear/full attention), user choice. Qwen3-0.6B kept
+  as reference. Compare against llama.cpp and other standard runtimes.
+
+### Added (baseline tooling)
+- `bench/llamacpp/build.sh` (pinned llama.cpp, static Cortex-A72 build + host quantizer),
+  `make_ggufs.sh` (HF → GGUF bf16 → Q8_0/Q4_0/Q4_K_M), `llama_bench.sh` (thread sweep).
+- `harness/pi.py push --dest <subdir>`.
+
 ### Measured
 - memband: 4.20 / 4.08 / 4.07 GB/s with 1 / 2 / 4 threads (`bench/results/memband_20261021_210615.json`).
 

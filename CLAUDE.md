@@ -14,6 +14,9 @@ Plan: `task_plan.md`. Findings: `notes.md`.
 4. Benchmarks: only through `harness/pi.py bench`; quote only `valid=true` results; add
    them to the baseline table in `notes.md` with the result file path.
 5. Report failures as failures, with the log path. Never delete logs or results.
+5b. The Pi is shared by parallel agents: every `bench` holds the Pi-wide lock
+   (`/tmp/pinfer-bench.lock`); use `run --lock` for anything heavy or timed. Never time
+   anything on the Pi without the lock. Cross-compile on the PC; don't build big things on the Pi.
 6. Never commit secrets: `harness/pi.secret`, `harness/pi.toml`, Wi-Fi/PSK material.
 
 ## Environment

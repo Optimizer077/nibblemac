@@ -1,0 +1,9 @@
+# 2026-10-21T21:27:27 pi@10.42.0.2
+$ cd models && sha256sum -c Qwen3.5-0.8B.SHA256SUMS --ignore-missing; df -h ~ | tail -1
+
+Qwen3.5-0.8B-Q4_0.gguf: OK
+Qwen3.5-0.8B-Q4_K_M.gguf: OK
+Qwen3.5-0.8B-Q8_0.gguf: OK
+/dev/sda2       917G  5.7G  874G   1% /
+
+[exit 0]

@@ -102,6 +102,18 @@ the result in `bench/results/*.json`; a result taken while throttled is marked i
 - PC is on wired Ethernet; Pi joins the same network over Ethernet.
 - Use the official 5.1 V / 3 A supply and a heatsink or fan during benchmarks.
 
-## 7. Left to the builder
-File format details of `.pq`, tile sizes, thread scheduling, exact Qwen variant
-(pick current small Qwen at phase 2 start: ~0.5-0.6B first, ~1.5-1.7B second).
+## 7. Target model *(user, 2026-10-21)*
+**Qwen3.5-0.8B** (HF `Qwen/Qwen3.5-0.8B` @ `2fc06364`), text path only. Hybrid: 24 layers =
+18 `linear_attention` (Gated-DeltaNet-style, fixed-size recurrent state, no KV cache growth)
++ 6 `full_attention` (every 4th layer; 8 query heads, 2 KV heads, head_dim 256); hidden 1024,
+FFN 3584, vocab 248,320, tied embeddings. The tied output head is ~254M of ~0.78B text
+parameters, i.e. about a third of the bytes read per token — a prime optimization target.
+Engine work therefore needs a linear-attention (delta-rule) kernel in addition to the usual
+matvec/attention kernels. Qwen3-0.6B (@ `c1899de2`, plain transformer) is kept as a secondary
+reference.
+
+Comparison baselines: llama.cpp (primary) + other standard runtimes that support this
+architecture on ARM64 CPU (being verified; see notes.md).
+
+## 8. Left to the builder
+File format details of `.pq`, tile sizes, thread scheduling.

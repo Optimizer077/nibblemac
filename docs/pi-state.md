@@ -20,6 +20,8 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | 1 | 2026-10-21 | Wi-Fi power save disabled | `nmcli` on `netplan-wlan0-<wifi-ssid>` (persisted to `/etc/netplan/90-NM-bf199e0c-….yaml`) + `/etc/NetworkManager/conf.d/90-pinfer-wifi-powersave-off.conf` | `sudo rm /etc/NetworkManager/conf.d/90-pinfer-wifi-powersave-off.conf && sudo nmcli con modify netplan-wlan0-<wifi-ssid> 802-11-wireless.powersave 0 && sudo nmcli general reload conf` | `logs/runs/` 2026-10-21 ~21:10 |
 | 2 | 2026-10-21 | eth0 static `10.42.0.2/24`, no gateway (`never-default`), IPv6 link-local only — for the direct cable to the PC | `netplan-eth0` (persisted to `/etc/netplan/90-NM-75a1216a-….yaml`) | `sudo nmcli con modify netplan-eth0 ipv4.method auto ipv4.addresses "" ipv4.never-default no ipv6.method ignore && sudo nmcli con up netplan-eth0` | snapshot `20261021_211516_before-eth-static`, `logs/runs/` ~21:15 |
 
+| 3 | 2026-10-21 | Bootloader EEPROM updated 2026-05-17 → **2026-09-23** (default channel; VL805 already current `000138c0`); applied by reboot at 21:17:45 | SPI EEPROM | `sudo rpi-eeprom-update -d -f /usr/lib/firmware/raspberrypi/bootloader-2711/default/pieeprom-2026-05-17.bin` (if that file is still shipped) then reboot | snapshot `20261021_211734_before-eeprom`; boot_id after: `c9020b3d…` |
+
 ## PC-side changes
 | # | Date | Change | Undo |
 |---|---|---|---|
@@ -29,9 +31,13 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | Path | What |
 |---|---|
 | `~/pinfer/memband` | bandwidth benchmark (sha256 in `logs/harness.jsonl` push events) |
+| `~/pinfer/llama/` | llama.cpp v0.7.0 @ `620d2225` static aarch64: llama-bench, llama-completion, llama-simple, llama-perplexity + `BUILD_INFO.txt` (sha256s) |
+| `~/pinfer/llama_bench.sh` | llama-bench thread-sweep wrapper |
+| `~/pinfer/models/` | Qwen3.5-0.8B GGUF Q8_0 / Q4_0 / Q4_K_M + `SHA256SUMS` (verified on Pi) |
 
 ## Snapshots
 | Snapshot | Taken before/after |
 |---|---|
 | `logs/snapshots/20261021_210923_stock-baseline/` | stock OS after first boot, before change #1 |
 | `logs/snapshots/20261021_211516_before-eth-static/` | after change #1, before change #2 |
+| `logs/snapshots/20261021_211734_before-eeprom/` | after change #2, before change #3 |

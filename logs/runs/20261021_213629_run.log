@@ -1,0 +1,7 @@
+# 2026-10-21T21:36:29 pi@10.42.0.2
+$ echo locked-ok; which flock
+
+locked-ok
+/usr/bin/flock
+
+[exit 0]

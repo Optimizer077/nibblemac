@@ -128,13 +128,21 @@ def throttle_flags(state: dict[str, str]) -> int | None:
         return None
 
 
-def remote_cmd(cfg: PiConfig, command: list[str]) -> str:
-    """`command` is one shell string split by argparse; it runs inside the remote dir."""
+BENCH_LOCK = "/tmp/pinfer-bench.lock"
+
+
+def remote_cmd(cfg: PiConfig, command: list[str], lock: bool = False) -> str:
+    """`command` is one shell string split by argparse; it runs inside the remote dir.
+    lock=True serializes it with every other locked command on the Pi (all benchmarks), so
+    parallel agents never measure on top of each other."""
     if not command:
         sys.exit("No command given.")
     rdir = shlex.quote(cfg.remote_dir)
+    body = " ".join(command)
+    if lock:
+        body = f"flock {BENCH_LOCK} bash -c {shlex.quote(body)}"
     # `|| exit 1;` (not `&&`) so a failed cd also stops commands after a `;` in the string.
-    return f"mkdir -p {rdir} && cd {rdir} || exit 1; {' '.join(command)}"
+    return f"mkdir -p {rdir} && cd {rdir} || exit 1; {body}"
 
 
 def cmd_check(cfg: PiConfig, _: argparse.Namespace, extra: dict) -> int:
@@ -165,15 +173,18 @@ def cmd_push(cfg: PiConfig, args: argparse.Namespace, extra: dict) -> int:
         for p in args.paths:
             path = Path(p)
             tar.add(path, arcname=path.name, filter=executable)
-    rdir = shlex.quote(cfg.remote_dir)
+    dest = f"{cfg.remote_dir}/{args.dest}".rstrip("/")
+    rdir = shlex.quote(dest)
     proc = ssh(cfg, f"mkdir -p {rdir} && tar -xf - -C {rdir}", stdin=buf.getvalue())
-    print(f"pushed {len(args.paths)} item(s) to {cfg.host}:{cfg.remote_dir}/" if proc.returncode == 0
+    extra["dest"] = dest
+    print(f"pushed {len(args.paths)} item(s) to {cfg.host}:{dest}/" if proc.returncode == 0
           else f"push failed (exit {proc.returncode})")
     return proc.returncode
 
 
 def cmd_run(cfg: PiConfig, args: argparse.Namespace, extra: dict) -> int:
-    command = remote_cmd(cfg, args.command)
+    command = remote_cmd(cfg, args.command, lock=args.lock)
+    extra["locked"] = args.lock
     out = LOG_DIR / "runs" / f"{stamp()}_run.log"
     extra["output"] = rel(out)
     return tee_command(ssh_base(cfg) + [command], out,
@@ -182,7 +193,7 @@ def cmd_run(cfg: PiConfig, args: argparse.Namespace, extra: dict) -> int:
 
 
 def cmd_bench(cfg: PiConfig, args: argparse.Namespace, extra: dict) -> int:
-    command = remote_cmd(cfg, args.command)
+    command = remote_cmd(cfg, args.command, lock=True)
     before = board_state(cfg)
     proc = ssh(cfg, command, capture=True)
     after = board_state(cfg)
@@ -244,7 +255,10 @@ def main() -> int:
     sub.add_parser("check", help="print board state")
     p = sub.add_parser("push", help="copy files to the Pi")
     p.add_argument("paths", nargs="+")
+    p.add_argument("--dest", default="", help="subdirectory of remote_dir (default: remote_dir)")
     p = sub.add_parser("run", help="run a command in the remote dir")
+    p.add_argument("--lock", action="store_true",
+                   help="hold the Pi-wide benchmark lock (use for anything heavy or timed)")
     p.add_argument("command", nargs=argparse.REMAINDER)
     p = sub.add_parser("bench", help="run a benchmark and save results")
     p.add_argument("name")

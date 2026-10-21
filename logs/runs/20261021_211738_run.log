@@ -1,0 +1,29 @@
+# 2026-10-21T21:17:38 pi@10.42.0.2
+$ sudo rpi-eeprom-update; echo "== config"; sudo rpi-eeprom-config; echo "== release channel"; grep -E "^FIRMWARE_RELEASE_STATUS" /etc/default/rpi-eeprom-update
+
+*** UPDATE AVAILABLE ***
+
+Run "sudo rpi-eeprom-update -a" to install this update without a prompt.
+
+To configure the bootloader update policy run "sudo raspi-config"
+
+BOOTLOADER: update available
+   CURRENT: Sun 17 May 19:13:18 UTC 2026 (1779045198)
+    LATEST: Wed 23 Sep 12:02:14 UTC 2026 (1790164934)
+   RELEASE: default (/usr/lib/firmware/raspberrypi/bootloader-2711/default)
+            Use raspi-config to change the release.
+
+  VL805_FW: Dedicated VL805 EEPROM
+     VL805: up to date
+   CURRENT: 000138c0
+    LATEST: 000138c0
+== config
+[all]
+BOOT_UART=0
+WAKE_ON_GPIO=1
+POWER_OFF_ON_HALT=0
+
+== release channel
+FIRMWARE_RELEASE_STATUS="default"
+
+[exit 0]

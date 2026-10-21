@@ -1,0 +1,13 @@
+# 2026-10-21T21:27:47 pi@10.42.0.2
+$ ./llama/llama-simple -m models/Qwen3.5-0.8B-Q8_0.gguf -n 40 "The Raspberry Pi 4 is a small computer that" 2>&1 | grep -vE "^(llama_|load|print_info|gguf|ggml|\.|main: |sched|graph|model_loader|load_tensors|common|init|  )" | tail -8
+
+resolve_fused_ops: fused DeepSeek V4 HC pre enabled
+resolve_fused_ops: fused DeepSeek V4 HC comb enabled
+resolve_fused_ops: fused DeepSeek V4 HC post enabled
+The Raspberry Pi 4 is a small computer that can be used for a wide range of tasks. It is a popular choice for beginners and professionals alike. The Raspberry Pi 4 is a small computer that can be used for a wide range of tasksmain: decoded 40 tokens in 11.82 s, speed: 3.39 t/s
+
+
+~llama_context:        CPU compute buffer size is   9.6735 MiB, matches expectation of   9.6735 MiB
+
+
+[exit 0]

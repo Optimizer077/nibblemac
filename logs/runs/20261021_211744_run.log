@@ -1,0 +1,12 @@
+# 2026-10-21T21:17:44 pi@10.42.0.2
+$ sudo rpi-eeprom-update -a 2>&1 | tail -6; sync; echo "rebooting at $(date +%T)"; (sleep 2; sudo systemctl reboot) >/dev/null 2>&1 &
+
+    BOOTFS: /boot/firmware
+'/tmp/tmp.VW9tATuX9v' -> '/boot/firmware/pieeprom.upd'
+Copying recovery.bin to /boot/firmware for EEPROM update
+
+EEPROM updates pending. Please reboot to apply the update.
+To cancel a pending update run "sudo rpi-eeprom-update -r".
+rebooting at 21:17:45
+
+[exit 0]
