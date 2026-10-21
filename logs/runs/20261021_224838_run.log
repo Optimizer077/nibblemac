@@ -1,0 +1,10 @@
+# 2026-10-21T22:48:38 pi@10.42.0.2
+$ cd /boot/firmware && ls overlays | LC_ALL=C sort | md5sum; ls -l bcm2711-rpi-4-b.dtb | awk "{print \$5}"; md5sum bcm2711-rpi-4-b.dtb overlays/overlay_map.dtb overlays/vc4-kms-v3d-pi4.dtbo
+
+c6a371dfb8468e7bde5cc67df96b08ac  -
+56407
+97242adc61840caac42330a9d959b033  bcm2711-rpi-4-b.dtb
+05f8dd87d20854c5f41147b12dfc8ee2  overlays/overlay_map.dtb
+4ffeeb5d8d6bbf49f2c97b6340804773  overlays/vc4-kms-v3d-pi4.dtbo
+
+[exit 0]

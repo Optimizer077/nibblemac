@@ -1,0 +1,14 @@
+# 2026-10-21T22:07:16 pi@10.42.0.2
+$ find ~/pinfer -maxdepth 3 -name "*.safetensors*" -o -maxdepth 3 -name "config.json" | head; ls ~/pinfer
+
+baselines
+engine
+kbench
+llama
+llama_bench.sh
+memband
+models
+venvs
+wheels
+
+[exit 0]

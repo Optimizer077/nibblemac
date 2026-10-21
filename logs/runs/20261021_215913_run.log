@@ -1,0 +1,15 @@
+# 2026-10-21T21:59:13 pi@10.42.0.2
+$ cd baselines && ./mnn/llm_bench -m models/Qwen3.5-0.8B-MNN/config_text.json -t 4 -p 8 -n 8 -rep 1 -kv true 2>&1 | tail -15; echo exit=$?; ./mnn/llm_bench -m models/Qwen3.5-0.8B-MNN/config.json -t 4 -p 8 -n 8 -rep 1 -kv true 2>&1 | tail -8; echo exit=$?
+
+exit=0
+CPU Group: [ 0  1  2  3 ], 600000 - 1500000
+The device supports: i8sdot:0, fp16:0, i8mm: 0, sve2: 0, sme2: 0
+Can't open file:models/Qwen3.5-0.8B-MNN/visual.mnn
+Error for open models/Qwen3.5-0.8B-MNN/visual.mnn
+| model                          |  modelSize | backend    | threads | precision  | llm_demo   | speed(tok/s) |
+| ------------------------------ | ---------: | ---------- | ----: | ---------- | ---------- | ------------ |
+| Qwen3.5-0.8B-MNN               | 448.59 MiB | CPU        |     4 | Low        | prompt=8<br>decode=8 | 26.01 ± 0.00<br>6.46 ± 0.00 |
+
+exit=0
+
+[exit 0]

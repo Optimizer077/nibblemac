@@ -1,0 +1,10 @@
+# 2026-10-21T22:38:27 pi@10.42.0.2
+$ ps aux | grep -v grep | grep flock | cut -c1-120
+
+pi          5775  0.0  0.0   5304  1664 ?        Ss   22:24   0:00 flock /tmp/pinfer-bench.lock bash -c cd baselines && 
+pi          5883  0.0  0.0   5304  1644 ?        Ss   22:25   0:00 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_
+pi          6067  0.0  0.0   5304  1644 ?        Ss   22:27   0:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench 
+pi          6169  0.0  0.0   5304  1684 ?        Ss   22:28   0:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-
+pi          6288  0.0  0.0   5304  1688 ?        Ss   22:30   0:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-
+
+[exit 0]

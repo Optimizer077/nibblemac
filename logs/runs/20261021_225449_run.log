@@ -1,0 +1,9 @@
+# 2026-10-21T22:54:49 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=$HOME/pinfer/models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=$HOME/pinfer/models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=$HOME/pinfer/golden/qwen35-0.8b/meta.json $V/python -m pytest tests/python/test_cli.py tests/python/test_golden.py -q -p no:cacheprovider 2>&1 | tail -2; $V/pinfer generate -m models/qwen35-0.8b-bf16.pq --tokenizer models/qwen35-0.8b-tokenizer -p "The Raspberry Pi 4 is a small computer that" -n 6 --stats 2>&1
+
+...........                                                              [100%]
+11 passed in 67.26s (0:01:07)
+ can be used for a wide
+[10 prompt tok (0 cached), 6 new, finish=length, prefill 2.04 tok/s, decode 1.55 tok/s]
+
+[exit 0]

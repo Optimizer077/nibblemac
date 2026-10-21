@@ -1,0 +1,12 @@
+# 2026-10-21T23:48:33 pi@10.42.0.2
+$ ls -la models/*.pq; free -m | head -2
+
+-rwxr-xr-x 1 pi pi 1546749184 Oct 21 21:36 models/qwen35-0.8b-bf16.pq
+-rwxr-xr-x 1 pi pi  439391488 Oct 21 23:46 models/qwen35-0.8b-mix-headq4k.pq
+-rwxr-xr-x 1 pi pi  566531328 Oct 21 23:47 models/qwen35-0.8b-mix-headq8.pq
+-rwxr-xr-x 1 pi pi  436507904 Oct 21 23:37 models/qwen35-0.8b-q4-headq4.pq
+-rwxr-xr-x 1 pi pi  822678784 Oct 21 23:33 models/qwen35-0.8b-q8-headq8.pq
+               total        used        free      shared  buff/cache   available
+Mem:            3794         260          46          23        3589        3533
+
+[exit 0]

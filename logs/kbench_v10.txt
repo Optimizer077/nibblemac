@@ -1,0 +1,37 @@
+dispatch thr=4  578 ns per empty call
+RESULT {"bench":"kbench_dispatch","variant":"v10-auto-cap3","threads":4,"ns":577.9}
+q4    qkv     6144x1024  thr=4 n=1       919.7 us    3.85 GB/s  err fp 8.08e-03 kern 1.33e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"qkv","rows":6144,"cols":1024,"threads":4,"n":1,"bytes":3538944,"us":919.69,"gbs":3.848,"rel_err_fp":8.082e-03,"rel_err_kernel":1.331e-06,"prefetch":0,"iters":170,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.017,"ok":true}
+q4    z       2048x1024  thr=4 n=1       307.0 us    3.84 GB/s  err fp 7.71e-03 kern 1.30e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"z","rows":2048,"cols":1024,"threads":4,"n":1,"bytes":1179648,"us":306.98,"gbs":3.843,"rel_err_fp":7.714e-03,"rel_err_kernel":1.300e-06,"prefetch":0,"iters":509,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.000,"ok":true}
+q4    out     1024x2048  thr=4 n=1       302.7 us    3.90 GB/s  err fp 8.05e-03 kern 1.80e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"out","rows":1024,"cols":2048,"threads":4,"n":1,"bytes":1179648,"us":302.70,"gbs":3.897,"rel_err_fp":8.045e-03,"rel_err_kernel":1.801e-06,"prefetch":0,"iters":509,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.002,"ok":true}
+q4    q       4096x1024  thr=4 n=1       622.9 us    3.79 GB/s  err fp 7.94e-03 kern 1.30e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"q","rows":4096,"cols":1024,"threads":4,"n":1,"bytes":2359296,"us":622.92,"gbs":3.787,"rel_err_fp":7.940e-03,"rel_err_kernel":1.300e-06,"prefetch":0,"iters":255,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":0.005,"ok":true}
+q4    kv       512x1024  thr=4 n=1        76.6 us    3.85 GB/s  err fp 8.21e-03 kern 1.55e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"kv","rows":512,"cols":1024,"threads":4,"n":1,"bytes":294912,"us":76.65,"gbs":3.848,"rel_err_fp":8.207e-03,"rel_err_kernel":1.554e-06,"prefetch":0,"iters":2035,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":0.005,"ok":true}
+q4    gate    3584x1024  thr=4 n=1       539.4 us    3.83 GB/s  err fp 7.94e-03 kern 1.30e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"gate","rows":3584,"cols":1024,"threads":4,"n":1,"bytes":2064384,"us":539.40,"gbs":3.827,"rel_err_fp":7.940e-03,"rel_err_kernel":1.300e-06,"prefetch":0,"iters":291,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":0.002,"ok":true}
+q4    down    1024x3584  thr=4 n=1       536.9 us    3.84 GB/s  err fp 7.61e-03 kern 1.97e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"down","rows":1024,"cols":3584,"threads":4,"n":1,"bytes":2064384,"us":536.91,"gbs":3.845,"rel_err_fp":7.609e-03,"rel_err_kernel":1.972e-06,"prefetch":0,"iters":291,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.007,"ok":true}
+q4    head  248320x1024  thr=4 n=1     36520.3 us    3.92 GB/s  err fp 9.14e-03 kern 1.36e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4","shape":"head","rows":248320,"cols":1024,"threads":4,"n":1,"bytes":143032320,"us":36520.29,"gbs":3.917,"rel_err_fp":9.137e-03,"rel_err_kernel":1.364e-06,"prefetch":0,"iters":5,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.006,"ok":true}
+q4k   qkv     6144x1024  thr=4 n=1       920.4 us    3.84 GB/s  err fp 7.53e-03 kern 7.57e-07 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"qkv","rows":6144,"cols":1024,"threads":4,"n":1,"bytes":3538944,"us":920.45,"gbs":3.845,"rel_err_fp":7.526e-03,"rel_err_kernel":7.567e-07,"prefetch":0,"iters":170,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.018,"ok":true}
+q4k   z       2048x1024  thr=4 n=1       303.3 us    3.89 GB/s  err fp 8.05e-03 kern 8.44e-07 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"z","rows":2048,"cols":1024,"threads":4,"n":1,"bytes":1179648,"us":303.34,"gbs":3.889,"rel_err_fp":8.055e-03,"rel_err_kernel":8.444e-07,"prefetch":0,"iters":509,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":0.000,"ok":true}
+q4k   out     1024x2048  thr=4 n=1       306.0 us    3.85 GB/s  err fp 9.22e-03 kern 9.71e-07 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"out","rows":1024,"cols":2048,"threads":4,"n":1,"bytes":1179648,"us":306.02,"gbs":3.855,"rel_err_fp":9.221e-03,"rel_err_kernel":9.711e-07,"prefetch":0,"iters":509,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.003,"ok":true}
+q4k   q       4096x1024  thr=4 n=1       616.5 us    3.83 GB/s  err fp 8.05e-03 kern 8.44e-07 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"q","rows":4096,"cols":1024,"threads":4,"n":1,"bytes":2359296,"us":616.54,"gbs":3.827,"rel_err_fp":8.055e-03,"rel_err_kernel":8.444e-07,"prefetch":0,"iters":255,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.005,"ok":true}
+q4k   kv       512x1024  thr=4 n=1        75.7 us    3.90 GB/s  err fp 8.95e-03 kern 5.69e-07 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"kv","rows":512,"cols":1024,"threads":4,"n":1,"bytes":294912,"us":75.69,"gbs":3.896,"rel_err_fp":8.952e-03,"rel_err_kernel":5.694e-07,"prefetch":0,"iters":2035,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.008,"ok":true}
+q4k   gate    3584x1024  thr=4 n=1       541.9 us    3.81 GB/s  err fp 8.05e-03 kern 8.44e-07 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"gate","rows":3584,"cols":1024,"threads":4,"n":1,"bytes":2064384,"us":541.87,"gbs":3.810,"rel_err_fp":8.055e-03,"rel_err_kernel":8.444e-07,"prefetch":0,"iters":291,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":0.002,"ok":true}
+q4k   down    1024x3584  thr=4 n=1       540.0 us    3.82 GB/s  err fp 7.13e-03 kern 1.38e-06 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"down","rows":1024,"cols":3584,"threads":4,"n":1,"bytes":2064384,"us":539.99,"gbs":3.823,"rel_err_fp":7.131e-03,"rel_err_kernel":1.375e-06,"prefetch":0,"iters":291,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.008,"ok":true}
+q4k   head  248320x1024  thr=4 n=1     36598.3 us    3.91 GB/s  err fp 8.49e-03 kern 7.95e-07 
+RESULT {"bench":"kbench","variant":"v10-auto-cap3","dtype":"q4k","shape":"head","rows":248320,"cols":1024,"threads":4,"n":1,"bytes":143032320,"us":36598.35,"gbs":3.908,"rel_err_fp":8.486e-03,"rel_err_kernel":7.953e-07,"prefetch":0,"iters":5,"hot":0,"auto_threads":1,"noisy":false,"foreign_cpu_s":-0.007,"ok":true}
+all checks passed (0 failing checks)
+
+saved bench/results/kbench-v10-auto-cap3_20261021_233247.json  valid=True  temp 50.6'C -> 50.6'C

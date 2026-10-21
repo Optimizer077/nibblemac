@@ -1,0 +1,12 @@
+# 2026-10-21T22:38:30 pi@10.42.0.2
+$ date; ps -eo pid,etime,pcpu,args --sort=-pcpu | head -6 | cut -c1-150
+
+Wed 21 Oct 22:38:31 KST 2026
+    PID     ELAPSED %CPU COMMAND
+   6199       08:31 99.4 ../venvs/ort/bin/python bench/ort/run_bench.py --model models/ort/int8-acc4 --quant int8-rtn-sym-b32-acc4-embfp32 --threads 1
+   6366       00:00 22.7 sshd-session: pi [priv]
+     92    01:20:12  0.1 [irq/40-mmc0]
+      1    01:20:13  0.1 /sbin/init
+   1925       52:58  0.1 [kworker/u16:4-flush-8:0]
+
+[exit 0]

@@ -1,0 +1,10 @@
+# 2026-10-21T21:59:01 pi@10.42.0.2
+$ cd baselines && ./mnn/mnn_bench models/Qwen3.5-0.8B-MNN/config_text.json bench/common/prompt64.json 4 1; echo exit=$?; dmesg 2>/dev/null | tail -3
+
+exit=135
+bash: line 1:  3737 Bus error               ./mnn/mnn_bench models/Qwen3.5-0.8B-MNN/config_text.json bench/common/prompt64.json 4 1
+[   16.284213] brcmfmac: brcmf_cfg80211_set_power_mgmt: power save enabled
+[   19.232323] brcmfmac: brcmf_cfg80211_set_power_mgmt: power save disabled
+[   20.355356] bcmgenet fd580000.ethernet eth0: Link is Up - 1Gbps/Full - flow control rx/tx
+
+[exit 0]

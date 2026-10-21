@@ -1,0 +1,64 @@
+# 2026-10-21T22:10:01 pi@10.42.0.2
+$ uname -a; cat /proc/version; cat /proc/cmdline; getconf PAGESIZE; ls /usr/share/doc/linux-image-6.18.50+rpt-rpi-v8/; zcat /usr/share/doc/linux-image-6.18.50+rpt-rpi-v8/changelog.Debian.gz 2>/dev/null | head -40; cat /boot/firmware/issue.txt; ls /etc/initramfs/post-update.d/ /etc/kernel/postinst.d/ 2>&1; nproc; cat /sys/kernel/mm/transparent_hugepage/enabled 2>&1; ls /boot/firmware/overlays | wc -l; grep -c . /boot/config-6.18.50+rpt-rpi-v8
+
+Linux pi4 6.18.50+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.18.50-1+rpt1 (2026-09-11) aarch64 GNU/Linux
+Linux version 6.18.50+rpt-rpi-v8 (serge@raspberrypi.com) (aarch64-linux-gnu-gcc-14 (Debian 14.2.0-19) 14.2.0, GNU ld (GNU Binutils for Debian) 2.44) #1 SMP PREEMPT Debian 1:6.18.50-1+rpt1 (2026-09-11)
+coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR
+4096
+changelog.Debian.gz
+copyright
+NEWS.Debian.gz
+linux (1:6.18.50-1+rpt1) trixie; urgency=medium
+
+  * Raspberry Pi OS release
+  * rpi/update: fail early when the vanilla release tag is missing
+  * Update Raspberry Pi patch
+  * Update debian/config
+  * Linux commit: cff533aec2fa601846766b32ff57204e0a61bed7
+
+ -- Serge Schneider <serge@raspberrypi.com>  Fri, 11 Sep 2026 14:21:05 +0100
+
+linux (1:6.18.39-1+rpt1) trixie; urgency=medium
+
+  * Raspberry Pi OS release
+  * salsa-ci: fold terminal release status into publish jobs
+  * salsa-ci: guard notify-test and notify-deploy against earlier-stage
+    failures
+  * salsa-ci: find Linux commit in .changes when debian/changelog absent
+  * salsa-ci: make notify-test failure-only to stop racing the terminal
+    status
+  * Update Raspberry Pi patch
+  * Update debian/config
+  * Linux commit: 60ea684a8ace97bb0db1a16e20753bdd6ab371ff
+
+ -- Serge Schneider <serge@raspberrypi.com>  Wed, 29 Jul 2026 18:19:41 +0100
+
+linux (1:6.18.34-1+rpt1) trixie; urgency=medium
+
+  * Raspberry Pi OS release
+  * salsa-ci: narrow notify-released needs: to mirror-to-github only
+  * salsa-ci: collapse notify-* contexts to one per flow
+  * rpi/update: pin QUILT_PATCHES and skip quiltrc
+  * Update Raspberry Pi patch
+  * Update debian/config
+  * Linux commit: c8c7494100e99ee05b11aaa4f0588a223a63d1af
+
+ -- Serge Schneider <serge@raspberrypi.com>  Tue, 09 Jun 2026 14:55:28 +0100
+
+linux (1:6.18.33-1+rpt1) trixie; urgency=medium
+
+  [ Bastian Blank ]
+Raspberry Pi reference 2026-10-06
+Generated using pi-gen, https://github.com/RPi-Distro/pi-gen, b2cd98a9ee08a31ef7d0110ed09f2492bbd972ec, stage2
+/etc/initramfs/post-update.d/:
+z50-raspi-firmware
+
+/etc/kernel/postinst.d/:
+initramfs-tools
+z50-raspi-firmware
+4
+cat: /sys/kernel/mm/transparent_hugepage/enabled: No such file or directory
+386
+9385
+
+[exit 0]

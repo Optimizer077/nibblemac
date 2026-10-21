@@ -1,0 +1,8 @@
+# 2026-10-21T22:26:32 pi@10.42.0.2
+$ ps aux | grep -v grep | grep flock | cut -c1-140
+
+pi          5601  0.0  0.0   5304  1684 ?        Ss   22:20   0:00 flock /tmp/pinfer-bench.lock bash -c cd ~/pinfer && echo "== pytest" && P
+pi          5775  0.0  0.0   5304  1684 ?        Ss   22:24   0:00 flock /tmp/pinfer-bench.lock bash -c cd baselines && bash bench/ort/sweep
+pi          5883  0.0  0.0   5304  1688 ?        Ss   22:25   0:00 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec -m models/q
+
+[exit 0]

@@ -1,0 +1,10 @@
+# 2026-10-21T22:59:54 pi@10.42.0.2
+$ date; ps -eo pid,etime,pcpu,args --sort=-pcpu | head -3 | cut -c1-120; ps aux | grep -c '[f]lock'
+
+Wed 21 Oct 22:59:54 KST 2026
+    PID     ELAPSED %CPU COMMAND
+   6714       00:00  100 ps -eo pid,etime,pcpu,args --sort=-pcpu
+   6199       29:55 99.5 ../venvs/ort/bin/python bench/ort/run_bench.py --model models/ort/int8-acc4 --quant int8-rtn-sy
+8
+
+[exit 0]

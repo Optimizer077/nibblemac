@@ -1,0 +1,37 @@
+# 2026-10-21T22:16:04 pi@10.42.0.2
+$ rm -rf ~/pinfer/venvs/pinfer && python3 -m venv ~/pinfer/venvs/pinfer && V=~/pinfer/venvs/pinfer/bin; W=~/pinfer/wheels/pinfer; $V/pip install -q --no-index --find-links $W --upgrade pip && $V/pip install -q --no-index --find-links $W "pinfer[test]" && $V/pip freeze | tee ~/pinfer/venvs/pinfer.freeze.txt && $V/pinfer --version && cd /tmp && $V/python -c "import pinfer,json;l=pinfer.load_library();print(l.path,l.version);print(open(l.path.replace(\"libpinfer.so\",\"BUILD_INFO.json\")).read())" && ldd ~/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so
+
+anyio==4.15.1
+click==8.5.0
+filelock==4.2.4
+fsspec==2026.9.0
+h11==0.16.0
+hf-xet==1.7.0
+httpcore2==2.16.0
+httpx2==2.16.0
+huggingface_hub==2.2.0
+idna==3.20
+iniconfig==2.3.1
+Jinja2==3.1.6
+MarkupSafe==3.0.4
+numpy==2.5.4
+packaging==26.3
+pinfer==0.1.0
+pluggy==1.7.0
+Pygments==2.21.0
+pytest==9.1.1
+PyYAML==6.0.3
+tokenizers==0.23.3
+tqdm==4.70.1
+truststore==0.10.5
+typing_extensions==4.16.0
+pinfer 0.1.0
+/home/pi/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so 0.1.0
+{"version": "0.1.0", "matvec": "ref", "arch": "aarch64", "cc": "aarch64-linux-gnu 15.2.0", "soname": "libpinfer.so.0.1"}
+
+	linux-vdso.so.1 (0x0000007fa9f9d000)
+	libm.so.6 => /lib/aarch64-linux-gnu/libm.so.6 (0x0000007fa9e70000)
+	libc.so.6 => /lib/aarch64-linux-gnu/libc.so.6 (0x0000007fa9cb0000)
+	/lib/ld-linux-aarch64.so.1 (0x0000007fa9f50000)
+
+[exit 0]

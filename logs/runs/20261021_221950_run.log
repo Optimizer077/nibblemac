@@ -1,0 +1,10 @@
+# 2026-10-21T22:19:50 pi@10.42.0.2
+$ ps aux | grep -v grep | grep -E "flock|pytest|pinfer_run|kbench|llama" | cut -c1-200; uptime
+
+pi          5004  0.0  0.0   5304  1688 ?        Ss   22:10   0:00 flock /tmp/pinfer-bench.lock bash -c cd baselines && bash bench/ort/sweep.sh models/ort/int4-acc4 int4-rtn-sym-b32-acc4 1,2,3,4 3
+pi          5160  0.0  0.0   5304  1688 ?        Ss   22:11   0:00 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec -m models/qwen35-0.8b-bf16.pq -t 1 -n 64 --ids 2064,557,279,1786,314,29
+pi          5230  0.0  0.0   5304  1688 ?        Ss   22:12   0:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench --variant v5-blockmajor --hot --batch 1,2,4,8 --threads 1 --shapes kv --dtypes q
+pi          5413  0.0  0.0   5304  1688 ?        Ss   22:16   0:00 flock /tmp/pinfer-bench.lock bash -c cd ~/pinfer && PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=$HOME/pinfer/models/qwen35-0.8b-bf16.pq P
+ 22:19:51 up  1:01,  5 users,  load average: 2.19, 1.92, 1.81
+
+[exit 0]

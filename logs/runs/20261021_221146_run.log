@@ -1,0 +1,24 @@
+# 2026-10-21T22:11:46 pi@10.42.0.2
+$ ls -la engine models; nproc; free -m | head -2
+
+engine:
+total 1536
+drwxrwxr-x 2 pi pi   4096 Oct 21 22:11 .
+drwxrwxr-x 9 pi pi   4096 Oct 21 21:56 ..
+-rwxr-xr-x 1 pi pi 779792 Oct 21 21:47 pinfer_run
+-rwxr-xr-x 1 pi pi 780952 Oct 21 22:11 pinfer_run_spec
+
+models:
+total 3354744
+drwxrwxr-x 2 pi pi       4096 Oct 21 21:45 .
+drwxrwxr-x 9 pi pi       4096 Oct 21 21:56 ..
+-rwxr-xr-x 1 pi pi 1546749184 Oct 21 21:36 qwen35-0.8b-bf16.pq
+-rwxr-xr-x 1 pi pi  512977920 Oct 21 21:26 Qwen3.5-0.8B-Q4_0.gguf
+-rwxr-xr-x 1 pi pi  541903872 Oct 21 21:26 Qwen3.5-0.8B-Q4_K_M.gguf
+-rwxr-xr-x 1 pi pi  833592320 Oct 21 21:25 Qwen3.5-0.8B-Q8_0.gguf
+-rwxr-xr-x 1 pi pi        358 Oct 21 21:26 Qwen3.5-0.8B.SHA256SUMS
+4
+               total        used        free      shared  buff/cache   available
+Mem:            3794         775         269           8        2826        3019
+
+[exit 0]

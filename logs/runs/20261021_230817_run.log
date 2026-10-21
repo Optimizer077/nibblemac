@@ -1,0 +1,14 @@
+# 2026-10-21T23:08:17 pi@10.42.0.2
+$ ps -o pid,etime,args -p 6199 | cut -c1-160; kill 6199 && echo "killed 6199 (ORT int8 t=1 bench, 38 min, blocking lock)"; sleep 3; ps -eo pid,etime,pcpu,args --sort=start_time | grep -E "pinfer_run|kbench|run_bench" | grep -v grep | cut -c1-120
+
+    PID     ELAPSED COMMAND
+   6199       38:18 ../venvs/ort/bin/python bench/ort/run_bench.py --model models/ort/int8-acc4 --quant int8-rtn-sym-b32-acc4-embfp32 --threads 1 --reps 3
+killed 6199 (ORT int8 t=1 bench, 38 min, blocking lock)
+   5883       42:57  0.0 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec -m models/qwen35-0.8b-bf16.pq -t 
+   6067       41:16  0.0 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench --golden kbench/kbench_golden.bin --varian
+   6169       40:03  0.0 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v7 --variant v7-split-hot --hot --batch 1,
+   6288       37:50  0.0 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v8 --variant v8-pass4-hot --hot --batch 1,
+   6468       24:29  0.0 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec_fast -m models/qwen35-0.8b-bf16.p
+   6837       00:02 98.9 ./engine/pinfer_run_spec -m models/qwen35-0.8b-bf16.pq -t 1 -n 64 --ids 2064,557,279,1786,314,2
+
+[exit 0]

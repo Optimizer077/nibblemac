@@ -1,0 +1,23 @@
+# 2026-10-21T22:15:57 pi@10.42.0.2
+$ cd wheels/pinfer && sha256sum -c SHA256SUMS | grep -c OK; ls ~/pinfer/models/qwen35-0.8b-tokenizer ~/pinfer/golden/qwen35-0.8b ~/pinfer/tests/python
+
+25
+/home/pi/pinfer/golden/qwen35-0.8b:
+meta.json
+
+/home/pi/pinfer/models/qwen35-0.8b-tokenizer:
+chat_template.jinja
+tokenizer_config.json
+tokenizer.json
+
+/home/pi/pinfer/tests/python:
+conftest.py
+test_api.py
+test_chat.py
+test_cli.py
+test_golden.py
+test_sampling.py
+test_streaming.py
+test_tokenizer.py
+
+[exit 0]

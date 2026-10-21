@@ -1,0 +1,9 @@
+# 2026-10-21T22:19:45 pi@10.42.0.2
+$ cat /sys/devices/system/cpu/cpu0/regs/identification/midr_el1; grep -m3 -E "CPU (implementer|part|revision)|CPU variant" /proc/cpuinfo
+
+0x00000000410fd083
+CPU implementer	: 0x41
+CPU variant	: 0x0
+CPU part	: 0xd08
+
+[exit 0]

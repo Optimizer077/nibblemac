@@ -1,0 +1,8 @@
+# 2026-10-21T22:54:41 pi@10.42.0.2
+$ cd ~/pinfer/wheels/pinfer && sha256sum -c SHA256SUMS | grep -c OK; V=~/pinfer/venvs/pinfer/bin; $V/pip install -q --no-index --find-links ~/pinfer/wheels/pinfer --force-reinstall --no-deps pinfer && $V/pip freeze > ~/pinfer/venvs/pinfer.freeze.txt && grep -c "flush()  # keep" ~/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/cli.py && sha256sum ~/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so
+
+25
+1
+b623de206957a5e0bd714b5648b10028b6cd14ca8ce0bb9ce4167243b42c1ff9  /home/pi/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so
+
+[exit 0]

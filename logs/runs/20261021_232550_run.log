@@ -1,0 +1,10 @@
+# 2026-10-21T23:25:50 pi@10.42.0.2
+$ ps -eo pid,etime,pcpu,args --sort=start_time | grep -E "pinfer_run|kbench|run_bench|llm_|litert|python3" | grep -v grep | cut -c1-130
+
+   7498       12:42  0.0 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_spec_fast -m models
+   7777       09:48  0.0 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_spec -m models/qwen
+   7809       00:21  0.0 timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_spec_fast -m models/qwen35-0.8b-bf16.pq -t 4 -n 
+   7810       00:21  318 ./engine/pinfer_run_spec_fast -m models/qwen35-0.8b-bf16.pq -t 4 -n 64 --ids 2064,557,279,1786,314,2942,1
+   7919       00:19  0.0 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./kbench/kbench-v9 --variant v9-auto --
+
+[exit 0]

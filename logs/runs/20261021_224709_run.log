@@ -1,0 +1,26 @@
+# 2026-10-21T22:47:09 pi@10.42.0.2
+$ cd /lib/modules/6.18.50+rpt-rpi-v8/kernel && find . -name "*.ko*" | sed "s|^\./||" | sort | md5sum; find . -name "*.ko*" | wc -l; ls /boot/firmware/overlays | wc -l; ls /lib/modules/6.18.50+rpt-rpi-v8
+
+ae70c3f56436b2b60e044b5b12fc52f7  -
+1914
+386
+build
+dtb
+kernel
+modules.alias
+modules.alias.bin
+modules.builtin
+modules.builtin.alias.bin
+modules.builtin.bin
+modules.builtin.modinfo
+modules.dep
+modules.dep.bin
+modules.devname
+modules.order
+modules.softdep
+modules.symbols
+modules.symbols.bin
+modules.weakdep
+source
+
+[exit 0]

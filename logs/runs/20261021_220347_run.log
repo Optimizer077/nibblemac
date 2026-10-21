@@ -1,0 +1,6 @@
+# 2026-10-21T22:03:47 pi@10.42.0.2
+$ pgrep -fa "llama|mnn|python" | grep -v pgrep | head; uptime
+
+ 22:03:48 up 45 min,  1 user,  load average: 2.10, 1.62, 1.48
+
+[exit 0]

@@ -1,0 +1,9 @@
+# 2026-10-21T23:23:44 pi@10.42.0.2
+$ ps -eo pid,etime,args | grep -E "flock" | grep -v grep | cut -c1-120
+
+   7386       10:58 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./kbench/kbench-v9 --golden kbench
+   7498       10:36 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_spec_fast -m m
+   7661       09:16 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c cd baselines && bash bench/ort/swe
+   7777       07:43 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_spec -m models
+
+[exit 0]

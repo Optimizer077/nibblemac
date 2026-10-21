@@ -1,0 +1,101 @@
+# 2026-10-21T23:08:05 pi@10.42.0.2
+$ INO=$(stat -c %i /tmp/pinfer-bench.lock); echo "lock inode $INO"; grep ":$INO " /proc/locks; for p in $(grep ":$INO " /proc/locks | awk "{print \$5}"); do echo "--- holder/waiter pid $p"; ps -o pid,ppid,etime,pcpu,stat,args -p $p | cut -c1-220; done; echo "=== top CPU ==="; ps -eo pid,ppid,etime,pcpu,stat,args --sort=-pcpu | head -6 | cut -c1-200
+
+lock inode 14
+1: FLOCK  ADVISORY  WRITE 5775 00:23:14 0 EOF
+1: -> FLOCK  ADVISORY  WRITE 5883 00:23:14 0 EOF
+1:  -> FLOCK  ADVISORY  WRITE 6067 00:23:14 0 EOF
+1:   -> FLOCK  ADVISORY  WRITE 6169 00:23:14 0 EOF
+1:    -> FLOCK  ADVISORY  WRITE 6288 00:23:14 0 EOF
+1:     -> FLOCK  ADVISORY  WRITE 6345 00:23:14 0 EOF
+1:      -> FLOCK  ADVISORY  WRITE 6468 00:23:14 0 EOF
+1:       -> FLOCK  ADVISORY  WRITE 6680 00:23:14 0 EOF
+--- holder/waiter pid 5775
+    PID    PPID     ELAPSED %CPU STAT COMMAND
+   5775    5774       43:54  0.0 Ss   flock /tmp/pinfer-bench.lock bash -c cd baselines && bash bench/ort/sweep.sh models/ort/int8-acc4 int8-rtn-sym-b32-acc4-embfp32 1,2,3,4 3
+--- holder/waiter pid WRITE
+error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+--- holder/waiter pid WRITE
+error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+--- holder/waiter pid WRITE
+error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+--- holder/waiter pid WRITE
+error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+--- holder/waiter pid WRITE
+error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+--- holder/waiter pid WRITE
+error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+--- holder/waiter pid WRITE
+error: process ID list syntax error
+
+Usage:
+ ps [options]
+
+ Try 'ps --help <simple|list|output|threads|misc|all>'
+  or 'ps --help <s|l|o|t|m|a>'
+ for additional help text.
+
+For more details see ps(1).
+=== top CPU ===
+    PID    PPID     ELAPSED %CPU STAT COMMAND
+   6199    6198       38:06 99.6 Rl   ../venvs/ort/bin/python bench/ort/run_bench.py --model models/ort/int8-acc4 --quant int8-rtn-sym-b32-acc4-embfp32 --threads 1 --reps 3
+   6785    1080       00:00 12.5 Ss   sshd-session: pi [priv]
+   6794    6793       00:00  8.3 Ss   bash -c mkdir -p pinfer && cd pinfer || exit 1; INO=$(stat -c %i /tmp/pinfer-bench.lock); echo "lock inode $INO"; grep ":$INO " /proc/locks; for p in $(grep ":$IN
+     92       2    01:49:46  0.1 S    [irq/40-mmc0]
+   6746       2       01:30  0.1 I    [kworker/2:1-events]
+
+[exit 0]

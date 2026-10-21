@@ -1,0 +1,11 @@
+# 2026-10-21T22:47:21 pi@10.42.0.2
+$ ls /boot/firmware/overlays | grep -v "\.dtbo$"; echo ===; cd /lib/modules/6.18.50+rpt-rpi-v8/kernel && find . -name "*.ko*" | wc -l; find . -name "*.ko*" | sed "s|^\./||" | sort | md5sum
+
+hat_map.dtb
+overlay_map.dtb
+README
+===
+1914
+ae70c3f56436b2b60e044b5b12fc52f7  -
+
+[exit 0]

@@ -1,0 +1,23 @@
+# 2026-10-21T22:20:48 pi@10.42.0.2
+$ cd ~/pinfer && echo "== pytest" && PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=$HOME/pinfer/models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=$HOME/pinfer/models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=$HOME/pinfer/golden/qwen35-0.8b/meta.json ~/pinfer/venvs/pinfer/bin/python -m pytest tests/python -q -p no:cacheprovider -rs --durations=8 2>&1; echo "== C example (static, libpinfer.a)"; ./examples/pinfer_example models/qwen35-0.8b-bf16.pq 760,45980,20010,220,19,369,264,2526,6165,421 8; echo "== CLI"; ~/pinfer/venvs/pinfer/bin/pinfer generate -m models/qwen35-0.8b-bf16.pq --tokenizer models/qwen35-0.8b-tokenizer -p "The Raspberry Pi 4 is a small computer that" -n 12 --stats
+
+== pytest
+........................................................................ [ 90%]
+........                                                                 [100%]
+============================= slowest 8 durations ==============================
+67.75s call     tests/python/test_api.py::test_speculative_matches_greedy
+24.78s call     tests/python/test_golden.py::test_greedy_text_prompt
+17.26s call     tests/python/test_streaming.py::test_stop_string
+15.94s call     tests/python/test_streaming.py::test_stream_equals_blocking
+11.41s call     tests/python/test_chat.py::test_chat_generates
+10.84s call     tests/python/test_streaming.py::test_max_new_tokens
+10.59s call     tests/python/test_api.py::test_context_overflow
+10.13s call     tests/python/test_streaming.py::test_early_close_keeps_model_usable
+80 passed in 236.65s (0:03:56)
+== C example (static, libpinfer.a)
+628,381,1429,364,264,6669,2020,314
+== CLI
+ can be used for a wide range of tasks. It is[10 prompt tok (0 cached), 12 new, finish=length, prefill 2.06 tok/s, decode 1.55 tok/s]
+
+
+[exit 0]

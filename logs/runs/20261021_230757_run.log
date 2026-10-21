@@ -1,0 +1,10 @@
+# 2026-10-21T23:07:57 pi@10.42.0.2
+$ ps -eo pid,etime,pcpu,args --sort=start_time | grep -E "pinfer_run|kbench|llm_|litert|python3" | grep -v grep | cut -c1-200
+
+   5883       42:35  0.0 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec -m models/qwen35-0.8b-bf16.pq -t 1 -n 64 --ids 2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,55
+   6067       40:53  0.0 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench --golden kbench/kbench_golden.bin --variant v6-hot --hot --batch 1,2,4,8 --threads 1 --shapes kv --dtypes q8,q4,q4k; ./kbe
+   6169       39:41  0.0 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v7 --variant v7-split-hot --hot --batch 1,2,4,8 --threads 1 --shapes kv,ab --dtypes f32,bf16; ./kbench/kbench-v7 --variant
+   6288       37:27  0.0 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v8 --variant v8-pass4-hot --hot --batch 1,2,3,4,8 --threads 1 --shapes kv,out --dtypes q8,q4,q4k
+   6468       24:07  0.0 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec_fast -m models/qwen35-0.8b-bf16.pq -t 4 -n 64 --ids 2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,4
+
+[exit 0]

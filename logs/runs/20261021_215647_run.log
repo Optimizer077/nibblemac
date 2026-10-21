@@ -1,0 +1,22 @@
+# 2026-10-21T21:56:47 pi@10.42.0.2
+$ cd baselines/models/ort/int4-acc1 && ln -sf ../int4-acc4/model.onnx.data model.onnx.data && ln -sf ../int4-acc4/mtp.onnx.data mtp.onnx.data && cd .. && sha256sum int4-acc4/model.onnx.data int4-acc1/model.onnx int4-acc4/model.onnx && ls -la int4-acc1
+
+65f80aec50026c9b249d0c4c33ca8388fb149f8c128232fad316f48a3631074d  int4-acc4/model.onnx.data
+44040866a1739804603171ad47aa67873836a7a2eca8295ea5bee53d5e6e15ef  int4-acc1/model.onnx
+57bb7c0fe5da471741f8105f41b5980286b10826c4343b920e2001779c564c47  int4-acc4/model.onnx
+total 20132
+drwxr-xr-x 2 pi pi     4096 Oct 21 21:56 .
+drwxrwxr-x 4 pi pi     4096 Oct 21 21:56 ..
+-rwxr-xr-x 1 pi pi     7755 Oct 21 21:56 chat_template.jinja
+-rwxr-xr-x 1 pi pi   199647 Oct 21 21:56 export.log
+-rwxr-xr-x 1 pi pi     2914 Oct 21 21:56 genai_config.json
+-rwxr-xr-x 1 pi pi     4509 Oct 21 21:56 genai_config.orig.json
+-rwxr-xr-x 1 pi pi   358976 Oct 21 21:56 model.onnx
+lrwxrwxrwx 1 pi pi       28 Oct 21 21:56 model.onnx.data -> ../int4-acc4/model.onnx.data
+-rwxr-xr-x 1 pi pi    21086 Oct 21 21:56 mtp.onnx
+lrwxrwxrwx 1 pi pi       26 Oct 21 21:56 mtp.onnx.data -> ../int4-acc4/mtp.onnx.data
+-rwxr-xr-x 1 pi pi      322 Oct 21 21:56 SHA256SUMS
+-rwxr-xr-x 1 pi pi     1465 Oct 21 21:56 tokenizer_config.json
+-rwxr-xr-x 1 pi pi 19989339 Oct 21 21:56 tokenizer.json
+
+[exit 0]

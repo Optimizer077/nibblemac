@@ -1,0 +1,8 @@
+# 2026-10-21T22:40:06 pi@10.42.0.2
+$ uptime; vcgencmd measure_temp; vcgencmd get_throttled
+
+ 22:40:06 up  1:21,  7 users,  load average: 1.06, 1.19, 1.50
+temp=45.2'C
+throttled=0x0
+
+[exit 0]

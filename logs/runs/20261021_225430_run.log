@@ -1,0 +1,7 @@
+# 2026-10-21T22:54:30 pi@10.42.0.2
+$ ps aux | grep -v grep | grep -E "SHA256SUMS|pytest|pinfer generate" | cut -c1-200; ls -la --time-style=+%H:%M:%S ~/pinfer/venvs/pinfer/lib/python3.13/site-packages/ | grep -i pinfer
+
+drwxrwxr-x  4 pi pi   4096 22:20:37 pinfer
+drwxrwxr-x  2 pi pi   4096 22:20:37 pinfer-0.1.0.dist-info
+
+[exit 0]

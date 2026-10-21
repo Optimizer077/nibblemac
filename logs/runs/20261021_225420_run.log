@@ -1,0 +1,11 @@
+# 2026-10-21T22:54:20 pi@10.42.0.2
+$ ps aux | grep -v grep | grep "flock /tmp/pinfer-bench.lock" | cut -c1-160
+
+pi          5775  0.0  0.0   5304  1664 ?        Ss   22:24   0:00 flock /tmp/pinfer-bench.lock bash -c cd baselines && bash bench/ort/sweep.sh models/ort/int8-
+pi          5883  0.0  0.0   5304  1644 ?        Ss   22:25   0:00 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec -m models/qwen35-0.8b-bf16.pq -
+pi          6067  0.0  0.0   5304  1644 ?        Ss   22:27   0:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench --golden kbench/kbench_golden.bin --vari
+pi          6169  0.0  0.0   5304  1684 ?        Ss   22:28   0:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v7 --variant v7-split-hot --hot --batch 
+pi          6288  0.0  0.0   5304  1688 ?        Ss   22:30   0:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v8 --variant v8-pass4-hot --hot --batch 
+pi          6468  0.0  0.0   5304  1676 ?        Ss   22:43   0:00 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec_fast -m models/qwen35-0.8b-bf16
+
+[exit 0]

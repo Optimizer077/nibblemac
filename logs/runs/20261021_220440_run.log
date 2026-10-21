@@ -1,0 +1,10 @@
+# 2026-10-21T22:04:40 pi@10.42.0.2
+$ cd baselines/models/ort/int8-acc1 && ln -sf ../int8-acc4/model.onnx.data model.onnx.data && ln -sf ../int8-acc4/mtp.onnx.data mtp.onnx.data && cd .. && sha256sum int8-acc4/model.onnx.data int8-acc1/model.onnx && free -m
+
+111fa1a04832366f0acb73d50a2d90b205bde01cecca1d00f5dc85ffd26df638  int8-acc4/model.onnx.data
+f40b1f2c115dfdabe1234c06d7169b57a49c0d8585714e7fb48b4c63602b68f5  int8-acc1/model.onnx
+               total        used        free      shared  buff/cache   available
+Mem:            3794         329          62           8        3516        3464
+Swap:           2047           0        2047
+
+[exit 0]

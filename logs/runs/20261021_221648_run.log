@@ -1,0 +1,5 @@
+# 2026-10-21T22:16:48 pi@10.42.0.2
+$ cd ~/pinfer && PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=$HOME/pinfer/models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=$HOME/pinfer/models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=$HOME/pinfer/golden/qwen35-0.8b/meta.json ~/pinfer/venvs/pinfer/bin/python -m pytest tests/python -q -p no:cacheprovider -rs --durations=10 2>&1
+
+
+[exit 255]

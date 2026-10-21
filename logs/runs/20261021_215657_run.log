@@ -1,0 +1,6 @@
+# 2026-10-21T21:56:57 pi@10.42.0.2
+$ cd baselines && ../venvs/ort/bin/python bench/ort/run_bench.py --model models/ort/int4-acc4 --threads 4 --reps 1 --quant int4 2>&1 | tail -5 | cut -c1-900
+
+RESULT {"engine": "onnxruntime-genai", "engine_version": "genai 0.18.0, ort 1.31.0", "model_file": "models/ort/int4-acc4", "quant": "int4", "threads": 4, "n_prompt": 64, "n_gen": 64, "reps": 1, "prefill_tps": 10.487676974393649, "prefill_tps_sd": 0.0, "decode_tps": 3.125555325564346, "decode_tps_sd": 0.0, "prefill_samples": [10.4877], "decode_samples": [3.1256], "peak_rss_mb": 780.19921875, "load_s": 4.32, "min_ref_match": 0, "warmup_first16": [279, 1814, 11, 424, 557, 279, 7094, 314, 279, 1814, 11, 424, 557, 279, 40297, 314], "decode_steps": 64, "notes": "mtp=off; CPU EP; intra_op=4; warm-up rep excluded; spec_stats={'rounds': 0, 'completed_rounds': 0, 'interrupted_rounds': 0, 'active_rounds': 0, 'draft_tokens_proposed': 0, 'draft_tokens_evaluated': 0, 'draft_tokens_accepted': 0, 'correction_tokens': 0, 'bonus_tokens': 0, 'tokens_queued': 0, 'tokens_emitted': 0, 'tokens_discarded': 0, '
+
+[exit 0]

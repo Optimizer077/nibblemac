@@ -1,0 +1,21 @@
+# 2026-10-21T22:03:51 pi@10.42.0.2
+$ top -b -n 1 | head -15; ls -la /tmp/pinfer-bench.lock 2>/dev/null; pgrep -fa flock
+
+top - 22:03:52 up 45 min,  1 user,  load average: 1.93, 1.59, 1.47
+Tasks: 151 total,   1 running, 150 sleeping,   0 stopped,   0 zombie
+%Cpu(s):  0.0 us,  2.3 sy,  0.0 ni, 97.7 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st 
+MiB Mem :   3794.7 total,    185.4 free,    207.9 used,   3478.7 buff/cache     
+MiB Swap:   2048.0 total,   2048.0 free,      0.0 used.   3586.8 avail Mem 
+
+    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND
+   4424 pi        20   0   10180   4828   2836 R   9.1   0.1   0:00.02 top
+      1 root      20   0   25184  14616  10612 S   0.0   0.4   0:05.98 systemd
+      2 root      20   0       0      0      0 S   0.0   0.0   0:00.00 kthreadd
+      3 root      20   0       0      0      0 S   0.0   0.0   0:00.00 pool_wo+
+      4 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      5 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      6 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+      7 root       0 -20       0      0      0 I   0.0   0.0   0:00.00 kworker+
+-rw-rw-r-- 1 pi pi 0 Oct 21 21:36 /tmp/pinfer-bench.lock
+
+[exit 1]

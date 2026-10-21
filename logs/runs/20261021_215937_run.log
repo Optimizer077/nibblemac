@@ -1,0 +1,12 @@
+# 2026-10-21T21:59:37 pi@10.42.0.2
+$ cd baselines && ./mnn/mnn_bench models/Qwen3.5-0.8B-MNN/config.json bench/common/prompt64.json 4 1; echo exit=$?
+
+load failed
+Can't open file:/sys/devices/system/cpu/cpufreq/ondemand/affected_cpus
+CPU Group: [ 0  1  2  3 ], 600000 - 1500000
+The device supports: i8sdot:0, fp16:0, i8mm: 0, sve2: 0, sme2: 0
+Can't open file:models/Qwen3.5-0.8B-MNN/visual.mnn
+Error for open models/Qwen3.5-0.8B-MNN/visual.mnn
+exit=1
+
+[exit 0]

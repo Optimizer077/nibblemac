@@ -1,0 +1,12 @@
+# 2026-10-21T22:00:47 pi@10.42.0.2
+$ cd baselines && ./mnn/mnn_bench models/Qwen3.5-0.8B-MNN/config.json bench/common/prompt64.json 4 1 2>/dev/null; echo exit=$?
+
+Can't open file:/sys/devices/system/cpu/cpufreq/ondemand/affected_cpus
+CPU Group: [ 0  1  2  3 ], 600000 - 1500000
+The device supports: i8sdot:0, fp16:0, i8mm: 0, sve2: 0, sme2: 0
+Can't open file:models/Qwen3.5-0.8B-MNN/visual.mnn
+Error for open models/Qwen3.5-0.8B-MNN/visual.mnn
+RESULT {"engine":"mnn","engine_version":"3.6.1","model_file":"models/Qwen3.5-0.8B-MNN/config.json","quant":"int4 HQQ asym block64 (lm_head int4, embed bf16)","threads":4,"n_prompt":64,"n_gen":64,"reps":1,"prefill_tps":31.4163,"prefill_tps_sd":0.0000,"decode_tps":6.4117,"decode_tps_sd":0.0000,"prefill_samples":[31.4163],"decode_samples":[6.4117],"peak_rss_mb":893.4,"min_generated":64,"min_ref_match":0,"warmup_first16":[279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,1786],"load_ok":false,"notes":"precision=low memory=low greedy reuse_kv=false; warm-up rep excluded"}
+exit=0
+
+[exit 0]

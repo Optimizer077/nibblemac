@@ -1,0 +1,10 @@
+# 2026-10-21T22:32:16 pi@10.42.0.2
+$ ps -eo pid,etime,args | grep -E "flock" | grep -v grep | cut -c1-140
+
+   5775       08:05 flock /tmp/pinfer-bench.lock bash -c cd baselines && bash bench/ort/sweep.sh models/ort/int8-acc4 int8-rtn-sym-b32-acc4-
+   5883       06:54 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec -m models/qwen35-0.8b-bf16.pq -t 1 -n 64 --ids 2064,557,27
+   6067       05:12 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench --golden kbench/kbench_golden.bin --variant v6-hot --hot --batch 1,
+   6169       04:00 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v7 --variant v7-split-hot --hot --batch 1,2,4,8 --threads 1 --shape
+   6288       01:46 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench-v8 --variant v8-pass4-hot --hot --batch 1,2,3,4,8 --threads 1 --sha
+
+[exit 0]

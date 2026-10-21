@@ -1,0 +1,163 @@
+# 2026-10-21T22:09:42 pi@10.42.0.2
+$ uname -a; cat /proc/version; ls -la /boot/firmware | head -80; echo ===CONFIG; cat /boot/firmware/config.txt; echo ===CMDLINE; cat /boot/firmware/cmdline.txt; echo ===; ls /boot; ls /lib/modules; dpkg -l | grep -E "linux-image|raspi-firmware|rpi-eeprom" ; cat /proc/meminfo | head -5; vcgencmd bootloader_version 2>/dev/null; rpi-eeprom-update 2>/dev/null | head; df -h /boot/firmware /
+
+Linux pi4 6.18.50+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.18.50-1+rpt1 (2026-09-11) aarch64 GNU/Linux
+Linux version 6.18.50+rpt-rpi-v8 (serge@raspberrypi.com) (aarch64-linux-gnu-gcc-14 (Debian 14.2.0-19) 14.2.0, GNU ld (GNU Binutils for Debian) 2.44) #1 SMP PREEMPT Debian 1:6.18.50-1+rpt1 (2026-09-11)
+total 75284
+drwxr-xr-x 4 root root     4608 Jan  1  1970 .
+drwxr-xr-x 3 root root     4096 Oct  6 09:27 ..
+-rwxr-xr-x 1 root root    32539 Sep 11 22:21 bcm2710-rpi-2-b.dtb
+-rwxr-xr-x 1 root root    34731 Sep 11 22:21 bcm2710-rpi-3-b.dtb
+-rwxr-xr-x 1 root root    35252 Sep 11 22:21 bcm2710-rpi-3-b-plus.dtb
+-rwxr-xr-x 1 root root    33720 Sep 11 22:21 bcm2710-rpi-cm0.dtb
+-rwxr-xr-x 1 root root    32302 Sep 11 22:21 bcm2710-rpi-cm3.dtb
+-rwxr-xr-x 1 root root    33708 Sep 11 22:21 bcm2710-rpi-zero-2.dtb
+-rwxr-xr-x 1 root root    33708 Sep 11 22:21 bcm2710-rpi-zero-2-w.dtb
+-rwxr-xr-x 1 root root    56411 Sep 11 22:21 bcm2711-rpi-400.dtb
+-rwxr-xr-x 1 root root    56407 Sep 11 22:21 bcm2711-rpi-4-b.dtb
+-rwxr-xr-x 1 root root    56928 Sep 11 22:21 bcm2711-rpi-cm4.dtb
+-rwxr-xr-x 1 root root    39913 Sep 11 22:21 bcm2711-rpi-cm4-io.dtb
+-rwxr-xr-x 1 root root    53824 Sep 11 22:21 bcm2711-rpi-cm4s.dtb
+-rwxr-xr-x 1 root root    78744 Sep 11 22:21 bcm2712d0-rpi-5-b.dtb
+-rwxr-xr-x 1 root root    78740 Sep 11 22:21 bcm2712-d-rpi-5-b.dtb
+-rwxr-xr-x 1 root root    78696 Sep 11 22:21 bcm2712-rpi-500.dtb
+-rwxr-xr-x 1 root root    78740 Sep 11 22:21 bcm2712-rpi-5-b.dtb
+-rwxr-xr-x 1 root root    79685 Sep 11 22:21 bcm2712-rpi-cm5-cm4io.dtb
+-rwxr-xr-x 1 root root    79751 Sep 11 22:21 bcm2712-rpi-cm5-cm5io.dtb
+-rwxr-xr-x 1 root root    79726 Sep 11 22:21 bcm2712-rpi-cm5l-cm4io.dtb
+-rwxr-xr-x 1 root root    79792 Sep 11 22:21 bcm2712-rpi-cm5l-cm5io.dtb
+-rwxr-xr-x 1 root root    52624 Oct  6 09:20 bootcode.bin
+-rwxr-xr-x 1 root root      132 Oct  6 09:27 cmdline.txt
+-rwxr-xr-x 1 root root     1272 Oct  6 09:20 config.txt
+-rwxr-xr-x 1 root root     3280 Oct  6 09:20 fixup4cd.dat
+-rwxr-xr-x 1 root root     5510 Oct  6 09:20 fixup4.dat
+-rwxr-xr-x 1 root root     8505 Oct  6 09:20 fixup4db.dat
+-rwxr-xr-x 1 root root     8505 Oct  6 09:20 fixup4x.dat
+-rwxr-xr-x 1 root root     3280 Oct  6 09:20 fixup_cd.dat
+-rwxr-xr-x 1 root root     7381 Oct  6 09:20 fixup.dat
+-rwxr-xr-x 1 root root    10348 Oct  6 09:20 fixup_db.dat
+-rwxr-xr-x 1 root root    10350 Oct  6 09:20 fixup_x.dat
+-rwxr-xr-x 1 root root 16449043 Oct  6 09:27 initramfs_2712
+-rwxr-xr-x 1 root root 16456722 Oct  6 09:27 initramfs8
+-rwxr-xr-x 1 root root      145 Oct  6 09:27 issue.txt
+-rwxr-xr-x 1 root root 10197590 Oct  6 09:20 kernel_2712.img
+-rwxr-xr-x 1 root root 10192324 Oct  6 09:20 kernel8.img
+-rwxr-xr-x 1 root root     1594 Oct  6 09:20 LICENCE.broadcom
+-rwxr-xr-x 1 root root       41 Oct 21 20:59 meta-data
+-rwxr-xr-x 1 root root      303 Oct 21 20:59 network-config
+drwxr-xr-x 2 root root    33280 Oct  6 09:20 overlays
+-rwxr-xr-x 1 root root   844380 Oct  6 09:20 start4cd.elf
+-rwxr-xr-x 1 root root  3796936 Oct  6 09:20 start4db.elf
+-rwxr-xr-x 1 root root  2298912 Oct  6 09:20 start4.elf
+-rwxr-xr-x 1 root root  3046152 Oct  6 09:20 start4x.elf
+-rwxr-xr-x 1 root root   844380 Oct  6 09:20 start_cd.elf
+-rwxr-xr-x 1 root root  4868936 Oct  6 09:20 start_db.elf
+-rwxr-xr-x 1 root root  3023104 Oct  6 09:20 start.elf
+-rwxr-xr-x 1 root root  3769800 Oct  6 09:20 start_x.elf
+drwxr-xr-x 2 root root      512 Oct 22  2026 System Volume Information
+-rwxr-xr-x 1 root root      566 Oct 21 20:59 user-data
+===CONFIG
+# For more options and information see
+# http://rptl.io/configtxt
+# Some settings may impact device functionality. See link above for details
+
+# Uncomment some or all of these to enable the optional hardware interfaces
+#dtparam=i2c_arm=on
+#dtparam=i2s=on
+#dtparam=spi=on
+
+# Enable audio (loads snd_bcm2835)
+dtparam=audio=on
+
+# Additional overlays and parameters are documented
+# /boot/firmware/overlays/README
+
+# Automatically load overlays for detected cameras
+camera_auto_detect=1
+
+# Automatically load overlays for detected DSI displays
+display_auto_detect=1
+
+# Automatically load initramfs files, if found
+auto_initramfs=1
+
+# Enable DRM VC4 V3D driver
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+
+# Don't have the firmware create an initial video= setting in cmdline.txt.
+# Use the kernel's default instead.
+disable_fw_kms_setup=1
+
+# Run in 64-bit mode
+arm_64bit=1
+
+# Disable compensation for displays with overscan
+disable_overscan=1
+
+# Run as fast as firmware / board allows
+arm_boost=1
+
+[cm4]
+# Enable host mode on the 2711 built-in XHCI USB controller.
+# This line should be removed if the legacy DWC2 controller is required
+# (e.g. for USB device mode) or if USB support is not required.
+otg_mode=1
+
+[cm5]
+dtoverlay=dwc2,dr_mode=host
+
+[pi5]
+dtoverlay=nospi10
+
+[all]
+===CMDLINE
+console=serial0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR
+===
+cmdline.txt
+config-6.18.50+rpt-rpi-2712
+config-6.18.50+rpt-rpi-v8
+config.txt
+firmware
+initrd.img-6.18.50+rpt-rpi-2712
+initrd.img-6.18.50+rpt-rpi-v8
+issue.txt
+overlays
+System.map-6.18.50+rpt-rpi-2712
+System.map-6.18.50+rpt-rpi-v8
+vmlinuz-6.18.50+rpt-rpi-2712
+vmlinuz-6.18.50+rpt-rpi-v8
+6.18.50+rpt-rpi-2712
+6.18.50+rpt-rpi-v8
+ii  linux-image-6.18.50+rpt-rpi-2712     1:6.18.50-1+rpt1                     arm64        Linux 6.18.50 for Raspberry Pi 2712, Raspberry Pi
+ii  linux-image-6.18.50+rpt-rpi-v8       1:6.18.50-1+rpt1                     arm64        Linux 6.18.50 for Raspberry Pi v8, Raspberry Pi
+ii  linux-image-rpi-2712                 1:6.18.50-1+rpt1                     arm64        Linux for Raspberry Pi 2712 (meta-package)
+ii  linux-image-rpi-v8                   1:6.18.50-1+rpt1                     arm64        Linux for Raspberry Pi v8 (meta-package)
+ii  raspi-firmware                       1:1.20260915-1                       all          Raspberry Pi family GPU firmware and bootloaders
+ii  rpi-eeprom                           28.33-1                              all          Raspberry Pi 4/5 boot EEPROM updater
+MemTotal:        3885816 kB
+MemFree:          507936 kB
+MemAvailable:    3063964 kB
+Buffers:           34988 kB
+Cached:          2439944 kB
+2026/09/23 12:02:14
+version 456428dcbedc313131e5dc8be59a80f1f55cd9ba (release)
+timestamp 1790164934
+update-time 1792585065
+capabilities 0x0000007f
+
+BOOTLOADER: up to date
+   CURRENT: Wed 23 Sep 12:02:14 UTC 2026 (1790164934)
+    LATEST: Wed 23 Sep 12:02:14 UTC 2026 (1790164934)
+   RELEASE: default (/usr/lib/firmware/raspberrypi/bootloader-2711/default)
+            Use raspi-config to change the release.
+
+  VL805_FW: Dedicated VL805 EEPROM
+     VL805: version unknown. Try sudo rpi-eeprom-update
+   CURRENT: 
+    LATEST: 000138c0
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1       505M   75M  430M  15% /boot/firmware
+/dev/sda2       917G   13G  867G   2% /
+
+[exit 0]

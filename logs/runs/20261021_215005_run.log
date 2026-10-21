@@ -1,0 +1,10 @@
+# 2026-10-21T21:50:05 pi@10.42.0.2
+$ venvs/torch/bin/pip install -q --no-index --find-links wheels/torch wheels/torch/*.whl 2>&1 | tail -3; venvs/torch/bin/pip list 2>/dev/null | grep -iE "torch|transformers|numpy|tokenizers|safetensors"
+
+numpy             2.5.4
+safetensors       0.8.0
+tokenizers        0.23.3
+torch             2.14.1+cpu
+transformers      5.20.2
+
+[exit 0]

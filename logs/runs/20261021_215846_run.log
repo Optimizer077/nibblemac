@@ -1,0 +1,12 @@
+# 2026-10-21T21:58:46 pi@10.42.0.2
+$ cd baselines && (cd models/Qwen3.5-0.8B-MNN && sha256sum -c SHA256SUMS) && file mnn/mnn_bench && cat mnn/BUILD_INFO.txt | head -3
+
+llm.mnn: OK
+llm.mnn.weight: OK
+tokenizer.txt: OK
+mnn/mnn_bench: ELF 64-bit LSB executable, ARM aarch64, version 1 (GNU/Linux), statically linked, BuildID[sha1]=99ab50bc99a42fd5a965bfbececc9b02ec1bfc5d, for GNU/Linux 3.7.0, not stripped
+MNN tag: 3.6.1
+commit: d407447ed56c4121a11ccbd266dc184ca1ead0c2
+built: 2026-10-21T21:46:18+09:00
+
+[exit 0]

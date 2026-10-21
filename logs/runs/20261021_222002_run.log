@@ -1,0 +1,6 @@
+# 2026-10-21T22:20:02 pi@10.42.0.2
+$ kill 5413 && echo killed-own-queued-job
+
+killed-own-queued-job
+
+[exit 0]

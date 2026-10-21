@@ -1,0 +1,11 @@
+# 2026-10-21T22:22:37 pi@10.42.0.2
+$ ps -eo pid,etime,args | grep -E "flock|kbench|bench|llama|mnn|litert" | grep -v grep | cut -c1-200
+
+   5004       11:58 flock /tmp/pinfer-bench.lock bash -c cd baselines && bash bench/ort/sweep.sh models/ort/int4-acc4 int4-rtn-sym-b32-acc4 1,2,3,4 3
+   5006       11:43 bash bench/ort/sweep.sh models/ort/int4-acc4 int4-rtn-sym-b32-acc4 1,2,3,4 3
+   5160       10:37 flock /tmp/pinfer-bench.lock bash -c ./engine/pinfer_run_spec -m models/qwen35-0.8b-bf16.pq -t 1 -n 64 --ids 2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279
+   5230       10:04 flock /tmp/pinfer-bench.lock bash -c ./kbench/kbench --variant v5-blockmajor --hot --batch 1,2,4,8 --threads 1 --shapes kv --dtypes q8,q4,q4a
+   5601       01:49 flock /tmp/pinfer-bench.lock bash -c cd ~/pinfer && echo "== pytest" && PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=$HOME/pinfer/models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=$HOME/
+   5604       00:20 ../venvs/ort/bin/python bench/ort/run_bench.py --model models/ort/int4-acc4 --quant int4-rtn-sym-b32-acc4 --threads 4 --reps 3
+
+[exit 0]
