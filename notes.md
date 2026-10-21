@@ -99,7 +99,7 @@ its speed with speculation (10.98 vs 5.41 tok/s). A Q8 head buys only −0.2 PPL
 Isolation (00:20–00:30): Q4K everywhere scores 18.48 — the Q8 overrides buy nothing, and
 Q4 layers + Q4K head scores 21.58, so the symmetric Q4_G32 *layers* are what loses quality
 (like llama.cpp's Q4_0); Q4K_G32's asymmetric 32-column groups fix it at the same 4.5 bits.
-**Recommended default: `q4k-headq4k` (11.57 tok/s with speculation, PPL 18.48 ≈ Q4_K_M).**
+**Recommended default: `q4k-headq4k`** (PPL 18.48–18.50 ≈ Q4_K_M; speed with the current engine: 7.88 plain / 16.49 spec / 37.4 prefill — see the scoreboard row).
 
 Baselines notebook: `bench/BASELINES.md` (MNN first token differs from the fp32 reference at a
 near-tie, like ORT int4 — quantization flip, not a bug). PC-side 64-chunk perplexity (16,320
@@ -112,6 +112,39 @@ verify pass rounding the Q4/Q4K offset term differently from the single-token pa
 Verify-pass cost vs one decode step (Q4K, vectorized engine): 1.19 (k=2) / 1.28 (k=3) / 1.61 (k=4);
 per plain step: matmul 118.6 ms, recurrence 6.5, everything else 3.2 → the DRAM floor (~113 ms for
 473 MB/token) is 12% away. Prefill 37.4 now leads MNN (30.9).
+
+## Context window — Qwen3.5-0.8B Q4K on the Pi 4 (2026-10-22 02:30–, `engine/CONTEXT.md`)
+Prompts: the first N tokens of wikitext-2 test (`bench/common/ctx{64,512,2048,4096,8192}.ids`), 32
+generated, 4 threads, `pinfer_run_ctx` (attention rewrite, bit-identical: spec_exact 20/20,
+NEON twin check 5/5). "before" = the vectorized core2 binary of 02:20 (512 / 2048 rows: the
+lead's runs `pinfer-ctx{512,2048}-q4k_20261022_02*.json`).
+
+| ctx | plain tok/s before → after | prefill tok/s before → after | spec k=3 tok/s before → after | RSS MB | llama.cpp Q4_K_M tg32 at that depth | result files |
+|---|---|---|---|---|---|---|
+| 64 | 7.81 → 7.92 | 37.4 → 35.6 | 16.74 (64 gen) → 14.64 (32 gen) | 432 / 451 | 5.48 (d=0) | `pinfer-ctx-p64-new-q4k_20261022_025529.json` |
+| 512 | 6.20 → **7.69** | 21.6 → **36.8** | 9.04 → **15.24** | 443 / 463 | 5.23 | `pinfer-ctx512-new-q4k_20261022_025648.json` |
+| 2048 | 4.12 → **7.13** | 11.6 → **32.3** | 2.39 → **7.47** | 479 / 506 | 4.32 | `pinfer-ctx2048-new-q4k_20261022_030125.json` |
+| 4096 | **6.48** | **28.0** | **8.47** | 528 / 562 | 3.43 | `pinfer-ctx4096-new-q4k-{plain,spec3}_20261022_03*.json` |
+| 8192 | **5.42** | **22.0** | **7.17** | 625 / 675 | — | `pinfer-ctx8192-new-q4k-{plain,spec3}_20261022_03*.json` |
+
+llama.cpp: `llamacpp-ctx-d0-512-2048-q4km_20261022_032910.json`, `llamacpp-ctx-d4096-q4km_20261022_033523.json`
+(`llama-bench -d`, its pp64 = 64 tokens after the depth: 14.8 / 13.1 / 10.3 / 7.8 tok/s).
+Final binary `pinfer_run_ctx7` (blocked P·V + fused fp16 dots; NEON identity 5/5, spec_exact 20/20,
+`bench/results/{ctx-check,spec-exact,f16-check}-ctx7_20261022_06*.json`): prompt64 plain 7.88 /
+k=3 16.79 / adaptive 16.42; 4096 plain fp32 6.38, fp16 **6.65** (84.4% of 64-token decode),
+adaptive fp32 7.93 (`pinfer-ctx7-*_20261022_06*.json`). 8192 decode-only A/B means: fp32
+5.23–5.33, fp16 5.72 (`pinfer-ab-att-ctx8192-kv*_*.json`).
+
+| KV dtype | PPL 8×512 | PPL 8×2048 | teacher-forced top-1 / KL vs fp32 (host, 512 pos.) | decode 4096 / 8192 | RSS 8192 |
+|---|---|---|---|---|---|
+| fp32 (default) | 18.5041 ± 1.25 | 13.9852 ± 0.46 | — | 6.38 / 5.3 | 625 MB |
+| fp16 | 18.5257 | 13.9828 | 100% / 3.5e-8 | 6.65 / 5.72 | 528 MB |
+| int8 | 18.5007 | 13.9892 | 99.4% / 2.3e-4 | 6.35 (ctx4) / — | 457 MB @4352 |
+
+Adaptive speculation (`--adaptive`, 64 generated, wikitext): 2048 → 9.57 tok/s (fixed k=3 9.13,
+plain 7.09), 4096 → 7.53 (7.38, 6.11) (`pinfer-adaptive2-*_20261022_05*.json`). State: 2048-token
+snapshot 70.5 MB, save 94 ms, load 90 ms vs 63 s prefill, exact (`state-check-ctx6_*.json`);
+`pinfer chat` turn 2: 0.68 s vs 2.10 s re-prefill. Details: `engine/CONTEXT.md`.
 
 ## Custom kernel 6.18.50-pinfer — effect on speed (2026-10-22 01:25–01:29, one-time tryboots)
 Same binary (`pinfer_run_fast` @ `af06041`), same model (`q4k-headq4k`), 4 threads, 64+64 tokens.
@@ -139,7 +172,7 @@ installed side by side (`docs/pi-state.md` #4).
 ## Context length (2026-10-22 02:13–02:39, Q4K, 32 generated tokens; pre-optimization, see Phase 6)
 | Context | Binary | Plain tok/s | Spec k=3 tok/s (tok/pass) | Prefill tok/s | Peak RSS | Result |
 |---|---|---|---|---|---|---|
-| 64 | vectorized | 7.88 | 16.49 (3.32) | 37.4 | 445 MB | `pinfer-final2-q4k_20261022_023950.json` |
+| 64 | vectorized | 7.88 | 16.49 (3.32) | 37.4 | 433 / 452 MB (plain / spec) | `pinfer-final2-q4k_20261022_023950.json` |
 | 512 | pre-vectorization | 6.20 | 9.04 (3.10) | 21.6 | 463 MB | `pinfer-ctx512-q4k_20261022_021315.json` |
 | 2048 | mixed (binary swapped mid-run) | 4.12 | 2.39 (1.63) | 11.6 | 505 MB | `pinfer-ctx2048-q4k_20261022_022009.json` |
 | 4096 | vectorized | 5.56 | 5.69 (2.38) | 18.1 | 561 MB | `pinfer-ctx4096-q4k_20261022_023914.json` |

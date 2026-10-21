@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import logging
 
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-from matplotlib.transforms import offset_copy
 
 from figstyle import (
     BAR_PX,
@@ -54,9 +54,16 @@ PROGRESS = [
     ("bit-exact kernels\n+ NEON recurrence", 7.26, 13.35),
     ("vectorized\nper-token ops", 7.88, 16.49),
 ]
-# Context length sweep (plain, spec k=3, prefill) — pre-optimization, mixed binaries for 2048
-CONTEXT = [(64, 7.88, 16.49, 37.4), (512, 6.20, 9.04, 21.6), (2048, 4.12, 2.39, 11.6),
-           (4096, 5.56, 5.69, 18.1)]
+# Context length sweep, Q4K, wikitext prompt of N tokens then 32 generated (engine/CONTEXT.md Summary).
+# After: final binary (ctx, plain fp32 KV, plain fp16 KV or None, prefill) — pinfer-ctx7-*, pinfer-final-kv*,
+# 8192 decode = mean of 3 decode-only runs from a saved state (CONTEXT.md §3d).
+CONTEXT = [(64, 7.88, 7.90, 37.3), (512, 7.69, 7.67, 36.8), (2048, 7.13, None, 32.3),
+           (4096, 6.38, 6.65, 28.0), (8192, 5.30, 5.72, 22.0)]
+# Before: the vectorized binary before the context work (ctx, plain, prefill) — pinfer-final2-q4k (64),
+# pinfer-ctx2048-profile-q4k (2048), pinfer-ctx4096-q4k (4096); 512 was only run with an older binary.
+CONTEXT_BEFORE = [(64, 7.88, 37.4), (2048, 6.57, 25.7), (4096, 5.56, 18.1)]
+# llama.cpp Q4_K_M token generation at the same KV depth (f16 KV, its default) — llamacpp-ctx-d*
+LLAMA_CTX = [(64, 5.48), (512, 5.23), (2048, 4.32), (4096, 3.43)]
 # Speculative k sweep on the Q4K default (pinfer-final2-q4k): k, tokens per pass, tok/s
 KSWEEP = [(0, 1.00, 7.88), (2, 2.63, 14.51), (3, 3.32, 16.49), (4, 3.94, 15.65)]
 
@@ -69,7 +76,7 @@ def fig_decode(t: Theme) -> None:
     style(ax, t, xlabel="tokens / s (higher is better)", grid="x")
     ax.set_xlim(0, 19)
     ax.set_ylim(*slot_lim(0, len(rows) - 1, half=0.36))
-    title(ax, t, "Decode speed: pinfer vs standard runtimes", "Qwen3.5-0.8B on a Raspberry Pi 4 (4 GB), 4 threads, 64-token prompt, 64 generated tokens, no throttling")
+    title(ax, t, "Decode speed: pinfer vs standard runtimes", "Qwen3.5-0.8B, Raspberry Pi 4 (4 GB), best thread count per engine, 64-token prompt + 64 tokens")
     bar = 28  # px; a pair is two bars and a surface gap, a single bar sits on its label
     h = px_to_data(ax, bar, axis="y")
     off = px_to_data(ax, (bar + GAP_PX) / 2, axis="y")
@@ -145,28 +152,45 @@ def fig_progress(t: Theme) -> None:
     save(fig, t, "progress")
 
 
+def _ctx_line(ax, t: Theme, pts: list, color: str, dashed: bool = False, end_dy: float = 0) -> None:
+    """One series of the context figure, its last value labelled to the right of the last marker."""
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    ax.plot(xs, ys, color=color, linewidth=LINE_PT, marker="o", markersize=6.5,
+            linestyle=(0, (4, 3)) if dashed else "-", **ring(t))
+    ax.annotate(f"{ys[-1]:.1f}", (xs[-1], ys[-1]), xytext=(9, end_dy), textcoords="offset points",
+                va="center", fontsize=9, color=t.ink)
+
+
 def fig_context(t: Theme) -> None:
-    """Lines: speed against context length (log-2 x axis)."""
-    fig, ax = new_fig(t, 7.5, 4.2)
+    """Two panels against context length (log-2 x axis): plain decode, prefill; before vs after."""
+    fig, (a1, a2) = new_fig(t, 10.0, 4.3, ncols=2, gridspec_kw={"width_ratios": [3, 2]})
     xs = [c[0] for c in CONTEXT]
-    series = [("plain decode", t.blue), ("speculative decode (k=3)", t.orange), ("prefill", t.aqua)]
-    # End labels: vertical centre offset in points; plain below, spec above (5.6 vs 5.7 meet at 4096),
-    # each led by a short line-key in its series colour, since the two end markers coincide.
-    end_dy = [-7, 7, 0]
-    for idx, (label, color) in enumerate(series):
-        ys = [c[idx + 1] for c in CONTEXT]
-        ax.plot(xs, ys, color=color, linewidth=LINE_PT, marker="o", markersize=7, **ring(t))
-        key = offset_copy(ax.transData, fig=fig, x=14, y=end_dy[idx], units="points")
-        ax.plot(xs[-1], ys[-1], marker="_", ms=9, mew=2, color=color, transform=key, clip_on=False)
-        ax.annotate(f"{ys[-1]:.1f}", (xs[-1], ys[-1]), xytext=(21, end_dy[idx]), textcoords="offset points",
-                    va="center", fontsize=9, color=t.ink)
-    ax.set_xscale("log", base=2)
-    ax.set_xticks(xs, [str(v) for v in xs])
-    style(ax, t, ylabel="tokens / s", xlabel="context length (tokens in the prompt)")
-    ax.set_ylim(0, 40)
-    ax.legend(handles=[line_key(c, n) for n, c in series], loc="upper right")
-    title(ax, t, "Speed vs context length (before the context-window work)", "Decode fell 29% at 4096 tokens and speculation lost its gain on wikitext; the attention path, not KV traffic, was the cause")
-    save(fig, t, "context_length")
+    before = t.muted  # the old binary is context, not a series to compare hues against
+    _ctx_line(a1, t, [(c[0], c[1]) for c in CONTEXT], t.blue, end_dy=-7)
+    _ctx_line(a1, t, [(c[0], c[2]) for c in CONTEXT if c[2]], t.aqua, end_dy=7)
+    _ctx_line(a1, t, [(c[0], c[1]) for c in CONTEXT_BEFORE], before, dashed=True)
+    _ctx_line(a1, t, LLAMA_CTX, t.orange)
+    a1.legend(handles=[line_key(t.blue, "pinfer, fp32 KV cache (default, exact)"),
+                       line_key(t.aqua, "pinfer, fp16 KV cache (opt-in)"),
+                       Line2D([], [], color=before, linewidth=LINE_PT, linestyle=(0, (4, 3)), marker="o",
+                              markersize=7, label="pinfer before"),
+                       line_key(t.orange, "llama.cpp Q4_K_M")], loc="lower left")
+    style(a1, t, ylabel="decode tokens / s (plain greedy)", xlabel="context length (tokens)")
+    a1.set_ylim(0, 9)
+    a1.set_title("Decode", color=t.ink, loc="left", fontsize=10.5)
+    _ctx_line(a2, t, [(c[0], c[3]) for c in CONTEXT], t.blue)
+    _ctx_line(a2, t, [(c[0], c[2]) for c in CONTEXT_BEFORE], before, dashed=True)
+    style(a2, t, ylabel="prefill tokens / s", xlabel="context length (tokens)")
+    a2.set_ylim(0, 42)
+    a2.set_title("Prefill (whole prompt)", color=t.ink, loc="left", fontsize=10.5)
+    for ax in (a1, a2):
+        ax.set_xscale("log", base=2)
+        ax.set_xticks(xs, [str(v) for v in xs])
+        ax.set_xlim(48, 8192 * 1.6)
+    rect = fig_title(fig, t, "Speed vs context length, before and after the attention rewrite",
+                     "Qwen3.5-0.8B Q4K, Pi 4, 4 threads: an N-token wikitext prompt, then 32 generated tokens. "
+                     "At 4096 tokens decode keeps 81% (fp32) / 84% (fp16) of its short-context speed")
+    save(fig, t, "context_length", rect=rect)
 
 
 def fig_kspeed(t: Theme) -> None:
@@ -199,7 +223,7 @@ def fig_prefill(t: Theme) -> None:
     style(ax, t, xlabel="prompt tokens / s (64-token prompt)", grid="x")
     ax.set_xlim(0, 42)
     ax.set_ylim(*slot_lim(0, len(rows) - 1, half=0.275))
-    title(ax, t, "Prefill (prompt processing) speed", "64-token prompt; pinfer processes prompts in batches of up to 64 positions per weight pass")
+    title(ax, t, "Prefill (prompt processing) speed", "64-token prompt; pinfer reads the weights once per group of up to 16 prompt positions")
     ax.barh(range(len(rows)), [r[1] for r in rows], height=px_to_data(ax, BAR_PX, axis="y"),
             color=[t.blue if r[0].startswith("pinfer") else t.orange for r in rows])
     for i, (_, v) in enumerate(rows):

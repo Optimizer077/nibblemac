@@ -72,7 +72,7 @@ def fig_step_breakdown(t: Theme) -> None:
     style(ax, t, xlabel="milliseconds (Q4K model, 4 threads)", grid="x")
     ax.set_xlim(0, 260)
     ax.set_ylim(1.4, -0.4)  # inverted: plain step on top
-    title(ax, t, "Where a token's time goes", "Reading 437 MB of weights dominates; verifying 4 drafted tokens costs only 1.24× one token")
+    title(ax, t, "Where a token's time goes", "Reading 437 MB of weights dominates; verifying 3 drafts (4 positions) costs only 1.24× one token")
     ax.legend(handles=[Patch(color=c, label=n) for (n, _), c in zip(STEP_PLAIN, colors)], loc="center right", fontsize=8.5)
     h = px_to_data(ax, BAR_PX, axis="y")
     for i, (_, parts) in enumerate(rows):

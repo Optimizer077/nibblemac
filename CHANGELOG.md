@@ -5,6 +5,55 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Merged (lead, 06:50)
+- Context-window work merged to `main` after the full gate (host golden / spec 81/81 / state /
+  pytest 85/85; Pi build md5-identical to the gated `pinfer_run_ctx7`). The Pi's shared
+  `engine/pinfer_run_fast` and `pinfer_ppl_fast` are now this build (previous: `*.pre-ctx`).
+- Defaults decided: fp32 KV cache stays the default (exact); adaptive speculation stays opt-in.
+- Fixed: `tests/test_spec.py` defaulted to a stale binary (`build/host/engine-spec/`).
+- Docs: README long-context section and headline row, before/after `context_length` figure,
+  RESULTS.md §6 final tables, CONTRIBUTING source-tree pytest command.
+
+### Added (context window — details `engine/CONTEXT.md`)
+- Attention over the KV cache rewritten (`engine/src/forward_attn.c`, `forward_kv.c`): K/V rows
+  streamed once per block of 8 tokens and shared by the 4 query heads of a KV group; threads
+  over (KV group × row half) for the scores and (KV group × head half) for softmax + P·V.
+  Bit-identical per element (host md5 and Pi NEON twin checks), spec_exact 20/20.
+- `pinfer_params.kv_dtype` (0 fp32, 1 fp16, 2 int8 + per-row scale), `pinfer_run --kv-dtype`,
+  `pinfer_ppl --kv-dtype`, Python `Model.load(kv_dtype=)`, CLI `--kv-dtype`.
+- State snapshot API: `pinfer_state_size / save / load`, continuation
+  `pinfer_generate_greedy_cont`; `pinfer_run --save-state / --load-state`; Python
+  `Model.save_state() / load_state()`, `context_tokens`, speculative `generate` continues from
+  the context; `pinfer chat` keeps the state between turns (`--reprefill` for the old way).
+- Adaptive speculation (`pinfer_spec_params.adaptive`, `--adaptive`, `spec_adaptive=`): the
+  engine measures step / verify / draft costs and first-draft acceptance and picks k in 0..k
+  per round, probing again in plain mode; output unchanged.
+- Attention, second round: register-blocked P·V on an L1 block of 8 rows, two heads per pass
+  (`pf_attn_pv_blk`), and single-token fp16 dots that widen K in registers (`pf_dot4_f16`);
+  both bit-identical. Tried and dropped: software prefetch of the next rows (−1…−11%).
+- Adaptive speculation estimator: decayed hits / trials over all drafts with a 2/3 prior
+  (the first version collapsed to plain decoding after one early miss).
+- Tests: `tests/test_state.py` (C round trip, 9 cases), `tests/python/test_state.py` (4),
+  `tests/test_spec.py` configs `k3adapt` and `k3b2` (verify pass with a prefill batch < k+1).
+- `bench/common/ctx{64,8192}.ids`, `engine/bench/ctx_check.sh`.
+
+### Fixed
+- Speculative verify pass with `-b` smaller than k+1 corrupted the rollback log (pre-existing);
+  `draft_vocab` 1–3 produced an empty draft head; the speculative prefill could consume part of
+  an oversized prompt before returning `PINFER_E_CTX_FULL`.
+
+### Measured (Pi 4, Q4K, 4 threads, 32 generated; before → after)
+- Plain decode tok/s: ctx 512 6.20 → 7.69, 2048 4.12 → 7.13, 4096 → 6.48, 8192 → 5.42
+  (64: 7.81 → 7.92). Prefill tok/s: 512 21.6 → 36.8, 2048 11.6 → 32.3, 4096 28.0, 8192 22.0.
+  Spec k=3 tok/s: 512 9.04 → 15.24, 2048 2.39 → 7.47, 4096 8.47, 8192 7.17.
+- llama.cpp Q4_K_M decode at depth 2048 / 4096: 4.32 / 3.43 tok/s (pinfer 7.13 / 6.48).
+- KV dtypes: perplexity within noise (8×2048: fp32 13.985, fp16 13.983, int8 13.989); fp16
+  teacher-forced top-1 100% / KL 3.5e-8. fp16 decode at 8192 5.72 vs fp32 5.33 tok/s, RSS −97 MB.
+- Adaptive k=3 (64 generated): 9.57 tok/s at 2048 (fixed 9.13, plain 7.09), 7.53 at 4096
+  (fixed 7.38, plain 6.11), 16.42–16.82 on prompt64 (fixed 16.72–16.79).
+- State: 2048-token state 70.5 MB, save 94 ms, load 90 ms (vs 63 s prefill); chat turn 2
+  0.68 s instead of 2.10 s.
+
 ### Added
 - Private GitHub repository `Optimizer077/piquant`; result figures in `docs/figures/` (`tools/make_figures.py`).
 - Engine: NEON per-token ops (`forward_ops.c`, bit-exact scalar twins), threaded attention/MLP,
