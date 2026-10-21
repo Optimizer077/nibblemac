@@ -1,0 +1,8 @@
+# 2026-10-22T06:11:12 pi@10.42.0.2
+$ cd tmp/pyctx && PYTHONPATH=. PINFER_LIB=$HOME/pinfer/tmp/pyctx/libpinfer.so PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=$HOME/pinfer/models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=$HOME/pinfer/models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=$HOME/pinfer/golden/qwen35-0.8b/meta.json $HOME/pinfer/venvs/pinfer/bin/python -m pytest tests/python -q -p no:cacheprovider 2>&1 | tail -4
+
+........................................................................ [ 84%]
+.............                                                            [100%]
+85 passed in 106.98s (0:01:46)
+
+[exit 0]

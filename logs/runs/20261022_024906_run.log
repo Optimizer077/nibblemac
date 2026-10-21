@@ -1,0 +1,7 @@
+# 2026-10-22T02:49:06 pi@10.42.0.2
+$ vcgencmd measure_temp; ps -eo etime,pcpu,args --sort=-pcpu | head -2 | tail -1 | cut -c1-110
+
+temp=42.8'C
+      00:00 68.7 /usr/lib/systemd/systemd --user
+
+[exit 0]

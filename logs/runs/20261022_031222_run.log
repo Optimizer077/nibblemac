@@ -1,0 +1,6 @@
+# 2026-10-22T03:12:22 pi@10.42.0.2
+$ ./engine/pinfer_ppl_ctx3 --kv-dtype 1 2>&1 | head -2
+
+need -m and -f
+
+[exit 0]

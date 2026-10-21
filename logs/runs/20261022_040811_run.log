@@ -1,0 +1,7 @@
+# 2026-10-22T04:08:11 pi@10.42.0.2
+$ vcgencmd measure_temp; ps -eo etime,pcpu,args --sort=-pcpu | head -2 | tail -1 | cut -c1-110
+
+temp=53.5'C
+      00:32  387 ./engine/pinfer_ppl_ctx4 -m models/qwen35-0.8b-q4k-headq4k.pq -f data/wikitext2-qwen35.tokens
+
+[exit 0]

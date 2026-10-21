@@ -1,0 +1,16 @@
+# 2026-10-22T04:51:27 pi@10.42.0.2
+$ printf 'Explain in two sentences what a Raspberry Pi 4 is.\nWhich of its interfaces would you use for a camera?\n' | PYTHONPATH=tmp/pyctx PINFER_LIB=tmp/pyctx/libpinfer.so venvs/pinfer/bin/python -m pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer --stats -n 48 -c 1024; echo ===REPREFILL===; printf 'Explain in two sentences what a Raspberry Pi 4 is.\nWhich of its interfaces would you use for a camera?\n' | PYTHONPATH=tmp/pyctx PINFER_LIB=tmp/pyctx/libpinfer.so venvs/pinfer/bin/python -m pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer --stats -n 48 -c 1024 --reprefill
+
+pinfer chat: empty line or /exit quits, /reset clears the history
+> The Raspberry Pi 4 is a compact, open-source computer chip designed to run Linux-based operating systems, making it ideal for low-cost, low-power embedded devices.
+> [25 prompt tok (0 cached), 33 new, finish=stop, prefill 34.85 tok/s, decode 7.64 tok/s]
+The Raspberry Pi 4's most suitable interface for a camera is its **USB 3.0** port, which allows for high-speed data transfer and low latency. Alternatively, the **USB 2.0** port can be used
+> [83 prompt tok (58 cached), 48 new, finish=length, prefill 36.51 tok/s, decode 7.86 tok/s]
+===REPREFILL===
+pinfer chat: empty line or /exit quits, /reset clears the history
+> The Raspberry Pi 4 is a compact, open-source computer chip designed to run Linux-based operating systems, making it ideal for low-cost, low-power embedded devices.
+> [25 prompt tok (0 cached), 33 new, finish=stop, prefill 35.06 tok/s, decode 7.68 tok/s]
+The Raspberry Pi 4's most suitable interface for a camera is its **USB 3.0** port, which allows for high-speed data transfer and low latency, essential for capturing high-resolution video. Alternatively, the **SD card slot
+> [79 prompt tok (0 cached), 48 new, finish=length, prefill 37.60 tok/s, decode 7.88 tok/s]
+
+[exit 0]

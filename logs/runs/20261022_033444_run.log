@@ -1,0 +1,8 @@
+# 2026-10-22T03:34:44 pi@10.42.0.2
+$ ./engine/pinfer_run_ctx4 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 4 --ids 760,45980,20010 --kv-dtype 1 --no-warmup 2>&1 | grep -E 'generated|load'; ./engine/pinfer_run_ctx4 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 4 --ids 760,45980,20010 --kv-dtype 0 --no-warmup 2>&1 | grep -E 'generated'
+
+generated: 369,264,5243,1724
+load 0.008 s | warm-up 0.000 s | prefill 3 tok in 0.907 s = 3.308 tok/s | decode 3 tok in 1.696 s = 1.769 tok/s | peak RSS 426.5 MB | matvec=fast threads=4
+generated: 369,264,5243,1724
+
+[exit 0]

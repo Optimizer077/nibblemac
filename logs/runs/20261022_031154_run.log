@@ -1,0 +1,6 @@
+# 2026-10-22T03:11:54 pi@10.42.0.2
+$ ls models | grep -i token
+
+qwen35-0.8b-tokenizer
+
+[exit 0]

@@ -1,0 +1,6 @@
+# 2026-10-22T04:52:52 pi@10.42.0.2
+$ which bc stat
+
+/usr/bin/stat
+
+[exit 1]

@@ -1,0 +1,7 @@
+# 2026-10-22T04:52:58 pi@10.42.0.2
+$ which awk; awk 'BEGIN{print 3.5 - 1.25}'
+
+/usr/bin/awk
+2.25
+
+[exit 0]

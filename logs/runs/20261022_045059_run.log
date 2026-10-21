@@ -1,0 +1,20 @@
+# 2026-10-22T04:50:59 pi@10.42.0.2
+$ printf 'Explain in two sentences what a Raspberry Pi 4 is.\nWhich of its interfaces would you use for a camera?\n' | PYTHONPATH=tmp/pyctx PINFER_LIB=tmp/pyctx/libpinfer.so venvs/pinfer/bin/python -m pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer --stats -n 48 -c 1024 --speculative --spec-k 3; echo ===REPREFILL===; printf 'Explain in two sentences what a Raspberry Pi 4 is.\nWhich of its interfaces would you use for a camera?\n' | PYTHONPATH=tmp/pyctx PINFER_LIB=tmp/pyctx/libpinfer.so venvs/pinfer/bin/python -m pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer --stats -n 48 -c 1024 --speculative --spec-k 3 --reprefill
+
+pinfer chat: empty line or /exit quits, /reset clears the history
+> The Raspberry Pi 4 is a compact, open-source computer chip designed to run Linux-based operating systems, making it ideal for low-cost, low-power embedded devices.
+> [25 prompt tok (0 cached), 33 new, finish=stop, prefill 33.64 tok/s, decode 8.56 tok/s]
+[speculative k=3: 19 passes, 14/57 drafts accepted, 1.74 tok/pass, 8.83 tok/s incl. prefill]
+The Raspberry Pi 4's most suitable interface for a camera is its **USB 3.0** port, which allows for high-speed data transfer and low latency. Alternatively, the **USB 2.0** port can be used
+[83 prompt tok (58 cached), 48 new, finish=length, prefill 32.53 tok/s, decode 10.41 tok/s]
+> [speculative k=3: 23 passes, 24/65 drafts accepted, 2.04 tok/pass, 10.63 tok/s incl. prefill]
+===REPREFILL===
+pinfer chat: empty line or /exit quits, /reset clears the history
+> The Raspberry Pi 4 is a compact, open-source computer chip designed to run Linux-based operating systems, making it ideal for low-cost, low-power embedded devices.
+[25 prompt tok (0 cached), 33 new, finish=stop, prefill 31.90 tok/s, decode 8.45 tok/s]
+> [speculative k=3: 19 passes, 14/57 drafts accepted, 1.74 tok/pass, 8.71 tok/s incl. prefill]
+The Raspberry Pi 4's most suitable interface for a camera is its **USB 3.0** port, which allows for high-speed data transfer and low latency, essential for capturing high-resolution video. Alternatively, the **SD card slot
+[79 prompt tok (0 cached), 48 new, finish=length, prefill 34.85 tok/s, decode 9.48 tok/s]
+[speculative k=3: 25 passes, 22/70 drafts accepted, 1.88 tok/pass, 9.68 tok/s incl. prefill]
+> 
+[exit 0]
