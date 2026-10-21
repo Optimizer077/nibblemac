@@ -1,0 +1,18 @@
+== pytest
+........................................................................ [ 90%]
+........                                                                 [100%]
+============================= slowest 8 durations ==============================
+67.75s call     tests/python/test_api.py::test_speculative_matches_greedy
+24.78s call     tests/python/test_golden.py::test_greedy_text_prompt
+17.26s call     tests/python/test_streaming.py::test_stop_string
+15.94s call     tests/python/test_streaming.py::test_stream_equals_blocking
+11.41s call     tests/python/test_chat.py::test_chat_generates
+10.84s call     tests/python/test_streaming.py::test_max_new_tokens
+10.59s call     tests/python/test_api.py::test_context_overflow
+10.13s call     tests/python/test_streaming.py::test_early_close_keeps_model_usable
+80 passed in 236.65s (0:03:56)
+== C example (static, libpinfer.a)
+628,381,1429,364,264,6669,2020,314
+== CLI
+ can be used for a wide range of tasks. It is[10 prompt tok (0 cached), 12 new, finish=length, prefill 2.06 tok/s, decode 1.55 tok/s]
+

@@ -1,0 +1,12 @@
+........................................................................ [ 93%]
+.....                                                                    [100%]
+============================= slowest 8 durations ==============================
+13.30s call     tests/python/test_golden.py::test_greedy_text_prompt
+11.74s call     tests/python/test_streaming.py::test_stop_string
+7.95s call     tests/python/test_api.py::test_eval_and_reset
+7.63s call     tests/python/test_streaming.py::test_stream_equals_blocking
+5.24s call     tests/python/test_chat.py::test_chat_generates
+5.11s call     tests/python/test_streaming.py::test_max_new_tokens
+4.99s call     tests/python/test_streaming.py::test_early_close_keeps_model_usable
+4.80s call     tests/python/test_api.py::test_context_overflow
+77 passed in 82.51s (0:01:22)

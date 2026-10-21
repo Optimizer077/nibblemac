@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=${prefix}
+libdir=@LIBDIR@
+includedir=@INCDIR@
+
+Name: pinfer
+Description: Raspberry-Pi-4-native inference engine for Qwen3.5 (C API, token ids in/logits out)
+Version: @VERSION@
+Libs: -L${libdir} -lpinfer
+Libs.private: -lm -pthread
+Cflags: -I${includedir}

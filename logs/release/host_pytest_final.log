@@ -1,0 +1,13 @@
+........................................................................ [ 90%]
+........                                                                 [100%]
+============================= slowest 5 durations ==============================
+119.37s call     tests/python/test_api.py::test_speculative_matches_greedy
+45.05s call     tests/python/test_golden.py::test_greedy_text_prompt
+26.44s call     tests/python/test_streaming.py::test_stop_string
+24.66s call     tests/python/test_streaming.py::test_stream_equals_blocking
+21.44s call     tests/python/test_chat.py::test_chat_generates
+80 passed in 389.05s (0:06:29)
+greedy: ' can be used for a wide range of tasks. It is a popular choice for beginners and professionals alike. The Raspberry Pi'
+  (24 tokens, 1.26 tok/s)
+chat: One fun fact about raspberries is that they have the **smallest seed** among all the berries in the world! In fact, if you count every berry in the entire world, raspberries are the only ones with a seed, while all other berries have an empty seed.
+eval: 1 tokens -> logits (248320,), argmax ','

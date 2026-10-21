@@ -5,6 +5,28 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-21
 
+### Added (release / packaging, pinfer 0.1.0 — not published)
+- `engine/Makefile`: `lib` / `host-lib` / `pi-lib` (`libpinfer.a` + `libpinfer.so`, `-fPIC`,
+  only `pinfer_*` exported via `engine/pkg/pinfer.map`; static archive localized with
+  `ld -r` + `objcopy`), `install PREFIX= [TARGET=host|pi] [DESTDIR=]` (+ `pinfer.pc`),
+  `examples`, `check-lib` (`engine/pkg/check_lib.sh`: exports, NEEDED, glibc ≤ 2.41 for the Pi),
+  `wheel-host` / `wheel-pi` → `build/dist/`. Library objects use `-fno-math-errno`
+  (otherwise `sqrtf@GLIBC_2.43` from WSL's glibc makes the .so unloadable on the Pi).
+- `python/`: package `pinfer` (ctypes binding, tokenizer, sampling, Qwen chat template,
+  streaming, speculative via `pinfer_generate_greedy`), CLI `pinfer`, `pyproject.toml` +
+  `hatch_build.py` (bundles the .so; manylinux tag derived from its glibc symbol versions).
+- `tests/python/` (80 tests), `examples/c/simple.c`, `examples/python/generate.py`,
+  `docs/library.md`, `docs/release-0.1.0.md` (draft).
+
+### Measured (release)
+- pytest 80/80 on host (`logs/release/host_pytest_final.log`) and on the Pi
+  (`logs/release/pi_pytest_final.log`); greedy ids via Python == golden 32/32 (plain and
+  speculative).
+
+### Pi (release)
+- User-level venv `~/pinfer/venvs/pinfer` (offline install from `~/pinfer/wheels/pinfer/`),
+  tokenizer files, golden meta.json, tests, C example — listed in `docs/pi-state.md`. No apt.
+
 ### Added
 - `docs/design.md`: design for pinfer (Qwen engine + split-core Linux, level 2).
 - `harness/pi.py`: `check`, `push`, `run`, `bench`, `snapshot`; `harness/runlog.py`: automatic

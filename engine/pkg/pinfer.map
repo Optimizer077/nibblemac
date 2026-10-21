@@ -1,0 +1,8 @@
+/* Linker version script for libpinfer.so: export the public C API (pinfer.h) only.
+ * The wildcard also exports functions the API gains later, as long as they are named pinfer_*. */
+{
+    global:
+        pinfer_*;
+    local:
+        *;
+};

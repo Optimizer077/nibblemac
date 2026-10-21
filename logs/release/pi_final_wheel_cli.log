@@ -1,0 +1,4 @@
+...........                                                              [100%]
+11 passed in 67.26s (0:01:07)
+ can be used for a wide
+[10 prompt tok (0 cached), 6 new, finish=length, prefill 2.04 tok/s, decode 1.55 tok/s]

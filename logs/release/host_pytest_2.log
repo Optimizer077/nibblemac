@@ -1,0 +1,11 @@
+  Created wheel for pinfer: filename=pinfer-0.1.0-py3-none-manylinux_2_33_x86_64.whl size=107128 sha256=601c4300e09f6514079b2d4a234f8286518fc3423350ecf72ddc559bb5a2aca2
+........................................................................ [ 90%]
+........                                                                 [100%]
+============================= slowest 6 durations ==============================
+47.81s call     tests/python/test_api.py::test_speculative_matches_greedy
+21.23s call     tests/python/test_golden.py::test_greedy_text_prompt
+17.93s call     tests/python/test_streaming.py::test_stream_equals_blocking
+13.38s call     tests/python/test_streaming.py::test_stop_string
+9.58s call     tests/python/test_golden.py::test_greedy_token_api
+9.37s call     tests/python/test_streaming.py::test_max_new_tokens
+80 passed in 190.09s (0:03:10)

@@ -34,6 +34,12 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | `~/pinfer/llama/` | llama.cpp v0.7.0 @ `620d2225` static aarch64: llama-bench, llama-completion, llama-simple, llama-perplexity + `BUILD_INFO.txt` (sha256s) |
 | `~/pinfer/llama_bench.sh` | llama-bench thread-sweep wrapper |
 | `~/pinfer/models/` | Qwen3.5-0.8B GGUF Q8_0 / Q4_0 / Q4_K_M + `SHA256SUMS` (verified on Pi) |
+| `~/pinfer/wheels/pinfer/` | 25 aarch64/cp313 wheels for the pinfer venv (pinfer 0.1.0 + numpy, tokenizers, jinja2, pytest and deps) + `SHA256SUMS` (verified on Pi). Release work 2026-10-21 |
+| `~/pinfer/venvs/pinfer/` | user-level venv (`python3 -m venv`, offline `pip install --no-index --find-links ~/pinfer/wheels/pinfer "pinfer[test]"`); exact package list in `~/pinfer/venvs/pinfer.freeze.txt`. Undo: `rm -rf ~/pinfer/venvs/pinfer ~/pinfer/venvs/pinfer.freeze.txt` |
+| `~/pinfer/models/qwen35-0.8b-tokenizer/` | `tokenizer.json`, `tokenizer_config.json`, `chat_template.jinja` from `models/Qwen3.5-0.8B` @ `2fc06364` |
+| `~/pinfer/golden/qwen35-0.8b/meta.json` | golden prompt / ids for the Python tests (copy of `ref/golden/qwen35-0.8b/meta.json`) |
+| `~/pinfer/tests/python/` | Python test suite (copy of `tests/python/`) |
+| `~/pinfer/examples/pinfer_example` | C API example, static aarch64 (`make -C engine examples`) |
 
 ## Snapshots
 | Snapshot | Taken before/after |
