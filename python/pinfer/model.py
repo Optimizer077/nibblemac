@@ -290,13 +290,14 @@ class Model:
             reuse_prefix: Keep the engine state when the new prompt extends the tokens already
                 in context (saves the shared prefill; output may differ in the last float bits
                 from a fresh run because prefill chunking differs).
-            speculative: Greedy speculative decoding with the model's MTP head through
-                ``pinfer_generate_greedy`` (same tokens as plain greedy, faster). Needs
-                greedy sampling and :attr:`supports_speculative`; the C call is blocking, so a
-                stream delivers its text when the call returns. See :mod:`pinfer.speculative`.
-            spec_k: Draft tokens per verification pass (default: the library's, 3).
+            speculative: Greedy speculative decoding with the model's MTP head (same tokens
+                as plain greedy, faster). Needs greedy sampling and
+                :attr:`supports_speculative`. Streams token by token with a libpinfer that
+                has ``pinfer_generate_greedy_ex``; older libraries deliver the text when the
+                blocking call returns. See :mod:`pinfer.speculative`.
+            spec_k: Draft tokens per verification pass (default: the library's).
             draft_vocab: Draft only over token ids below this (cheaper drafts; output
-                unchanged). Default: full vocabulary.
+                unchanged). Default: the library's.
 
         Returns:
             A :class:`GenerationResult`, or a :class:`TextStream` when ``stream=True``.

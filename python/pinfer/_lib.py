@@ -54,6 +54,16 @@ _c_float_p = ctypes.POINTER(ctypes.c_float)
 _c_int32_p = ctypes.POINTER(ctypes.c_int32)
 _c_int_p = ctypes.POINTER(ctypes.c_int)
 
+# int (*on_token)(int32_t tok, void *user) of pinfer_gen_opts.
+ON_TOKEN = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_int32, ctypes.c_void_p)
+
+
+class GenOpts(ctypes.Structure):
+    """Mirror of ``pinfer_gen_opts`` (stop tokens + per-token callback, optional API)."""
+
+    _fields_ = [("stop_ids", _c_int32_p), ("n_stop", ctypes.c_int),
+                ("on_token", ON_TOKEN), ("user", ctypes.c_void_p)]
+
 # name -> (restype, argtypes) for every function of the v0.1 C API.
 _REQUIRED = {
     "pinfer_default_params": (Params, []),
@@ -111,6 +121,11 @@ class Lib:
             "pinfer_generate_greedy", ctypes.c_int,
             [ctypes.c_void_p, _c_int32_p, ctypes.c_int, _c_int32_p, ctypes.c_int,
              ctypes.POINTER(SpecParams), ctypes.POINTER(SpecStats)])
+        self.pinfer_generate_greedy_ex = self.optional(
+            "pinfer_generate_greedy_ex", ctypes.c_int,
+            [ctypes.c_void_p, _c_int32_p, ctypes.c_int, _c_int32_p, ctypes.c_int,
+             ctypes.POINTER(SpecParams), ctypes.POINTER(GenOpts), ctypes.POINTER(SpecStats),
+             _c_int_p])
 
     def has(self, name: str) -> bool:
         """Return True if the library exports ``name`` (feature detection for newer APIs)."""
