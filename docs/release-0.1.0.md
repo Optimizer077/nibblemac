@@ -15,7 +15,7 @@ The first packaged release of pinfer, a Raspberry-Pi-4-native inference engine f
   - a typed exception hierarchy.
 - **CLI `pinfer`:** `generate`, `chat`, `bench`, `convert` (bundles `tools/convert.py` and writes a tokenizer sidecar), `info`.
 - **Wheels:**
-  - `pinfer-0.1.0-py3-none-manylinux_2_33_aarch64.whl` (Pi);
+  - `pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl` (Pi, NEON kernels);
   - `pinfer-0.1.0-py3-none-manylinux_2_33_x86_64.whl` (development and tests).
 
   The wheel tag comes from the bundled library's newest glibc symbol version, so pip refuses a system whose glibc is too old.
@@ -26,10 +26,10 @@ The first packaged release of pinfer, a Raspberry-Pi-4-native inference engine f
 - The C example built against `libpinfer.a` (static, Pi) and `libpinfer.so` (host) prints the golden ids.
 
 ## Performance
-The 0.1.0 wheels are built with the **reference** kernels (`MATVEC=ref`): about 1.5 tok/s decode and 2.0 tok/s prefill on the Pi 4, bf16, 1 thread. The NEON / quantized kernels (`MATVEC=fast`) are in development and will ship in a later release without API changes. Measured numbers: `notes.md`.
+The aarch64 wheel is built with the NEON kernels (`MATVEC=fast`): with the recommended Q4K model, 7.9 tok/s plain, 16.5 tok/s speculative and 37 tok/s prefill on the Pi 4, 4 threads (README, `docs/RESULTS.md`). The x86-64 wheel keeps the scalar reference kernels (for development and tests). Measured numbers: `notes.md`.
 
 ## Compatibility
-- Linux only. aarch64 needs glibc ≥ 2.33 (the Pi has 2.41); x86-64 needs glibc ≥ 2.33. Runtime dependencies are libc and libm only.
+- Linux only. aarch64 needs glibc ≥ 2.34 for the NEON build (pthread symbols; the Pi has 2.41); x86-64 needs glibc ≥ 2.33. Runtime dependencies are libc and libm only.
 - Python ≥ 3.10. Dependencies: `numpy`, `tokenizers`. Optional: `jinja2` to render the model's own chat template (a built-in Qwen3.5 template is used otherwise).
 - `.pq` format version 1 (`engine/FORMAT.md`).
 

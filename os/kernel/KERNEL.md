@@ -1,8 +1,9 @@
 # pinfer kernel: lab notebook
 
 Owner: OS/kernel. Scope: `os/kernel/`, `build/kernel/`, `logs/kernel/`.
-Status (2026-10-21): **built and staged, NOT installed.** Nothing on the Pi has been changed.
-The lead installs it later with the procedure in §5.
+Status (2026-10-22): **installed side by side, inactive.** Tested through three one-time tryboots
+(K1–K3, all within 1% of stock — `notes.md` "Custom kernel"); the stock kernel stays the default.
+Undo: `docs/pi-state.md` change #4. (Originally built and staged on 2026-10-21; install procedure §5.)
 
 ## 1. What and why
 
