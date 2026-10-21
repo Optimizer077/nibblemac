@@ -1,0 +1,6 @@
+# 2026-10-22T02:28:06 pi@10.42.0.2
+$ ps -eo etime,pcpu,args --sort=-pcpu | head -2 | tail -1 | cut -c1-110
+
+      04:42  398 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 32 -c 4160 --ids-file d
+
+[exit 0]
