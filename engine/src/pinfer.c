@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "forward.h"
+#include "spec.h"
 
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -120,6 +121,7 @@ pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err)
 
 void pinfer_free(pinfer_ctx *c) {
     if (!c) return;
+    pf_spec_free(c);
     int nl = c->n_layers;
     free_layer_state(c->conv, nl);
     free_layer_state(c->rec, nl);

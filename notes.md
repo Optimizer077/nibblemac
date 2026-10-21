@@ -59,3 +59,12 @@ valid (no throttling, ≤55 °C).
 **Key finding:** one core already saturates DRAM (~4.2 GB/s). Extra cores add no bandwidth;
 they are only useful for the compute (dequantization, math) that must keep pace with it.
 Decode ceiling ≈ 4.2 GB/s ÷ weight bytes per token, e.g. ~0.4 GB of 4-bit weights → ~10 tok/s.
+
+### pinfer MTP speculative decoding, bf16, 64 prompt + 64 gen tokens (2026-10-21, details `engine/SPEC.md` §4)
+| Kernels | Prompt | plain tok/s | best spec config | spec tok/s | Result |
+|---|---|---|---|---|---|
+| ref, 1 thr | bench64 | 1.546 | k=1 | 1.151 (0.74×) | `bench/results/pinfer-spec-ref-k{0,1}_20261021_*.json` |
+| fast, 4 thr | bench64 | 2.274 | k=3, draft vocab 32768 | 3.993 (1.76×) | `bench/results/pinfer-spec-fast-k3-v32768_20261021_233457.json` |
+| fast2, 4 thr | bench64 | 2.308 | k=2, draft vocab 32768 | 4.130 (1.79×) | `bench/results/pinfer-spec-fast2-dickens64-k2-v32768_20261021_234027.json` |
+| fast2, 4 thr | French history | 2.326 | k=2, draft vocab 32768 | 3.272 (1.41×) | `bench/results/pinfer-spec-fast2-french-k2-v32768_20261021_233722.json` |
+| fast2, 4 thr | quicksort code | 2.331 | k=2, draft vocab 32768 | 4.503 (1.93×) | `bench/results/pinfer-spec-fast2-quicksort-k2-v32768_20261021_233856.json` |

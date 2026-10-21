@@ -1,0 +1,165 @@
+'The Raspberry Pi 4 i'   k=1 dv=     0: rounds 36 drafted 35 accepted 27 tok/pass 1.750
+'The Raspberry Pi 4 i'   k=1 dv=131072: rounds 36 drafted 35 accepted 27 tok/pass 1.750
+'The Raspberry Pi 4 i'   k=1 dv= 65536: rounds 36 drafted 35 accepted 27 tok/pass 1.750
+'The Raspberry Pi 4 i'   k=1 dv= 32768: rounds 36 drafted 36 accepted 27 tok/pass 1.750
+'The Raspberry Pi 4 i'   k=2 dv=     0: rounds 27 drafted 53 accepted 36 tok/pass 2.333
+'The Raspberry Pi 4 i'   k=2 dv=131072: rounds 27 drafted 53 accepted 36 tok/pass 2.333
+'The Raspberry Pi 4 i'   k=2 dv= 65536: rounds 27 drafted 53 accepted 36 tok/pass 2.333
+'The Raspberry Pi 4 i'   k=2 dv= 32768: rounds 28 drafted 54 accepted 35 tok/pass 2.250
+'The Raspberry Pi 4 i'   k=3 dv=     0: rounds 22 drafted 66 accepted 41 tok/pass 2.864
+'The Raspberry Pi 4 i'   k=3 dv=131072: rounds 22 drafted 66 accepted 41 tok/pass 2.864
+'The Raspberry Pi 4 i'   k=3 dv= 65536: rounds 22 drafted 66 accepted 41 tok/pass 2.864
+'The Raspberry Pi 4 i'   k=3 dv= 32768: rounds 24 drafted 72 accepted 39 tok/pass 2.625
+'The Raspberry Pi 4 i'   k=4 dv=     0: rounds 20 drafted 80 accepted 43 tok/pass 3.150
+'The Raspberry Pi 4 i'   k=4 dv=131072: rounds 20 drafted 80 accepted 43 tok/pass 3.150
+'The Raspberry Pi 4 i'   k=4 dv= 65536: rounds 20 drafted 80 accepted 43 tok/pass 3.150
+'The Raspberry Pi 4 i'   k=4 dv= 32768: rounds 22 drafted 88 accepted 41 tok/pass 2.864
+'It was the best of t'   k=1 dv=     0: rounds 32 drafted 32 accepted 31 tok/pass 1.969
+'It was the best of t'   k=1 dv=131072: rounds 32 drafted 32 accepted 31 tok/pass 1.969
+'It was the best of t'   k=1 dv= 65536: rounds 32 drafted 32 accepted 31 tok/pass 1.969
+'It was the best of t'   k=1 dv= 32768: rounds 33 drafted 32 accepted 30 tok/pass 1.909
+'It was the best of t'   k=2 dv=     0: rounds 22 drafted 43 accepted 41 tok/pass 2.864
+'It was the best of t'   k=2 dv=131072: rounds 22 drafted 43 accepted 41 tok/pass 2.864
+'It was the best of t'   k=2 dv= 65536: rounds 22 drafted 43 accepted 41 tok/pass 2.864
+'It was the best of t'   k=2 dv= 32768: rounds 22 drafted 43 accepted 41 tok/pass 2.864
+'It was the best of t'   k=3 dv=     0: rounds 17 drafted 51 accepted 46 tok/pass 3.706
+'It was the best of t'   k=3 dv=131072: rounds 17 drafted 51 accepted 46 tok/pass 3.706
+'It was the best of t'   k=3 dv= 65536: rounds 17 drafted 51 accepted 46 tok/pass 3.706
+'It was the best of t'   k=3 dv= 32768: rounds 18 drafted 51 accepted 45 tok/pass 3.500
+'It was the best of t'   k=4 dv=     0: rounds 14 drafted 52 accepted 49 tok/pass 4.500
+'It was the best of t'   k=4 dv=131072: rounds 14 drafted 52 accepted 49 tok/pass 4.500
+'It was the best of t'   k=4 dv= 65536: rounds 14 drafted 52 accepted 49 tok/pass 4.500
+'It was the best of t'   k=4 dv= 32768: rounds 14 drafted 55 accepted 49 tok/pass 4.500
+'def quicksort(arr):\n'  k=1 dv=     0: rounds 32 drafted 32 accepted 31 tok/pass 1.969
+'def quicksort(arr):\n'  k=1 dv=131072: rounds 32 drafted 32 accepted 31 tok/pass 1.969
+'def quicksort(arr):\n'  k=1 dv= 65536: rounds 32 drafted 32 accepted 31 tok/pass 1.969
+'def quicksort(arr):\n'  k=1 dv= 32768: rounds 32 drafted 32 accepted 31 tok/pass 1.969
+'def quicksort(arr):\n'  k=2 dv=     0: rounds 24 drafted 46 accepted 39 tok/pass 2.625
+'def quicksort(arr):\n'  k=2 dv=131072: rounds 24 drafted 46 accepted 39 tok/pass 2.625
+'def quicksort(arr):\n'  k=2 dv= 65536: rounds 24 drafted 46 accepted 39 tok/pass 2.625
+'def quicksort(arr):\n'  k=2 dv= 32768: rounds 24 drafted 46 accepted 39 tok/pass 2.625
+'def quicksort(arr):\n'  k=3 dv=     0: rounds 20 drafted 58 accepted 43 tok/pass 3.150
+'def quicksort(arr):\n'  k=3 dv=131072: rounds 20 drafted 58 accepted 43 tok/pass 3.150
+'def quicksort(arr):\n'  k=3 dv= 65536: rounds 20 drafted 58 accepted 43 tok/pass 3.150
+'def quicksort(arr):\n'  k=3 dv= 32768: rounds 20 drafted 58 accepted 43 tok/pass 3.150
+'def quicksort(arr):\n'  k=4 dv=     0: rounds 16 drafted 63 accepted 47 tok/pass 3.938
+'def quicksort(arr):\n'  k=4 dv=131072: rounds 16 drafted 63 accepted 47 tok/pass 3.938
+'def quicksort(arr):\n'  k=4 dv= 65536: rounds 16 drafted 63 accepted 47 tok/pass 3.938
+'def quicksort(arr):\n'  k=4 dv= 32768: rounds 16 drafted 63 accepted 47 tok/pass 3.938
+'Q: Why is the sky bl'   k=1 dv=     0: rounds 34 drafted 33 accepted 29 tok/pass 1.853
+'Q: Why is the sky bl'   k=1 dv=131072: rounds 34 drafted 33 accepted 29 tok/pass 1.853
+'Q: Why is the sky bl'   k=1 dv= 65536: rounds 34 drafted 34 accepted 29 tok/pass 1.853
+'Q: Why is the sky bl'   k=1 dv= 32768: rounds 36 drafted 35 accepted 27 tok/pass 1.750
+'Q: Why is the sky bl'   k=2 dv=     0: rounds 25 drafted 49 accepted 38 tok/pass 2.520
+'Q: Why is the sky bl'   k=2 dv=131072: rounds 25 drafted 49 accepted 38 tok/pass 2.520
+'Q: Why is the sky bl'   k=2 dv= 65536: rounds 25 drafted 49 accepted 38 tok/pass 2.520
+'Q: Why is the sky bl'   k=2 dv= 32768: rounds 25 drafted 49 accepted 38 tok/pass 2.520
+'Q: Why is the sky bl'   k=3 dv=     0: rounds 20 drafted 57 accepted 43 tok/pass 3.150
+'Q: Why is the sky bl'   k=3 dv=131072: rounds 20 drafted 57 accepted 43 tok/pass 3.150
+'Q: Why is the sky bl'   k=3 dv= 65536: rounds 22 drafted 63 accepted 41 tok/pass 2.864
+'Q: Why is the sky bl'   k=3 dv= 32768: rounds 24 drafted 69 accepted 39 tok/pass 2.625
+'Q: Why is the sky bl'   k=4 dv=     0: rounds 17 drafted 68 accepted 46 tok/pass 3.706
+'Q: Why is the sky bl'   k=4 dv=131072: rounds 17 drafted 68 accepted 46 tok/pass 3.706
+'Q: Why is the sky bl'   k=4 dv= 65536: rounds 18 drafted 68 accepted 45 tok/pass 3.500
+'Q: Why is the sky bl'   k=4 dv= 32768: rounds 18 drafted 68 accepted 45 tok/pass 3.500
+'The French Revolutio'   k=1 dv=     0: rounds 36 drafted 35 accepted 27 tok/pass 1.750
+'The French Revolutio'   k=1 dv=131072: rounds 36 drafted 35 accepted 27 tok/pass 1.750
+'The French Revolutio'   k=1 dv= 65536: rounds 36 drafted 36 accepted 27 tok/pass 1.750
+'The French Revolutio'   k=1 dv= 32768: rounds 40 drafted 39 accepted 23 tok/pass 1.575
+'The French Revolutio'   k=2 dv=     0: rounds 25 drafted 50 accepted 38 tok/pass 2.520
+'The French Revolutio'   k=2 dv=131072: rounds 25 drafted 50 accepted 38 tok/pass 2.520
+'The French Revolutio'   k=2 dv= 65536: rounds 28 drafted 54 accepted 35 tok/pass 2.250
+'The French Revolutio'   k=2 dv= 32768: rounds 33 drafted 66 accepted 30 tok/pass 1.909
+'The French Revolutio'   k=3 dv=     0: rounds 22 drafted 66 accepted 41 tok/pass 2.864
+'The French Revolutio'   k=3 dv=131072: rounds 22 drafted 66 accepted 41 tok/pass 2.864
+'The French Revolutio'   k=3 dv= 65536: rounds 25 drafted 75 accepted 38 tok/pass 2.520
+'The French Revolutio'   k=3 dv= 32768: rounds 29 drafted 86 accepted 34 tok/pass 2.172
+'The French Revolutio'   k=4 dv=     0: rounds 21 drafted 80 accepted 42 tok/pass 3.000
+'The French Revolutio'   k=4 dv=131072: rounds 21 drafted 80 accepted 42 tok/pass 3.000
+'The French Revolutio'   k=4 dv= 65536: rounds 23 drafted 91 accepted 40 tok/pass 2.739
+'The French Revolutio'   k=4 dv= 32768: rounds 27 drafted 105 accepted 36 tok/pass 2.333
+'Ingredients for a si'   k=1 dv=     0: rounds 32 drafted 31 accepted 31 tok/pass 1.969
+'Ingredients for a si'   k=1 dv=131072: rounds 32 drafted 31 accepted 31 tok/pass 1.969
+'Ingredients for a si'   k=1 dv= 65536: rounds 32 drafted 31 accepted 31 tok/pass 1.969
+'Ingredients for a si'   k=1 dv= 32768: rounds 35 drafted 34 accepted 28 tok/pass 1.800
+'Ingredients for a si'   k=2 dv=     0: rounds 22 drafted 44 accepted 41 tok/pass 2.864
+'Ingredients for a si'   k=2 dv=131072: rounds 22 drafted 44 accepted 41 tok/pass 2.864
+'Ingredients for a si'   k=2 dv= 65536: rounds 22 drafted 44 accepted 41 tok/pass 2.864
+'Ingredients for a si'   k=2 dv= 32768: rounds 24 drafted 46 accepted 39 tok/pass 2.625
+'Ingredients for a si'   k=3 dv=     0: rounds 17 drafted 48 accepted 46 tok/pass 3.706
+'Ingredients for a si'   k=3 dv=131072: rounds 17 drafted 48 accepted 46 tok/pass 3.706
+'Ingredients for a si'   k=3 dv= 65536: rounds 17 drafted 48 accepted 46 tok/pass 3.706
+'Ingredients for a si'   k=3 dv= 32768: rounds 19 drafted 54 accepted 44 tok/pass 3.316
+'Ingredients for a si'   k=4 dv=     0: rounds 14 drafted 53 accepted 49 tok/pass 4.500
+'Ingredients for a si'   k=4 dv=131072: rounds 14 drafted 53 accepted 49 tok/pass 4.500
+'Ingredients for a si'   k=4 dv= 65536: rounds 14 drafted 53 accepted 49 tok/pass 4.500
+'Ingredients for a si'   k=4 dv= 32768: rounds 19 drafted 69 accepted 44 tok/pass 3.316
+'人工智能的发展历史可以追溯到'         k=1 dv=     0: rounds 44 drafted 43 accepted 19 tok/pass 1.432
+'人工智能的发展历史可以追溯到'         k=1 dv=131072: rounds 44 drafted 43 accepted 19 tok/pass 1.432
+'人工智能的发展历史可以追溯到'         k=1 dv= 65536: rounds 52 drafted 51 accepted 11 tok/pass 1.212
+'人工智能的发展历史可以追溯到'         k=1 dv= 32768: rounds 52 drafted 51 accepted 11 tok/pass 1.212
+'人工智能的发展历史可以追溯到'         k=2 dv=     0: rounds 37 drafted 71 accepted 26 tok/pass 1.703
+'人工智能的发展历史可以追溯到'         k=2 dv=131072: rounds 37 drafted 71 accepted 26 tok/pass 1.703
+'人工智能的发展历史可以追溯到'         k=2 dv= 65536: rounds 51 drafted 99 accepted 12 tok/pass 1.235
+'人工智能的发展历史可以追溯到'         k=2 dv= 32768: rounds 52 drafted 101 accepted 11 tok/pass 1.212
+'人工智能的发展历史可以追溯到'         k=3 dv=     0: rounds 36 drafted 102 accepted 27 tok/pass 1.750
+'人工智能的发展历史可以追溯到'         k=3 dv=131072: rounds 36 drafted 102 accepted 27 tok/pass 1.750
+'人工智能的发展历史可以追溯到'         k=3 dv= 65536: rounds 51 drafted 147 accepted 12 tok/pass 1.235
+'人工智能的发展历史可以追溯到'         k=3 dv= 32768: rounds 52 drafted 150 accepted 11 tok/pass 1.212
+'人工智能的发展历史可以追溯到'         k=4 dv=     0: rounds 35 drafted 131 accepted 28 tok/pass 1.800
+'人工智能的发展历史可以追溯到'         k=4 dv=131072: rounds 35 drafted 131 accepted 28 tok/pass 1.800
+'人工智能的发展历史可以追溯到'         k=4 dv= 65536: rounds 51 drafted 194 accepted 12 tok/pass 1.235
+'人工智能的发展历史可以追溯到'         k=4 dv= 32768: rounds 52 drafted 198 accepted 11 tok/pass 1.212
+'bench64'                k=1 dv=     0: rounds 35 drafted 35 accepted 28 tok/pass 1.800
+'bench64'                k=1 dv=131072: rounds 35 drafted 35 accepted 28 tok/pass 1.800
+'bench64'                k=1 dv= 65536: rounds 35 drafted 35 accepted 28 tok/pass 1.800
+'bench64'                k=1 dv= 32768: rounds 36 drafted 35 accepted 27 tok/pass 1.750
+'bench64'                k=2 dv=     0: rounds 26 drafted 50 accepted 37 tok/pass 2.423
+'bench64'                k=2 dv=131072: rounds 26 drafted 50 accepted 37 tok/pass 2.423
+'bench64'                k=2 dv= 65536: rounds 26 drafted 50 accepted 37 tok/pass 2.423
+'bench64'                k=2 dv= 32768: rounds 26 drafted 50 accepted 37 tok/pass 2.423
+'bench64'                k=3 dv=     0: rounds 22 drafted 64 accepted 41 tok/pass 2.864
+'bench64'                k=3 dv=131072: rounds 22 drafted 64 accepted 41 tok/pass 2.864
+'bench64'                k=3 dv= 65536: rounds 22 drafted 64 accepted 41 tok/pass 2.864
+'bench64'                k=3 dv= 32768: rounds 22 drafted 65 accepted 41 tok/pass 2.864
+'bench64'                k=4 dv=     0: rounds 17 drafted 67 accepted 46 tok/pass 3.706
+'bench64'                k=4 dv=131072: rounds 17 drafted 67 accepted 46 tok/pass 3.706
+'bench64'                k=4 dv= 65536: rounds 17 drafted 67 accepted 46 tok/pass 3.706
+'bench64'                k=4 dv= 32768: rounds 18 drafted 69 accepted 45 tok/pass 3.500
+
+SUMMARY all: k dv rounds drafted accepted accept_rate tok_per_pass
+SUMMARY 1 0 281 276 223 0.808 1.794
+SUMMARY 1 32768 300 294 204 0.694 1.680
+SUMMARY 1 65536 289 286 215 0.752 1.744
+SUMMARY 1 131072 281 276 223 0.808 1.794
+SUMMARY 2 0 208 406 296 0.729 2.423
+SUMMARY 2 32768 234 455 270 0.593 2.154
+SUMMARY 2 65536 225 438 279 0.637 2.240
+SUMMARY 2 131072 208 406 296 0.729 2.423
+SUMMARY 3 0 176 512 328 0.641 2.864
+SUMMARY 3 32768 208 605 296 0.489 2.423
+SUMMARY 3 65536 196 572 308 0.538 2.571
+SUMMARY 3 131072 176 512 328 0.641 2.864
+SUMMARY 4 0 154 594 350 0.589 3.273
+SUMMARY 4 32768 186 715 318 0.445 2.710
+SUMMARY 4 65536 173 668 331 0.496 2.913
+SUMMARY 4 131072 154 594 350 0.589 3.273
+
+SUMMARY varied (no bench64): k dv rounds drafted accepted accept_rate tok_per_pass
+SUMMARY 1 0 246 241 195 0.809 1.793
+SUMMARY 1 32768 264 259 177 0.683 1.670
+SUMMARY 1 65536 254 251 187 0.745 1.736
+SUMMARY 1 131072 246 241 195 0.809 1.793
+SUMMARY 2 0 182 356 259 0.728 2.423
+SUMMARY 2 32768 208 405 233 0.575 2.120
+SUMMARY 2 65536 199 388 242 0.624 2.216
+SUMMARY 2 131072 182 356 259 0.728 2.423
+SUMMARY 3 0 154 448 287 0.641 2.864
+SUMMARY 3 32768 186 540 255 0.472 2.371
+SUMMARY 3 65536 174 508 267 0.526 2.534
+SUMMARY 3 131072 154 448 287 0.641 2.864
+SUMMARY 4 0 137 527 304 0.577 3.219
+SUMMARY 4 32768 168 646 273 0.423 2.625
+SUMMARY 4 65536 156 601 285 0.474 2.827
+SUMMARY 4 131072 137 527 304 0.577 3.219
+exit 0

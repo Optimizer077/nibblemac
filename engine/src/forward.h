@@ -13,6 +13,22 @@
  * stream over more tokens; 64 keeps the scratch buffers at ~4 MB. */
 #define PF_MAX_BATCH 64
 
+/* Rollback log for speculative verification (forward_lin.c). While ctx->lin_log_on is set,
+ * pf_linear_attn runs the conv and recurrent states on scratch copies (the committed states
+ * stay untouched) and records, per token, what pf_lin_commit needs to advance the committed
+ * states by any prefix of the pass: the raw conv inputs and each head's rank-1 update. */
+typedef struct {
+    int cap;          /* max tokens per logged pass */
+    int n;            /* tokens in the last logged pass */
+    float *S;         /* [lk_dim * lv_dim]: working copy of one head's state */
+    float *conv;      /* [(conv_k-1) * conv_dim]: working copy of one layer's conv state */
+    float **xin;      /* per linear layer [cap][conv_dim]: raw conv inputs */
+    float **upd;      /* per linear layer [cap][lv_heads][lk_dim + lv_dim + 1]: k | delta | decay */
+} pf_lin_log;
+
+struct pf_mtp;        /* MTP draft head (mtp.h) */
+struct pf_spec_buf;   /* speculative-decoding buffers (spec.h) */
+
 struct pinfer_ctx {
     pf_model model;
     pf_pool *pool;
@@ -36,6 +52,12 @@ struct pinfer_ctx {
     float *ba, *aa;             /* [B][lv_heads]: in_proj_b / in_proj_a outputs */
     float *rope_cos, *rope_sin; /* [B][rot/2] */
     float *att;                 /* [max_ctx]: attention scores of one head */
+
+    /* speculative decoding (spec.c); all NULL / 0 until first used */
+    pf_lin_log *lin_log;
+    int lin_log_on;
+    struct pf_mtp *mtp;
+    struct pf_spec_buf *spec;
 };
 
 /* Run n tokens through the model starting at position ctx->n_past and advance n_past.
@@ -47,11 +69,31 @@ struct pinfer_ctx {
 int pf_forward(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits_last,
                float *logits_all, float *hidden);
 
+/* pf_forward plus `normed` [n][H] (may be NULL): every token's final-normed hidden state,
+ * the input of the MTP head. */
+int pf_forward_h(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits_last,
+                 float *logits_all, float *hidden, float *normed);
+
 /* Prefill chunk size (clamped to 1..PF_MAX_BATCH). 1 = pure token-by-token decode path. */
 void pf_set_batch(pinfer_ctx *ctx, int batch);
 
 /* Gated DeltaNet mixer for n tokens (forward_lin.c): ctx->xn -> ctx->out. */
 void pf_linear_attn(pinfer_ctx *ctx, int layer, int n);
+
+/* Rollback log (forward_lin.c). alloc: room for passes of up to `cap` tokens. commit:
+ * advance the committed conv/recurrent states by the first `keep` tokens of the last logged
+ * pass, bit-identical to having run only those tokens. */
+int pf_lin_log_alloc(pinfer_ctx *ctx, int cap);
+void pf_lin_log_free(pinfer_ctx *ctx);
+void pf_lin_commit(pinfer_ctx *ctx, int keep);
+
+/* Building blocks shared with the MTP head (forward.c). All work on rows 0..n-1 of the
+ * ctx scratch buffers: x = residual stream, xn = normed input, out = sublayer output. */
+void pf_rope_tables(pinfer_ctx *ctx, int pos0, int n);        /* positions pos0.. */
+void pf_norm_rows(pinfer_ctx *ctx, float *dst, const float *w, int n);   /* dst = norm(x) */
+void pf_add_rows(pinfer_ctx *ctx, int n);                     /* x += out */
+void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0);
+void pf_mlp(pinfer_ctx *ctx, const pf_layer *L, int n);
 
 /* Shared elementwise helpers (forward.c). */
 void pf_rmsnorm(float *y, const float *x, const float *w, int n, float eps);

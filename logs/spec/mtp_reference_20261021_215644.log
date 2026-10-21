@@ -1,0 +1,22 @@
+Loading weights:   0%|          | 0/473 [00:00<?, ?it/s]Loading weights:   0%|          | 1/473 [00:02<16:06,  2.05s/it]Loading weights:  61%|██████    | 287/473 [00:02<00:01, 184.89it/s]Loading weights:  91%|█████████ | 431/473 [00:02<00:00, 184.57it/s]Loading weights: 100%|██████████| 473/473 [00:03<00:00, 144.57it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+golden: chained drafts [1542, 383, 866, 6165], true greedy [381, 1429, 364, 264]
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+'The Raspberry Pi 4 is a small computer t' n_gen=96 step1 acc (full vocab) 0.882
+'It was the best of times, it was the wor' n_gen=96 step1 acc (full vocab) 0.978
+'def quicksort(arr):\n    """Sort a list o' n_gen=96 step1 acc (full vocab) 0.892
+'Q: Why is the sky blue?\nA:'            n_gen=96 step1 acc (full vocab) 0.935
+'The French Revolution began in 1789 when' n_gen=96 step1 acc (full vocab) 0.903
+'Ingredients for a simple tomato soup:\n1.' n_gen=96 step1 acc (full vocab) 0.978
+'人工智能的发展历史可以追溯到'                         n_gen=96 step1 acc (full vocab) 0.538
+vocab248320            rows  651  p_cond [0.873, 0.868, 0.897, 0.937]  E[accepted] k=1..4 [0.873, 1.63, 2.309, 2.945]
+vocab131072            rows  651  p_cond [0.873, 0.868, 0.897, 0.937]  E[accepted] k=1..4 [0.873, 1.63, 2.309, 2.945]
+vocab65536             rows  651  p_cond [0.81, 0.865, 0.899, 0.92]  E[accepted] k=1..4 [0.81, 1.51, 2.14, 2.719]
+vocab32768             rows  651  p_cond [0.763, 0.815, 0.835, 0.837]  E[accepted] k=1..4 [0.763, 1.386, 1.905, 2.339]
+vocab16384             rows  651  p_cond [0.74, 0.784, 0.812, 0.824]  E[accepted] k=1..4 [0.74, 1.321, 1.793, 2.181]
+vocab8192              rows  651  p_cond [0.707, 0.746, 0.77, 0.773]  E[accepted] k=1..4 [0.707, 1.233, 1.639, 1.952]
+ctrl_prenorm_hidden    rows  651  p_cond [0.545, 0.369, 0.374, 0.388]  E[accepted] k=1..4 [0.545, 0.747, 0.822, 0.851]
+ctrl_swapped_concat    rows  651  p_cond [0.003, 0.0, 0.0, 0.0]  E[accepted] k=1..4 [0.003, 0.003, 0.003, 0.003]
+wrote /mnt/e/Personal_tries/Raspberry_Pi/ref/golden/qwen35-0.8b-mtp

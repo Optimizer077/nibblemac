@@ -5,6 +5,27 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-21
 
+### Added (MTP self-speculative decoding — details `engine/SPEC.md`)
+- `engine/src/mtp.{c,h}` (Qwen3.5 MTP draft head; semantics from vLLM `qwen3_5_mtp.py` +
+  llama.cpp `qwen35.cpp`), `engine/src/spec.{c,h}` (draft k with the MTP chain, verify k+1 in
+  ONE batched pass, exact rollback of linear-attention state by replaying logged rank-1
+  updates — no state snapshots). `forward_lin.c` loops head-outer (state stays in L2),
+  `forward.c` exports its attention/MLP blocks and `pf_forward_h` (final-normed hiddens).
+- `pinfer.h` (additive): `pinfer_spec_params`, `pinfer_spec_stats`, `pinfer_default_spec_params`
+  (k=2, draft_vocab=32768), `pinfer_has_mtp`, `pinfer_generate_greedy`,
+  `pinfer_generate_greedy_ex` + `pinfer_gen_opts` (stop ids, per-token callback, tokens kept on
+  context overflow).
+- `pinfer_run --spec k [--draft-vocab N] [--dump-mtp f]`; RESULT json gains rounds / drafted /
+  accepted / tokens_per_pass / per-pass timings.
+- `ref/mtp_reference.py` + `ref/golden/qwen35-0.8b-mtp/`, `tests/test_spec.py` (PASS: MTP logits
+  ≤ 4e-6 rel vs reference; spec output == plain greedy for 9 prompts × k=0..4 + draft vocab).
+
+### Measured (speculative decoding, bf16, 64 tokens, Pi)
+- Reference MTP acceptance 87.3% first draft (651 positions); controls 54.5% / 0.3%.
+- NEON kernels, 4 threads, k=2 + draft vocab 32768: 4.13 / 3.27 / 4.50 tok/s vs 2.31 / 2.33 /
+  2.33 plain (1.79× / 1.41× / 1.93×, Dickens / history / code), identical tokens.
+  Scalar kernels: speculation 0.55–0.74× (compute-bound, expected).
+
 ### Added (release / packaging, pinfer 0.1.0 — not published)
 - `engine/Makefile`: `lib` / `host-lib` / `pi-lib` (`libpinfer.a` + `libpinfer.so`, `-fPIC`,
   only `pinfer_*` exported via `engine/pkg/pinfer.map`; static archive localized with

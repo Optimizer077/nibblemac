@@ -34,7 +34,7 @@ static void rope(float *v, const float *c, const float *s, int rot) {
 /* cos/sin tables for positions pos0..pos0+n-1. Computed in fp32 exactly like the reference
  * (inv_freq = 1 / theta^(2i/rot) in float, angle = float(pos) * inv_freq) so long-context
  * angles round the same way. */
-static void rope_tables(pinfer_ctx *ctx, int pos0, int n) {
+void pf_rope_tables(pinfer_ctx *ctx, int pos0, int n) {
     int h = ctx->rot / 2;
     float theta = ctx->model.hdr->rope_theta;
     for (int i = 0; i < h; i++) {
@@ -47,13 +47,13 @@ static void rope_tables(pinfer_ctx *ctx, int pos0, int n) {
     }
 }
 
-/* Gated full attention for n tokens at positions pos0.. : ctx->xn -> ctx->out. */
-static void full_attn(pinfer_ctx *ctx, int layer, int n, int pos0) {
-    const pf_layer *L = &ctx->model.layers[layer];
+/* Gated full attention for n tokens at positions pos0.. : ctx->xn -> ctx->out. kc / vc are
+ * the layer's KV cache (the main model's or the MTP head's). */
+void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0) {
     const int hd = ctx->hd, nq = ctx->n_heads, kvw = ctx->n_kv * hd, grp = nq / ctx->n_kv;
     const int qw = nq * hd * 2, h2 = ctx->rot / 2;
     const float eps = ctx->model.hdr->rms_eps, scale = 1.0f / sqrtf((float)hd);
-    float *kc = ctx->kc[layer], *vc = ctx->vc[layer], *att = ctx->att;
+    float *att = ctx->att;
 
     pf_matmul(ctx->pool, &L->q, ctx->xn, ctx->ta, n);   /* per head: [query hd | gate hd] */
     pf_matmul(ctx->pool, &L->k, ctx->xn, ctx->tb, n);
@@ -105,8 +105,7 @@ static void full_attn(pinfer_ctx *ctx, int layer, int n, int pos0) {
 }
 
 /* SwiGLU: down(silu(gate x) * up x), ctx->xn -> ctx->out. */
-static void mlp(pinfer_ctx *ctx, int layer, int n) {
-    const pf_layer *L = &ctx->model.layers[layer];
+void pf_mlp(pinfer_ctx *ctx, const pf_layer *L, int n) {
     pf_matmul(ctx->pool, &L->gate, ctx->xn, ctx->ta, n);
     pf_matmul(ctx->pool, &L->up, ctx->xn, ctx->tb, n);
     size_t m = (size_t)n * ctx->ffn;
@@ -114,13 +113,13 @@ static void mlp(pinfer_ctx *ctx, int layer, int n) {
     pf_matmul(ctx->pool, &L->down, ctx->ta, ctx->out, n);
 }
 
-static void norm_rows(pinfer_ctx *ctx, float *dst, const float *w, int n) {
+void pf_norm_rows(pinfer_ctx *ctx, float *dst, const float *w, int n) {
     for (int t = 0; t < n; t++)
         pf_rmsnorm(dst + (size_t)t * ctx->H, ctx->x + (size_t)t * ctx->H, w, ctx->H,
                    ctx->model.hdr->rms_eps);
 }
 
-static void add_rows(pinfer_ctx *ctx, int n) {
+void pf_add_rows(pinfer_ctx *ctx, int n) {
     size_t m = (size_t)n * ctx->H;
     for (size_t i = 0; i < m; i++) ctx->x[i] += ctx->out[i];
 }
@@ -135,30 +134,32 @@ static void dump(const pinfer_ctx *ctx, float *hidden, int e, int n_total, int t
 
 /* One chunk of n <= ctx->batch tokens. t0 = index of the chunk inside the pf_forward call. */
 static void forward_chunk(pinfer_ctx *ctx, const int32_t *tok, int n, int t0, int n_total,
-                          float *logits_last, float *logits_all, float *hidden) {
+                          float *logits_last, float *logits_all, float *hidden,
+                          float *normed) {
     const pf_model *m = &ctx->model;
     const int H = ctx->H, pos0 = ctx->n_past;
 
     for (int t = 0; t < n; t++) pf_get_row(&m->embed, tok[t], ctx->x + (size_t)t * H);
     dump(ctx, hidden, 0, n_total, t0, ctx->x, n);
-    rope_tables(ctx, pos0, n);
+    pf_rope_tables(ctx, pos0, n);
 
     for (int l = 0; l < ctx->n_layers; l++) {
         const pf_layer *L = &m->layers[l];
-        norm_rows(ctx, ctx->xn, L->in_norm, n);
-        if (L->is_full) full_attn(ctx, l, n, pos0);
+        pf_norm_rows(ctx, ctx->xn, L->in_norm, n);
+        if (L->is_full) pf_full_attn(ctx, L, ctx->kc[l], ctx->vc[l], n, pos0);
         else pf_linear_attn(ctx, l, n);
-        add_rows(ctx, n);
-        norm_rows(ctx, ctx->xn, L->post_norm, n);
-        mlp(ctx, l, n);
-        add_rows(ctx, n);
+        pf_add_rows(ctx, n);
+        pf_norm_rows(ctx, ctx->xn, L->post_norm, n);
+        pf_mlp(ctx, L, n);
+        pf_add_rows(ctx, n);
         if (l + 1 < ctx->n_layers) dump(ctx, hidden, l + 1, n_total, t0, ctx->x, n);
     }
 
     /* Final norm + tied head. Only the rows whose logits are wanted pay for the 248k-row
      * head matmul (it is ~1/3 of all weight bytes). */
-    norm_rows(ctx, ctx->xn, m->norm, n);
+    pf_norm_rows(ctx, ctx->xn, m->norm, n);
     dump(ctx, hidden, ctx->n_layers, n_total, t0, ctx->xn, n);
+    if (normed) memcpy(normed + (size_t)t0 * H, ctx->xn, (size_t)n * H * sizeof(float));
     if (logits_all)
         pf_matmul(ctx->pool, &m->embed, ctx->xn, logits_all + (size_t)t0 * ctx->vocab, n);
     if (logits_last && t0 + n == n_total)
@@ -168,13 +169,18 @@ static void forward_chunk(pinfer_ctx *ctx, const int32_t *tok, int n, int t0, in
 
 int pf_forward(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits_last,
                float *logits_all, float *hidden) {
+    return pf_forward_h(ctx, tokens, n, logits_last, logits_all, hidden, NULL);
+}
+
+int pf_forward_h(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits_last,
+                 float *logits_all, float *hidden, float *normed) {
     if (!ctx || !tokens || n <= 0) return PINFER_E_ARG;
     for (int i = 0; i < n; i++)
         if (tokens[i] < 0 || tokens[i] >= ctx->vocab) return PINFER_E_ARG;
     if (n > ctx->max_ctx - ctx->n_past) return PINFER_E_CTX_FULL;
     for (int t0 = 0; t0 < n; t0 += ctx->batch) {
         int nb = n - t0 < ctx->batch ? n - t0 : ctx->batch;
-        forward_chunk(ctx, tokens + t0, nb, t0, n, logits_last, logits_all, hidden);
+        forward_chunk(ctx, tokens + t0, nb, t0, n, logits_last, logits_all, hidden, normed);
     }
     return PINFER_OK;
 }

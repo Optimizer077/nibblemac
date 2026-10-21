@@ -38,26 +38,30 @@ PI_LIBS   := -static -pthread -lm
 PI_OUT    := $(ROOT)/build/aarch64/engine
 PI_OBJ    := $(PI_OUT)/obj-$(MATVEC)
 
-host: $(HOST_OUT)/pinfer_run
-pi: $(PI_OUT)/pinfer_run
+# Command-line tools: engine/tools/<name>.c, each linked against CORE.
+TOOLS := pinfer_run pinfer_ppl
+TOOL_DIR := $(ROOT)/engine/tools
+
+host: $(addprefix $(HOST_OUT)/,$(TOOLS))
+pi: $(addprefix $(PI_OUT)/,$(TOOLS))
 all: host pi
 
-$(HOST_OUT)/pinfer_run: $(addprefix $(HOST_OBJ)/,$(CORE:.c=.o)) $(HOST_OBJ)/pinfer_run.o
+$(addprefix $(HOST_OUT)/,$(TOOLS)): $(HOST_OUT)/%: $(addprefix $(HOST_OBJ)/,$(CORE:.c=.o)) $(HOST_OBJ)/%.o
 	$(HOST_CC) $(filter %.o,$^) -o $@ $(HOST_LIBS)
 
 $(HOST_OBJ)/%.o: $(SRC_DIR)/%.c $(HDRS) | $(HOST_OBJ)
 	$(HOST_CC) $(HOST_CFLAGS) $(INCS) $(DEFS) -c $< -o $@
 
-$(HOST_OBJ)/pinfer_run.o: $(ROOT)/engine/tools/pinfer_run.c $(HDRS) | $(HOST_OBJ)
+$(HOST_OBJ)/%.o: $(TOOL_DIR)/%.c $(HDRS) | $(HOST_OBJ)
 	$(HOST_CC) $(HOST_CFLAGS) $(INCS) $(DEFS) -c $< -o $@
 
-$(PI_OUT)/pinfer_run: $(addprefix $(PI_OBJ)/,$(CORE:.c=.o)) $(PI_OBJ)/pinfer_run.o
+$(addprefix $(PI_OUT)/,$(TOOLS)): $(PI_OUT)/%: $(addprefix $(PI_OBJ)/,$(CORE:.c=.o)) $(PI_OBJ)/%.o
 	$(PI_CC) $(filter %.o,$^) -o $@ $(PI_LIBS)
 
 $(PI_OBJ)/%.o: $(SRC_DIR)/%.c $(HDRS) | $(PI_OBJ)
 	$(PI_CC) $(PI_CFLAGS) $(INCS) $(DEFS) -c $< -o $@
 
-$(PI_OBJ)/pinfer_run.o: $(ROOT)/engine/tools/pinfer_run.c $(HDRS) | $(PI_OBJ)
+$(PI_OBJ)/%.o: $(TOOL_DIR)/%.c $(HDRS) | $(PI_OBJ)
 	$(PI_CC) $(PI_CFLAGS) $(INCS) $(DEFS) -c $< -o $@
 
 $(HOST_OBJ) $(PI_OBJ):
@@ -67,7 +71,7 @@ $(HOST_OBJ) $(PI_OBJ):
 .PHONY: host pi all clean test FORCE host-lib pi-lib lib examples install \
         check-lib wheel-host wheel-pi
 FORCE:
-$(HOST_OUT)/pinfer_run $(PI_OUT)/pinfer_run: FORCE
+$(addprefix $(HOST_OUT)/,$(TOOLS)) $(addprefix $(PI_OUT)/,$(TOOLS)): FORCE
 
 # From Windows: uv run --no-project --with numpy python tests/test_golden.py
 PY ?= /root/venv-ref/bin/python

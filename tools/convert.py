@@ -1,20 +1,24 @@
 """Convert a Hugging Face Qwen3.5 checkpoint (safetensors) into a pinfer `.pq` file (v1).
 
 Text model (+ MTP head) only; vision tensors are skipped. 2-D weights stay BF16 (bit-exact
-copy); norms, conv and gate parameters become F32 with the conventions in engine/FORMAT.md.
-Needs only numpy (safetensors is parsed directly, so BF16 needs no torch).
+copy) or are quantized with tools/quant.py; norms, conv and gate parameters become F32 with
+the conventions in engine/FORMAT.md. Needs only numpy.
 
     python tools/convert.py models/Qwen3.5-0.8B models/pq/qwen35-0.8b-bf16.pq
+    python tools/convert.py models/Qwen3.5-0.8B models/pq/qwen35-0.8b-q4.pq --quant q4 --head q8
 """
 from __future__ import annotations
 
 import argparse
 import json
 import logging
+import re
 import struct
 from pathlib import Path
 
 import numpy as np
+
+from quant import Q4_G32, Q4K_G32, Q8_G32, quantize_pack
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +27,7 @@ VERSION = 1
 HEADER_BYTES = 4096
 ALIGN = 64
 F32, BF16 = 0, 1
+QUANT_IDS = {"bf16": BF16, "q8": Q8_G32, "q4": Q4_G32, "q4k": Q4K_G32}
 HEADER_FMT = "<8sIIQQ" + "I" * 18 + "ff"   # must match pq_header in engine/src/pq_format.h
 ENTRY_FMT = "<80sII4IQQ8x"                 # must match pq_tensor_entry (128 bytes)
 TEXT_PREFIX = "model.language_model."
@@ -69,15 +74,19 @@ def pq_name(hf_name: str) -> str | None:
     return None  # vision tower etc.
 
 
-def convert_tensor(name: str, dtype: str, shape: list[int], buf: memoryview
+def convert_tensor(name: str, dtype: str, shape: list[int], buf: memoryview, target: int = 1
                    ) -> tuple[int, list[int], bytes]:
-    """Return (pq dtype, shape, bytes) for one tensor following FORMAT.md conventions."""
+    """Return (pq dtype, shape, bytes) for one tensor following FORMAT.md conventions.
+    `target` is the pq dtype for 2-D matrices: BF16 (1) or a quantized dtype."""
     if name.endswith(ZERO_CENTERED_SUFFIXES) or name in ZERO_CENTERED_EXACT:
         return F32, shape, (1.0 + to_f32(dtype, buf)).astype(np.float32).tobytes()
     if name.endswith("linear_attn.conv1d.weight"):          # [C, 1, K] -> [C, K]
         return F32, [shape[0], shape[2]], to_f32(dtype, buf).astype(np.float32).tobytes()
     if len(shape) == 1:                                       # gated norm, A_log, dt_bias
         return F32, shape, to_f32(dtype, buf).astype(np.float32).tobytes()
+    if len(shape) == 2 and target != BF16:
+        packed, _ = quantize_pack(target, to_f32(dtype, buf).reshape(shape))
+        return target, shape, packed
     if len(shape) == 2 and dtype == "BF16":
         return BF16, shape, bytes(buf)
     if len(shape) == 2 and dtype == "F32":
@@ -112,7 +121,19 @@ def main() -> None:
     p.add_argument("model_dir", type=Path)
     p.add_argument("out", type=Path)
     p.add_argument("--no-mtp", action="store_true", help="drop the MTP head")
+    p.add_argument("--quant", choices=sorted(QUANT_IDS), default="bf16",
+                   help="dtype for layer and MTP matrices")
+    p.add_argument("--head", choices=sorted(QUANT_IDS), default=None,
+                   help="dtype for embed_tokens (= tied output head); default: --quant")
+    p.add_argument("--override", action="append", default=[], metavar="REGEX=DTYPE",
+                   help="per-tensor dtype, first match wins, e.g. 'v_proj=q8' 'mtp\\.fc=q8'")
     a = p.parse_args()
+    overrides = []
+    for spec in a.override:
+        pattern, _, dt = spec.rpartition("=")
+        if dt not in QUANT_IDS or not pattern:
+            p.error(f"bad --override {spec!r}")
+        overrides.append((re.compile(pattern), dt))
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     cfg = json.loads((a.model_dir / "config.json").read_text())
@@ -124,7 +145,10 @@ def main() -> None:
             continue
         if len(name.encode()) >= 80:
             raise ValueError(f"name too long: {name}")
-        tensors.append((name, *convert_tensor(name, *src[hf_name])))
+        choice = a.head if (name == "embed_tokens.weight" and a.head) else a.quant
+        choice = next((dt for rx, dt in overrides if rx.search(name)), choice)
+        tensors.append((name, *convert_tensor(name, *src[hf_name], target=QUANT_IDS[choice])))
+        logger.debug("%s -> %s", name, choice)
     has_mtp = any(t[0].startswith("mtp.") for t in tensors)
 
     dir_off = HEADER_BYTES

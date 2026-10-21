@@ -1,0 +1,65 @@
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.005 s | prefill 64 tok in 5.842 s = 10.955 tok/s | decode 63 tok in 27.707 s = 2.274 tok/s | peak RSS 1463.7 MB | matvec=fast threads=4
+RESULT {"engine": "pinfer-fast", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.9552, "decode_tps": 2.2738, "peak_rss_mb": 1463.7}
+
+saved bench/results/pinfer-spec-fast-k0_20261021_231307.json  valid=True  temp 46.2'C -> 48.2'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.004 s | prefill 64 tok in 6.709 s = 9.540 tok/s | decode 63 tok in 22.077 s = 2.854 tok/s | peak RSS 1507.2 MB | matvec=fast threads=4
+spec k=1 draft_vocab=0 | rounds 35 drafted 35 accepted 28 | mean accepted 0.800, 1.800 tok/pass | per pass: mtp 142.6 ms verify 469.6 ms commit 18.5 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 9.5401, "decode_tps": 2.8536, "peak_rss_mb": 1507.2, "spec_k": 1, "draft_vocab": 0, "rounds": 35, "drafted": 35, "accepted": 28, "mean_accepted": 0.8000, "accept_rate": 0.8000, "tokens_per_pass": 1.8000, "mtp_ms_per_pass": 142.63, "verify_ms_per_pass": 469.62, "commit_ms_per_pass": 18.54}
+
+saved bench/results/pinfer-spec-fast-k1_20261021_232558.json  valid=True  temp 46.7'C -> 50.6'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.005 s | prefill 64 tok in 6.247 s = 10.245 tok/s | decode 63 tok in 22.328 s = 2.822 tok/s | peak RSS 1508.6 MB | matvec=fast threads=4
+spec k=2 draft_vocab=0 | rounds 26 drafted 50 accepted 37 | mean accepted 1.423, 2.423 tok/pass | per pass: mtp 279.6 ms verify 558.8 ms commit 20.4 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.2448, "decode_tps": 2.8215, "peak_rss_mb": 1508.6, "spec_k": 2, "draft_vocab": 0, "rounds": 26, "drafted": 50, "accepted": 37, "mean_accepted": 1.4231, "accept_rate": 0.7400, "tokens_per_pass": 2.4231, "mtp_ms_per_pass": 279.55, "verify_ms_per_pass": 558.79, "commit_ms_per_pass": 20.44}
+
+saved bench/results/pinfer-spec-fast-k2_20261021_233014.json  valid=True  temp 51.1'C -> 50.6'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.005 s | prefill 64 tok in 6.285 s = 10.184 tok/s | decode 63 tok in 23.016 s = 2.737 tok/s | peak RSS 1510.3 MB | matvec=fast threads=4
+spec k=3 draft_vocab=0 | rounds 22 drafted 64 accepted 41 | mean accepted 1.864, 2.864 tok/pass | per pass: mtp 416.3 ms verify 606.5 ms commit 23.4 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.1836, "decode_tps": 2.7372, "peak_rss_mb": 1510.3, "spec_k": 3, "draft_vocab": 0, "rounds": 22, "drafted": 64, "accepted": 41, "mean_accepted": 1.8636, "accept_rate": 0.6406, "tokens_per_pass": 2.8636, "mtp_ms_per_pass": 416.28, "verify_ms_per_pass": 606.49, "commit_ms_per_pass": 23.42}
+
+saved bench/results/pinfer-spec-fast-k3_20261021_233227.json  valid=True  temp 51.6'C -> 50.1'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.004 s | prefill 64 tok in 6.207 s = 10.310 tok/s | decode 63 tok in 22.097 s = 2.851 tok/s | peak RSS 1511.9 MB | matvec=fast threads=4
+spec k=4 draft_vocab=0 | rounds 17 drafted 67 accepted 46 | mean accepted 2.706, 3.706 tok/pass | per pass: mtp 563.8 ms verify 709.4 ms commit 26.6 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.3102, "decode_tps": 2.8511, "peak_rss_mb": 1511.9, "spec_k": 4, "draft_vocab": 0, "rounds": 17, "drafted": 67, "accepted": 46, "mean_accepted": 2.7059, "accept_rate": 0.6866, "tokens_per_pass": 3.7059, "mtp_ms_per_pass": 563.82, "verify_ms_per_pass": 709.38, "commit_ms_per_pass": 26.62}
+
+saved bench/results/pinfer-spec-fast-k4_20261021_233316.json  valid=True  temp 51.1'C -> 50.6'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.004 s | prefill 64 tok in 6.225 s = 10.281 tok/s | decode 63 tok in 18.018 s = 3.497 tok/s | peak RSS 1508.4 MB | matvec=fast threads=4
+spec k=2 draft_vocab=131072 | rounds 26 drafted 50 accepted 37 | mean accepted 1.423, 2.423 tok/pass | per pass: mtp 160.4 ms verify 511.4 ms commit 21.2 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.2813, "decode_tps": 3.4966, "peak_rss_mb": 1508.4, "spec_k": 2, "draft_vocab": 131072, "rounds": 26, "drafted": 50, "accepted": 37, "mean_accepted": 1.4231, "accept_rate": 0.7400, "tokens_per_pass": 2.4231, "mtp_ms_per_pass": 160.43, "verify_ms_per_pass": 511.35, "commit_ms_per_pass": 21.20}
+
+saved bench/results/pinfer-spec-fast-k2-v131072_20261021_233341.json  valid=True  temp 50.6'C -> 50.6'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.003 s | prefill 64 tok in 6.322 s = 10.123 tok/s | decode 63 tok in 19.912 s = 3.164 tok/s | peak RSS 1509.8 MB | matvec=fast threads=4
+spec k=3 draft_vocab=131072 | rounds 22 drafted 64 accepted 41 | mean accepted 1.864, 2.864 tok/pass | per pass: mtp 238.2 ms verify 643.3 ms commit 23.6 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.1231, "decode_tps": 3.1639, "peak_rss_mb": 1509.8, "spec_k": 3, "draft_vocab": 131072, "rounds": 22, "drafted": 64, "accepted": 41, "mean_accepted": 1.8636, "accept_rate": 0.6406, "tokens_per_pass": 2.8636, "mtp_ms_per_pass": 238.20, "verify_ms_per_pass": 643.32, "commit_ms_per_pass": 23.56}
+
+saved bench/results/pinfer-spec-fast-k3-v131072_20261021_233408.json  valid=True  temp 50.1'C -> 51.6'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.004 s | prefill 64 tok in 6.153 s = 10.401 tok/s | decode 63 tok in 18.715 s = 3.366 tok/s | peak RSS 1511.6 MB | matvec=fast threads=4
+spec k=4 draft_vocab=131072 | rounds 17 drafted 67 accepted 46 | mean accepted 2.706, 3.706 tok/pass | per pass: mtp 325.6 ms verify 747.7 ms commit 27.6 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.4015, "decode_tps": 3.3662, "peak_rss_mb": 1511.6, "spec_k": 4, "draft_vocab": 131072, "rounds": 17, "drafted": 67, "accepted": 46, "mean_accepted": 2.7059, "accept_rate": 0.6866, "tokens_per_pass": 3.7059, "mtp_ms_per_pass": 325.59, "verify_ms_per_pass": 747.66, "commit_ms_per_pass": 27.65}
+
+saved bench/results/pinfer-spec-fast-k4-v131072_20261021_233434.json  valid=True  temp 51.6'C -> 50.6'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.005 s | prefill 64 tok in 6.099 s = 10.494 tok/s | decode 63 tok in 15.777 s = 3.993 tok/s | peak RSS 1509.6 MB | matvec=fast threads=4
+spec k=3 draft_vocab=32768 | rounds 22 drafted 65 accepted 41 | mean accepted 1.864, 2.864 tok/pass | per pass: mtp 89.4 ms verify 604.1 ms commit 23.6 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.4944, "decode_tps": 3.9931, "peak_rss_mb": 1509.6, "spec_k": 3, "draft_vocab": 32768, "rounds": 22, "drafted": 65, "accepted": 41, "mean_accepted": 1.8636, "accept_rate": 0.6308, "tokens_per_pass": 2.8636, "mtp_ms_per_pass": 89.43, "verify_ms_per_pass": 604.09, "commit_ms_per_pass": 23.62}
+
+saved bench/results/pinfer-spec-fast-k3-v32768_20261021_233457.json  valid=True  temp 51.1'C -> 52.1'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.005 s | prefill 64 tok in 6.062 s = 10.558 tok/s | decode 63 tok in 16.771 s = 3.757 tok/s | peak RSS 1511.2 MB | matvec=fast threads=4
+spec k=4 draft_vocab=32768 | rounds 18 drafted 69 accepted 45 | mean accepted 2.500, 3.500 tok/pass | per pass: mtp 118.3 ms verify 787.1 ms commit 26.3 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.5576, "decode_tps": 3.7566, "peak_rss_mb": 1511.2, "spec_k": 4, "draft_vocab": 32768, "rounds": 18, "drafted": 69, "accepted": 45, "mean_accepted": 2.5000, "accept_rate": 0.6522, "tokens_per_pass": 3.5000, "mtp_ms_per_pass": 118.27, "verify_ms_per_pass": 787.08, "commit_ms_per_pass": 26.35}
+
+saved bench/results/pinfer-spec-fast-k4-v32768_20261021_233521.json  valid=True  temp 51.6'C -> 53.0'C
+generated: 3769,11,424,557,279,10151,314,8415,11,424,557,279,7094,314,279,6337,314,4124,11,424,557,279,12050,314,279,6337,314,4124,13,198,2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314
+load 0.003 s | prefill 64 tok in 6.179 s = 10.357 tok/s | decode 63 tok in 16.760 s = 3.759 tok/s | peak RSS 1512.9 MB | matvec=fast threads=4
+spec k=5 draft_vocab=32768 | rounds 17 drafted 80 accepted 46 | mean accepted 2.706, 3.706 tok/pass | per pass: mtp 144.6 ms verify 814.1 ms commit 27.2 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-bf16.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 10.3574, "decode_tps": 3.7589, "peak_rss_mb": 1512.9, "spec_k": 5, "draft_vocab": 32768, "rounds": 17, "drafted": 80, "accepted": 46, "mean_accepted": 2.7059, "accept_rate": 0.5750, "tokens_per_pass": 3.7059, "mtp_ms_per_pass": 144.65, "verify_ms_per_pass": 814.10, "commit_ms_per_pass": 27.16}
+
+saved bench/results/pinfer-spec-fast-k5-v32768_20261021_233545.json  valid=True  temp 51.1'C -> 54.0'C
