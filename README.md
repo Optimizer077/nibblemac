@@ -22,6 +22,8 @@ Repository: private, `github.com/Optimizer077/piquant` · engine and package: `p
 [docs/RESULTS.md](docs/RESULTS.md).*
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/decode_speed-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/decode_speed-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/decode_speed-dark.png">
   <img alt="On a Raspberry Pi 4, pinfer Q4K decodes 7.9 tokens/s plain and 16.5 tokens/s with exact speculative decoding, ahead of MNN int4 (6.7), llama.cpp (4.1–5.6) and ONNX Runtime GenAI int4 (3.1)." src="docs/figures/decode_speed.png">
 </picture>
@@ -59,6 +61,8 @@ loses no quality, and (b) producing more than one token per read of the weights 
 pinfer does both, and spends the rest of its effort making sure the core streams weights at the wall.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/kernel_bandwidth-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/kernel_bandwidth-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/kernel_bandwidth-dark.png">
   <img alt="Every matrix kernel streams weights at 3.86–4.33 GB/s, at the Pi 4's 4.2 GB/s DRAM read ceiling, so decode speed is set by the bytes read per token." src="docs/figures/kernel_bandwidth.png">
 </picture>
@@ -67,6 +71,8 @@ A third of those bytes is the output head — the 248K-token vocabulary times 10
 input embedding — which is why the draft step only scores the first 32K tokens (143 MB → 19 MB).
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/bytes_per_token-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/bytes_per_token-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/bytes_per_token-dark.png">
   <img alt="Of the 437 MB Q4K model, the MLPs take 148.7 MB, the tied output head 143.0 MB, the 18 linear-attention layers 108.4 MB, the 6 full-attention layers 24.8 MB and the MTP draft head 11.5 MB; a plain decode step streams 424.9 MB." src="docs/figures/bytes_per_token.png">
 </picture>
@@ -83,6 +89,8 @@ contiguous range and every scale line lands on a cache-line boundary. Three quan
 their quality decided the default:
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/quantization-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/quantization-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/quantization-dark.png">
   <img alt="Q4K and symmetric Q4 both spend 4.5 bits per weight, but Q4K keeps wikitext-2 perplexity at 18.50 (bf16: 17.93) while symmetric Q4 rises to 21.61." src="docs/figures/quantization.png">
 </picture>
@@ -107,6 +115,8 @@ accumulators per row (no gain). Lab notebook: `engine/bench/KERNELS.md`.
 
 ### 2.3 Exact speculative decoding with the model's own draft head
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/speculative_schematic-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/speculative_schematic-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speculative_schematic-dark.png">
   <img alt="In one speculative round the MTP head drafts 3 tokens, the full model checks all 4 positions in a single weight pass, and the matching prefix plus one of its own tokens is kept: 3.3 tokens per round on average, identical to plain greedy output." src="docs/figures/speculative_schematic.png">
 </picture>
@@ -117,6 +127,8 @@ in one batched pass and keeps the longest correct prefix plus one token of its o
 the full model's own greedy choice, so the output is token-for-token identical to plain decoding.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/mtp_acceptance-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/mtp_acceptance-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/mtp_acceptance-dark.png">
   <img alt="The full model accepts 87–94% of the MTP head's drafts at every draft position, while two deliberately mis-wired controls drop first-draft acceptance to 54.5% and 0.3%." src="docs/figures/mtp_acceptance.png">
 </picture>
@@ -129,12 +141,16 @@ roll back the 19 MB recurrent state exactly — pinfer logs each rank-1 state up
 pass and replays only the accepted ones, instead of copying state.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/speculative_k-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/speculative_k-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speculative_k-dark.png">
   <img alt="More drafts per round raise tokens per weight pass from 2.63 at k=2 to 3.94 at k=4, but decode speed peaks at k=3 with 16.5 tokens/s." src="docs/figures/speculative_k.png">
 </picture>
 
 ### 2.4 Where the remaining time goes
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/step_breakdown-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/step_breakdown-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/step_breakdown-dark.png">
   <img alt="A plain decode step takes 128 ms, 119 ms of it streaming weights, and a speculative verify pass over 4 positions takes 160 ms, only 1.24× one token." src="docs/figures/step_breakdown.png">
 </picture>
@@ -146,16 +162,22 @@ step is 119 ms of weight streaming plus 10 ms of everything else — about 12% f
 ## 3. Results
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/progress-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/progress-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/progress-dark.png">
   <img alt="Each verified optimization step raised decode speed, from 1.6 tokens/s in scalar C to 7.9 tokens/s plain and 16.5 tokens/s speculative after vectorizing the per-token ops." src="docs/figures/progress.png">
 </picture>
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/speed_vs_quality-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/speed_vs_quality-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speed_vs_quality-dark.png">
   <img alt="pinfer Q4K decodes faster than every llama.cpp format at Q4_K_M quality (perplexity 18.50 vs 18.59), and exact speculative decoding doubles its speed at unchanged quality." src="docs/figures/speed_vs_quality.png">
 </picture>
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/prefill_speed-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/prefill_speed-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/prefill_speed-dark.png">
   <img alt="pinfer reads a 64-token prompt at 37.4 tokens/s, ahead of MNN int4 (30.9), llama.cpp (14.8–17.1) and ONNX Runtime GenAI int4 (9.9)." src="docs/figures/prefill_speed.png">
 </picture>
@@ -168,6 +190,8 @@ needs 4.8 GB of RAM.
 ### Long contexts and multi-turn chat
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/context_length-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/context_length-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/context_length-dark.png">
   <img alt="After the attention rewrite, plain decode at a 4096-token context is 6.4 tokens/s with the exact fp32 KV cache and 6.7 with fp16 (5.6 before; llama.cpp 3.4), and prefill of a 4096-token prompt is 28 tokens/s (18 before)." src="docs/figures/context_length.png">
 </picture>
@@ -208,6 +232,8 @@ runs. Sources: `engine/CONTEXT.md` Summary.*
 Measured, logged and kept for the record:
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/os_experiment-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/os_experiment-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/os_experiment-dark.png">
   <img alt="A custom tickless split-core kernel with huge pages kept decode speed within 1% of the stock kernel (7.21–7.30 tokens/s plain, 13.35–13.51 speculative) because decoding is DRAM-bound." src="docs/figures/os_experiment.png">
 </picture>

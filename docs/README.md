@@ -36,4 +36,4 @@ One line per document. Paths are relative to this folder.
 - [../CLAUDE.md](../CLAUDE.md): project rules for coding agents (same rules as CONTRIBUTING.md, in short form).
 - `../logs/harness.jsonl`, `../logs/runs/`, `../logs/snapshots/`: audit log of every harness call, full `run` outputs, Pi configuration records.
 - `../bench/results/`: one JSON file per benchmark run (format: [REPRODUCE.md §9](REPRODUCE.md#9-reading-benchresultsjson)).
-- `figures/`: the result figures, each with a `-dark.png` variant, rendered by `../tools/make_figures.py` and `../tools/make_figures2.py` (list: [RESULTS.md §13](RESULTS.md#13-figures)).
+- `figures/`: the result figures, each in four variants (desktop / phone × light / dark), rendered by `../tools/make_figures.py` and `../tools/make_figures2.py` (list: [RESULTS.md §13](RESULTS.md#13-figures)).
