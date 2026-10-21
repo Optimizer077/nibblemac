@@ -55,4 +55,10 @@ int pf_model_vec(const pf_model *m, const char *name, uint32_t n, const float **
 int pf_model_mat(const pf_model *m, const char *name, uint32_t rows, uint32_t cols,
                  pf_mat *out);
 
+/* 64-bit fingerprint of the loaded file: FNV-1a over the header, the tensor directory and
+ * three 64-byte samples (start, middle, end) of every tensor. State blobs carry it (state.c),
+ * so a blob saved with one model file is refused by another, including one with the same
+ * dimensions and layout but other weights. Reads ~3 cache lines per tensor (~0.1 ms). */
+uint64_t pf_model_fingerprint(const pf_model *m);
+
 #endif

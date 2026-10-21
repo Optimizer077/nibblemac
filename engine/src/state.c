@@ -2,7 +2,7 @@
  *
  * The blob holds everything the context keeps for the tokens consumed so far, so restoring
  * it and feeding more tokens gives bit-identical results to never having left:
- *   header (dims, n_past, kv_dtype, MTP rows)
+ *   header (dims, n_past, kv_dtype, MTP rows, model fingerprint)
  *   per linear-attention layer: conv state [(conv_k-1)][conv_dim], recurrent state S
  *   per full-attention layer:   K rows [n_kv][n_past] then V rows, in the cache's storage
  *                               format (plus the int8 scales, forward_kv.c)
@@ -15,15 +15,19 @@
 #include "spec.h"
 
 #define STATE_MAGIC "PINFERS"
-#define STATE_VERSION 1u
+/* 2: model_fp (pf_model_fingerprint) in the former reserved field; version-1 blobs only
+ * matched dimensions, so another model file of the same shape was accepted. */
+#define STATE_VERSION 2u
 
 typedef struct {
     char magic[8];
     uint32_t version, n_past, kv_dtype, mtp_rows;
     uint32_t n_layers, hidden, n_kv, head_dim, lk_heads, lv_heads, lk_dim, lv_dim, conv_k;
     uint32_t full_mask;
-    uint32_t reserved[2];
+    uint64_t model_fp;   /* pf_model_fingerprint of the file the state was saved with */
 } state_hdr;   /* 72 bytes */
+
+_Static_assert(sizeof(state_hdr) == 72, "state_hdr layout");
 
 static size_t lin_bytes(const pinfer_ctx *c) {
     return ((size_t)(c->conv_k - 1) * c->conv_dim + (size_t)c->lv_heads * c->lk_dim * c->lv_dim)
@@ -92,7 +96,7 @@ int pinfer_state_save(const pinfer_ctx *c, void *buf, size_t cap) {
     state_hdr hdr = {STATE_MAGIC, STATE_VERSION, (uint32_t)c->n_past, (uint32_t)c->kv_dtype,
                      (uint32_t)n_mtp, h->n_layers, h->hidden, h->n_kv_heads, h->head_dim,
                      h->lin_k_heads, h->lin_v_heads, h->lin_k_dim, h->lin_v_dim, h->conv_k,
-                     h->full_attn_mask, {0, 0}};
+                     h->full_attn_mask, pf_model_fingerprint(&c->model)};
     char *cur = buf;
     memcpy(cur, &hdr, sizeof hdr);
     cur += sizeof hdr;
@@ -121,8 +125,9 @@ int pinfer_state_load(pinfer_ctx *c, const void *buf, size_t len) {
         hdr.head_dim != h->head_dim || hdr.lk_heads != h->lin_k_heads ||
         hdr.lv_heads != h->lin_v_heads || hdr.lk_dim != h->lin_k_dim ||
         hdr.lv_dim != h->lin_v_dim || hdr.conv_k != h->conv_k ||
-        hdr.full_mask != h->full_attn_mask || hdr.kv_dtype != (uint32_t)c->kv_dtype)
-        return PINFER_E_FORMAT;   /* another model, or another KV storage format */
+        hdr.full_mask != h->full_attn_mask || hdr.kv_dtype != (uint32_t)c->kv_dtype ||
+        hdr.model_fp != pf_model_fingerprint(&c->model))
+        return PINFER_E_FORMAT;   /* another model file, or another KV storage format */
     if (hdr.n_past > (uint32_t)c->max_ctx) return PINFER_E_CTX_FULL;
     if (hdr.mtp_rows > hdr.n_past || len < state_bytes(c, (int)hdr.n_past, (int)hdr.mtp_rows))
         return PINFER_E_FORMAT;

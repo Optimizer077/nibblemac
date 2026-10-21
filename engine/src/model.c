@@ -133,6 +133,26 @@ static int check_header(const pq_header *h) {
     return PINFER_OK;
 }
 
+static uint64_t fnv1a(uint64_t h, const void *p, size_t n) {
+    const unsigned char *b = p;
+    for (size_t i = 0; i < n; i++) h = (h ^ b[i]) * 1099511628211ull;
+    return h;
+}
+
+uint64_t pf_model_fingerprint(const pf_model *m) {
+    uint64_t h = fnv1a(14695981039346656037ull, m->hdr, sizeof(pq_header));
+    h = fnv1a(h, m->dir, (size_t)m->hdr->n_tensors * sizeof(pq_tensor_entry));
+    for (uint32_t i = 0; i < m->hdr->n_tensors; i++) {
+        const pq_tensor_entry *e = &m->dir[i];
+        const unsigned char *d = (const unsigned char *)m->map + e->offset;
+        const size_t n = (size_t)e->nbytes, s = n < 64 ? n : 64;
+        h = fnv1a(h, d, s);
+        h = fnv1a(h, d + (n - s) / 2, s);
+        h = fnv1a(h, d + (n - s), s);
+    }
+    return h;
+}
+
 static int build_layer(const pf_model *m, int i, pf_layer *L) {
     const pq_header *h = m->hdr;
     char nm[PQ_NAME_MAX + 32];
