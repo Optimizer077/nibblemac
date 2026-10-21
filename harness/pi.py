@@ -129,18 +129,23 @@ def throttle_flags(state: dict[str, str]) -> int | None:
 
 
 BENCH_LOCK = "/tmp/pinfer-bench.lock"
+# A locked job may hold the Pi for at most this long; a 38-min run once stalled four agents.
+LOCK_MAX_MINUTES = 20
 
 
-def remote_cmd(cfg: PiConfig, command: list[str], lock: bool = False) -> str:
+def remote_cmd(cfg: PiConfig, command: list[str], lock: bool = False,
+               max_minutes: int = LOCK_MAX_MINUTES) -> str:
     """`command` is one shell string split by argparse; it runs inside the remote dir.
     lock=True serializes it with every other locked command on the Pi (all benchmarks), so
-    parallel agents never measure on top of each other."""
+    parallel agents never measure on top of each other, and kills it after max_minutes
+    (exit code 124) so one slow job cannot block the queue."""
     if not command:
         sys.exit("No command given.")
     rdir = shlex.quote(cfg.remote_dir)
     body = " ".join(command)
     if lock:
-        body = f"flock {BENCH_LOCK} bash -c {shlex.quote(body)}"
+        body = (f"flock {BENCH_LOCK} timeout --kill-after=30 {max_minutes * 60} "
+                f"bash -c {shlex.quote(body)}")
     # `|| exit 1;` (not `&&`) so a failed cd also stops commands after a `;` in the string.
     return f"mkdir -p {rdir} && cd {rdir} || exit 1; {body}"
 
