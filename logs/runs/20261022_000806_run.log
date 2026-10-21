@@ -1,0 +1,8 @@
+# 2026-10-22T00:08:06 pi@10.42.0.2
+$ cd ~/pinfer && PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=golden/qwen35-0.8b/meta.json ~/pinfer/venvs/pinfer/bin/python -m pytest -q tests/python 2>&1 | tail -4
+
+........................................................................ [ 90%]
+........                                                                 [100%]
+80 passed in 91.72s (0:01:31)
+
+[exit 0]
