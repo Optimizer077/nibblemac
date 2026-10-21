@@ -1,0 +1,22 @@
+# 2026-10-22T07:46:22 pi@10.42.0.2
+$ df -h /tmp ~/pinfer | cat; ls -la /tmp | head -20; free -m
+
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           1.9G   76M  1.8G   4% /tmp
+/dev/sda2       917G   17G  863G   2% /
+total 4
+drwxrwxrwt  9 root root  200 Oct 22 07:46 .
+drwxr-xr-x 18 root root 4096 Oct  6 09:26 ..
+drwxrwxrwt  2 root root   40 Oct 22 01:34 .font-unix
+drwxrwxrwt  2 root root   40 Oct 22 01:34 .ICE-unix
+-rw-rw-r--  1 pi   pi      0 Oct 22 01:38 pinfer-bench.lock
+drwx------  5 pi   pi    120 Oct 22 07:42 pytest-of-pi
+drwx------  3 root root   60 Oct 22 01:34 systemd-private-6e970849272d4006bd8b3053fa942c9d-bluetooth.service-pa4YVg
+drwx------  3 root root   60 Oct 22 01:34 systemd-private-6e970849272d4006bd8b3053fa942c9d-systemd-logind.service-BRwXm3
+drwxrwxrwt  2 root root   40 Oct 22 01:34 .X11-unix
+drwxrwxrwt  2 root root   40 Oct 22 01:34 .XIM-unix
+               total        used        free      shared  buff/cache   available
+Mem:            3794         236        1925          40        1734        3557
+Swap:           2047          63        1984
+
+[exit 0]

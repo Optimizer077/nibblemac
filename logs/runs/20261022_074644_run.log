@@ -1,0 +1,28 @@
+# 2026-10-22T07:46:44 pi@10.42.0.2
+$ cd ~/pinfer && python3 tmp/hard/tests/test_malformed.py --tmp tmp/hard/mal --bin ./engine/pinfer_run_hard1 --ppl ./engine/pinfer_ppl_hard1 --model models/qwen35-0.8b-bf16.pq --qmodel models/qwen35-0.8b-q4k-headq4k.pq 2>&1 | tail -22; df -h /tmp | tail -1
+
+PASS  mtp-shape              pinfer: mtp.fc.weight: expected shape [1024, 2048]
+PASS  control-sparse-quant   generated: 0
+PASS  q-nbytes               pinfer: layers.0.mlp.gate_proj.weight: nbytes 2063808 != 2064384 for dtype 4 and its shape
+PASS  q-nbytes-at-eof        pinfer: layers.0.mlp.gate_proj.weight: nbytes 2063808 != 2064384 for dtype 4 and its shape
+PASS  q-rows                 pinfer: layers.0.mlp.gate_proj.weight: quantized dtype 4 needs a [rows % 4, cols % 256] matrix
+PASS  q-cols                 pinfer: layers.0.mlp.gate_proj.weight: quantized dtype 4 needs a [rows % 4, cols % 256] matrix
+PASS  q-ndim                 pinfer: layers.0.mlp.gate_proj.weight: quantized dtype 4 needs a [rows % 4, cols % 256] matrix
+PASS  q-mtp-nbytes           pinfer: mtp.fc.weight: nbytes 1179072 != 1179648 for dtype 4 and its shape
+PASS  state-control          generated: 6
+PASS  state-other-weights    load-state /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/state.bin failed (-2)
+PASS  state-v1               load-state /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/v1.bin failed (-2)
+PASS  state-fingerprint      load-state /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/fp.bin failed (-2)
+PASS  state-truncated        load-state /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/short.bin failed (-2)
+PASS  state-ctx-full         load-state /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/state.bin failed (-5)
+PASS  ppl-control            RESULT {"engine":"pinfer","tool":"pinfer_ppl","kernels":"fast","model_file":"models/qwen35-0.8b-bf16
+PASS  ppl-bad-target         /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/bad.bin: token 192 = 1048576 outside the voca
+PASS  ppl-negative           /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/neg.bin: token 0 = -5 outside the vocabulary 
+PASS  ppl-chunks0            need -m and -f, -c >= 4 and --chunks >= 1
+PASS  ppl-odd-size           cannot read /home/pi/pinfer/tmp/hard/mal/pinfer-malformed-y85xl3tw/odd.bin or too few tokens
+
+43/43 passed
+OVERALL: PASS
+tmpfs           1.9G   76M  1.8G   4% /tmp
+
+[exit 0]

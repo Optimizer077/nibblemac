@@ -1,0 +1,12 @@
+# 2026-10-22T07:45:41 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; OLD=$(ls ~/pinfer/venvs/pinfer/lib/python3*/site-packages/pinfer/libpinfer.so); PYTHONPATH=tmp/hard/python PINFER_LIB=$OLD PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq $V/python -m pytest -q -p no:cacheprovider tmp/hard/tests/python/test_affinity.py 2>&1 | grep -F -e AssertionError -e assert  -e where | head -8
+
+>       assert r["after_load"] == r["before"], "pinfer_load changed the caller's affinity"
+E       AssertionError: pinfer_load changed the caller's affinity
+E       assert {0} == {0, 1, 2, 3}
+tmp/hard/tests/python/test_affinity.py:72: AssertionError
+>       assert r["after"] == mask and r["ok"]
+E       assert ({0} == {2, 3}
+tmp/hard/tests/python/test_affinity.py:105: AssertionError
+
+[exit 0]

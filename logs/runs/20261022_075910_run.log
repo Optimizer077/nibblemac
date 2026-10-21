@@ -1,0 +1,17 @@
+# 2026-10-22T07:59:10 pi@10.42.0.2
+$ ps -eo pid,etime,args --sort=start_time | tail -12 | cut -c1-170
+
+  22772       01:35 sshd-session: pi@notty
+  22773       01:35 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/chat_spec.sh ./engine/pinfer_run_fast 96 1 k2 k3full k2full
+  22888       00:13 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 2 --ids-file data/ctx512.ids --dump-logits tmp/ctx/l512_old.bin
+  22889       00:13 grep ^load
+  22890       00:13 sed s/^/  ctx512 old: /
+  22894       00:12 [kworker/2:2]
+  22895       00:00 sshd-session: pi [priv]
+  22903       00:00 sshd-session: pi@notty
+  22904       00:00 bash -c mkdir -p pinfer && cd pinfer || exit 1; ps -eo pid,etime,args --sort=start_time | tail -12 | cut -c1-170
+  22906       00:00 ps -eo pid,etime,args --sort=start_time
+  22907       00:00 tail -12
+  22908       00:00 cut -c1-170
+
+[exit 0]

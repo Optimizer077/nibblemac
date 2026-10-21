@@ -1,0 +1,48 @@
+# 2026-10-22T07:45:57 pi@10.42.0.2
+$ cd ~/pinfer && python3 tmp/hard/tests/test_malformed.py --bin ./engine/pinfer_run_hard1 --ppl ./engine/pinfer_ppl_hard1 --model models/qwen35-0.8b-bf16.pq --qmodel models/qwen35-0.8b-q4k-headq4k.pq 2>&1 | tail -48
+
+43 cases; bin ./engine/pinfer_run_hard1; ppl ./engine/pinfer_ppl_hard1
+PASS  control-sparse-bf16    generated: 0
+PASS  truncated              pinfer: mtp.layers.0.self_attn.v_proj.weight: data out of bounds or misaligned
+PASS  truncated-header       pinfer: /tmp/pinfer-malformed-9fxapg0m/truncated-header.pq: too small for a .pq file
+PASS  bad-magic              pinfer: bad magic
+PASS  hdr-huge-hidden        pinfer: bad model dimensions
+PASS  hdr-layers-33          pinfer: bad model dimensions
+PASS  hdr-heads-wrap         pinfer: bad attention dimensions
+PASS  hdr-lin-wrap           pinfer: bad linear-attention dimensions
+PASS  hdr-eos                pinfer: eos_id 248320 outside the vocabulary
+PASS  hdr-theta-inf          pinfer: bad eps / rope_theta
+PASS  hdr-eps-nan            pinfer: bad eps / rope_theta
+PASS  lin-v-dim-80           pinfer: lin_v_dim 80 (needs <= 512, multiple of 32) or head_dim 256 not supported
+PASS  lin-v-dim-544          pinfer: lin_v_dim 544 (needs <= 512, multiple of 32) or head_dim 256 not supported
+PASS  dir-misaligned         pinfer: tensor directory out of bounds or misaligned
+PASS  dir-n-tensors          pinfer: tensor directory out of bounds or misaligned
+PASS  name-unterminated      pinfer: tensor 319: name not terminated
+PASS  ndim-5                 pinfer: norm.weight: bad ndim 5
+PASS  bf16-nbytes            pinfer: embed_tokens.weight: nbytes 508559358 != 508559360 for dtype 1 and its shape
+PASS  shape-wrap             pinfer: mtp.norm.weight: shape larger than the file
+PASS  shape-huge             pinfer: norm.weight: shape larger than the file
+PASS  shape-zero             pinfer: norm.weight: zero dimension
+PASS  dtype-unknown          pinfer: norm.weight: unknown dtype 99
+PASS  dtype-f32-for-bf16     pinfer: layers.0.mlp.up_proj.weight: nbytes 7340032 != 14680064 for dtype 0 and its shape
+PASS  dtype-q8-for-bf16      pinfer: layers.0.mlp.up_proj.weight: nbytes 7340032 != 3899392 for dtype 2 and its shape
+PASS  mtp-shape              pinfer: mtp.fc.weight: expected shape [1024, 2048]
+FAIL  control-sparse-quant   killed by signal 7; missing 'generated:'
+Traceback (most recent call last):
+  File "/home/pi/pinfer/tmp/hard/tests/test_malformed.py", line 446, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/pi/pinfer/tmp/hard/tests/test_malformed.py", line 435, in main
+    ok, detail = run_case(e, c, Path(td))
+                 ~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/pi/pinfer/tmp/hard/tests/test_malformed.py", line 384, in run_case
+    argv = [e.ppl if c.tool == "ppl" else e.bin] + c.make(tmp)
+                                                   ~~~~~~^^^^^
+  File "/home/pi/pinfer/tmp/hard/tests/test_malformed.py", line 182, in make
+    out = p.write(tmp / f"{name}.pq", size(p) if size else None)
+  File "/home/pi/pinfer/tmp/hard/tests/test_malformed.py", line 122, in write
+    f.write(self.buf)
+    ~~~~~~~^^^^^^^^^^
+OSError: [Errno 28] No space left on device
+
+[exit 0]

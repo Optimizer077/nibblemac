@@ -1,0 +1,13 @@
+# 2026-10-22T08:08:55 pi@10.42.0.2
+$ ps -eo pid,etime,args --sort=start_time | tail -8 | cut -c1-150
+
+  24244       00:13 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 96 --ids-file data/chat_code_c.ids --bench --spec 3
+  24245       00:13 grep ^RESULT
+  24249       00:00 sshd-session: pi [priv]
+  24257       00:00 sshd-session: pi@notty
+  24258       00:00 bash -c mkdir -p pinfer && cd pinfer || exit 1; ps -eo pid,etime,args --sort=start_time | tail -8 | cut -c1-150
+  24260       00:00 ps -eo pid,etime,args --sort=start_time
+  24261       00:00 tail -8
+  24262       00:00 cut -c1-150
+
+[exit 0]

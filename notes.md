@@ -179,3 +179,29 @@ installed side by side (`docs/pi-state.md` #4).
 
 Memory is not the issue (KV cache 24 KB/token: +116 MB at 4096); the attention path is. Speculation
 loses its gain on long wikitext (low acceptance + verify cost growing with context × batch) → adaptive k.
+
+## Speculative decoding on chat prompts (2026-10-22 07:56–08:14, lead; `pinfer_run_fast` 9d30bbda)
+Q4K, 4 threads, 96 generated tokens (pinfer_run ignores EOS), chat-templated prompts
+`bench/common/chat_*.ids` (made by `bench/common/make_chat_prompts.py`), `engine/bench/chat_spec.sh`.
+tok/s (tokens per pass); draft vocab 32768 unless "full":
+
+| prompt | plain | k=2 | k=3 | adaptive k≤3 | k=3 full vocab | k=2 full vocab |
+|---|---|---|---|---|---|---|
+| chat27 (explain) | 7.97 | **9.85** (1.76) | 9.21 (1.83) | 9.31 (1.67) | 6.71 (1.98) | 7.81 (1.90) |
+| code, Python | 7.88 | **11.71** (2.11) | 11.21 (2.21) | 10.91 (2.11) | 7.42 (2.16) | 8.44 (2.07) |
+| code, C | 7.89 | **12.23** (2.21) | 12.02 (2.38) | 11.75 (2.26) | 8.08 (2.38) | 8.85 (2.16) |
+| list | 7.69 | **11.15** (2.02) | 10.44 (2.07) | 10.91 (1.98) | 7.75 (2.26) | 9.24 (2.26) |
+| math, step by step | 7.87 | **13.46** (2.44) | 13.20 (2.64) | 13.15 (2.57) | 9.29 (2.71) | 9.74 (2.50) |
+| story | 7.67 | **9.96** (1.79) | 9.24 (1.83) | 8.80 (1.43) | 6.34 (1.86) | 7.48 (1.83) |
+
+Files: `chat-spec-adaptive_20261022_075629.json` (plain/k3/adaptive, 2 reps), `chat-spec-vocab_20261022_080315.json`
+(k2), `chat-spec-fullvocab_20261022_081036.json` (full vocab).
+- On chat answers speculation gives **1.25–1.71×** (k=2), not the 2.1× of the prose-continuation
+  headline (prompt64: 3.32 tokens/pass vs 1.8–2.6 here). **k=2 beats k=3 on every chat prompt**
+  (+2…+8%); k=2 is already the library default (`pinfer_default_spec_params`).
+- Draft vocab 32768 vs full: 5–25% of chat-answer tokens have ids ≥ 32768 (```, Fibonacci, :**,
+  France…), but the full-vocabulary draft raises tokens/pass by only 0–9% and is 5× costlier →
+  30% slower overall. **Frequency-ranked draft vocabulary (FR-Spec style) dropped**: at most those
+  few % to gain. Low chat acceptance is the MTP head's, not the vocabulary cut.
+- Adaptive k ≤ 3 is below fixed k=2 on chat (story: 1.43 tokens/pass — it falls back to plain
+  too often); it stays opt-in. To fix in `spec_adapt.c`: never worse than the best fixed k.

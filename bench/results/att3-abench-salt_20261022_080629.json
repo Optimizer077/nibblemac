@@ -1,0 +1,90 @@
+{
+  "name": "att3-abench-salt",
+  "command": "for kv in 0 1; do tmp/att3/abench_w0 --ctx 4096 --kv $kv --stream-alt; tmp/att3/abench_w0 --ctx 4096 --kv $kv --stream; done; for r in 1 2; do for B in w0 wnq ws16 ws64 ws16nq; do for kv in 0 1; do tmp/att3/abench_$B --ctx 4096 --kv $kv --phases --reps 10 | grep phases | sed \"s/^/$B /\" | cut -c1-140; done; done; done; for B in w0 ws16 ws16nq; do for kv in 0 1; do tmp/att3/abench_$B --ctx 1000 --kv $kv --layers 2 --reps 2 | grep -o \"hash.*\" | sed \"s/^/$B kv$kv /\"; done; done",
+  "timestamp": "2026-10-22T08:06:29",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "bench": "abench_stream_alt",
+      "ctx": 4096,
+      "kv": 0,
+      "threads": 4,
+      "k_us": 2122.8,
+      "k_gbs": 3.952,
+      "v_us": 2119.4,
+      "v_gbs": 3.958
+    },
+    {
+      "bench": "abench_stream",
+      "ctx": 4096,
+      "kv": 0,
+      "threads": 4,
+      "k_us": 2241.1,
+      "k_gbs": 3.743,
+      "v_us": 2272.1,
+      "v_gbs": 3.692
+    },
+    {
+      "bench": "abench_stream_alt",
+      "ctx": 4096,
+      "kv": 1,
+      "threads": 4,
+      "k_us": 1056.3,
+      "k_gbs": 3.971,
+      "v_us": 1045.3,
+      "v_gbs": 4.012
+    },
+    {
+      "bench": "abench_stream",
+      "ctx": 4096,
+      "kv": 1,
+      "threads": 4,
+      "k_us": 1107.4,
+      "k_gbs": 3.788,
+      "v_us": 1099.6,
+      "v_gbs": 3.814
+    }
+  ],
+  "unparsed": [],
+  "stdout": "stream_alt ctx=4096 kv=0 threads=4: K 2122.8 us (3.95 GB/s), V 2119.4 us (3.96 GB/s) [sink 0]\nRESULT {\"bench\":\"abench_stream_alt\",\"ctx\":4096,\"kv\":0,\"threads\":4,\"k_us\":2122.8,\"k_gbs\":3.952,\"v_us\":2119.4,\"v_gbs\":3.958}\nstream ctx=4096 kv=0 threads=4: K 2241.1 us (3.74 GB/s), V 2272.1 us (3.69 GB/s) [sink 0]\nRESULT {\"bench\":\"abench_stream\",\"ctx\":4096,\"kv\":0,\"threads\":4,\"k_us\":2241.1,\"k_gbs\":3.743,\"v_us\":2272.1,\"v_gbs\":3.692}\nstream_alt ctx=4096 kv=1 threads=4: K 1056.3 us (3.97 GB/s), V 1045.3 us (4.01 GB/s) [sink 0]\nRESULT {\"bench\":\"abench_stream_alt\",\"ctx\":4096,\"kv\":1,\"threads\":4,\"k_us\":1056.3,\"k_gbs\":3.971,\"v_us\":1045.3,\"v_gbs\":4.012}\nstream ctx=4096 kv=1 threads=4: K 1107.4 us (3.79 GB/s), V 1099.6 us (3.81 GB/s) [sink 0]\nRESULT {\"bench\":\"abench_stream\",\"ctx\":4096,\"kv\":1,\"threads\":4,\"k_us\":1107.4,\"k_gbs\":3.788,\"v_us\":1099.6,\"v_gbs\":3.814}\nw0 phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2424.6 / 2423.6 / 2398.4 | softmax 95.8 / 95.2 / 8\nw0 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2424.6,\"scores_busy_max_us\":2423.6,\"scores_busy_min_us\":2\nw0 phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1237.4 / 1236.7 / 1228.8 | softmax 91.3 / 90.7 / 8\nw0 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1237.4,\"scores_busy_max_us\":1236.7,\"scores_busy_min_us\":1\nwnq phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2395.3 / 2392.4 / 2298.6 | softmax 94.3 / 93.8 / \nwnq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2395.3,\"scores_busy_max_us\":2392.4,\"scores_busy_min_us\":\nwnq phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1291.1 / 1290.4 / 1244.3 | softmax 90.8 / 90.3 / \nwnq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1291.1,\"scores_busy_max_us\":1290.4,\"scores_busy_min_us\":\nws16 phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2240.9 / 2240.1 / 2212.4 | softmax 94.8 / 94.2 /\nws16 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2240.9,\"scores_busy_max_us\":2240.1,\"scores_busy_min_us\"\nws16 phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1277.6 / 1277.0 / 1209.1 | softmax 96.1 / 95.5 /\nws16 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1277.6,\"scores_busy_max_us\":1277.0,\"scores_busy_min_us\"\nws64 phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2351.7 / 2350.8 / 2326.2 | softmax 96.8 / 96.1 /\nws64 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2351.7,\"scores_busy_max_us\":2350.8,\"scores_busy_min_us\"\nws64 phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1214.0 / 1213.2 / 1202.4 | softmax 92.8 / 91.8 /\nws64 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1214.0,\"scores_busy_max_us\":1213.2,\"scores_busy_min_us\"\nws16nq phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2231.8 / 2231.0 / 2188.8 | softmax 93.3 / 92.7\nws16nq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2231.8,\"scores_busy_max_us\":2231.0,\"scores_busy_min_u\nws16nq phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1677.5 / 1676.8 / 1199.2 | softmax 100.4 / 99.\nws16nq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1677.5,\"scores_busy_max_us\":1676.8,\"scores_busy_min_u\nw0 phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2394.9 / 2393.8 / 2370.1 | softmax 95.8 / 95.4 / 9\nw0 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2394.9,\"scores_busy_max_us\":2393.8,\"scores_busy_min_us\":2\nw0 phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1202.7 / 1201.8 / 1189.7 | softmax 91.2 / 90.7 / 8\nw0 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1202.7,\"scores_busy_max_us\":1201.8,\"scores_busy_min_us\":1\nwnq phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2343.5 / 2342.4 / 2261.0 | softmax 97.1 / 96.5 / \nwnq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2343.5,\"scores_busy_max_us\":2342.4,\"scores_busy_min_us\":\nwnq phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1471.5 / 1470.8 / 1142.4 | softmax 93.2 / 92.6 / \nwnq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1471.5,\"scores_busy_max_us\":1470.8,\"scores_busy_min_us\":\nws16 phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2244.7 / 2243.8 / 2216.0 | softmax 96.1 / 95.5 /\nws16 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2244.7,\"scores_busy_max_us\":2243.8,\"scores_busy_min_us\"\nws16 phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1218.7 / 1218.1 / 1208.6 | softmax 91.9 / 91.4 /\nws16 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1218.7,\"scores_busy_max_us\":1218.1,\"scores_busy_min_us\"\nws64 phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2440.3 / 2439.4 / 2355.1 | softmax 95.8 / 95.1 /\nws64 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2440.3,\"scores_busy_max_us\":2439.4,\"scores_busy_min_us\"\nws64 phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1212.8 / 1212.0 / 1200.3 | softmax 93.7 / 93.0 /\nws64 RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1212.8,\"scores_busy_max_us\":1212.0,\"scores_busy_min_us\"\nws16nq phases ctx=4096 n=1 kv=0 threads=4, us per layer (wall / busiest / least busy): scores 2236.3 / 2235.6 / 2202.8 | softmax 94.5 / 93.9\nws16nq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":0,\"threads\":4,\"scores_us\":2236.3,\"scores_busy_max_us\":2235.6,\"scores_busy_min_u\nws16nq phases ctx=4096 n=1 kv=1 threads=4, us per layer (wall / busiest / least busy): scores 1567.9 / 1566.6 / 1158.7 | softmax 92.9 / 92.3\nws16nq RESULT {\"bench\":\"abench_phases\",\"ctx\":4096,\"n\":1,\"kv\":1,\"threads\":4,\"scores_us\":1567.9,\"scores_busy_max_us\":1566.6,\"scores_busy_min_u\nw0 kv0 hash b0c5437b27d81049\nw0 kv0 hash\":\"b0c5437b27d81049\"}\nw0 kv1 hash 351635de47136e41\nw0 kv1 hash\":\"351635de47136e41\"}\nws16 kv0 hash b0c5437b27d81049\nws16 kv0 hash\":\"b0c5437b27d81049\"}\nws16 kv1 hash 351635de47136e41\nws16 kv1 hash\":\"351635de47136e41\"}\nws16nq kv0 hash b0c5437b27d81049\nws16nq kv0 hash\":\"b0c5437b27d81049\"}\nws16nq kv1 hash 351635de47136e41\nws16nq kv1 hash\":\"351635de47136e41\"}\n",
+  "stderr": "",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "50.1'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3511",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "45.2'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3508",
+    "python": "Python 3.13.5"
+  }
+}

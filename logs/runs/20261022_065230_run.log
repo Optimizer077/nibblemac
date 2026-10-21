@@ -1,0 +1,12 @@
+# 2026-10-22T06:52:30 pi@10.42.0.2
+$ mkdir -p tmp/att3 && cat data/next2048.ids data/next4096.ids | od -c | head; ps aux --sort=-%cpu | head -5
+
+0000000   2   5   0   2  \n   3   7   1   2  \r  \n
+0000013
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+pi         15636  100  0.0   9112  3824 ?        R    06:52   0:00 ps aux --sort=-%cpu
+pi         15590 35.9  0.3  23220 12316 ?        Ss   06:52   0:00 /usr/lib/systemd/systemd --user
+root       15621 15.7  0.2  21456 10632 ?        Ss   06:52   0:00 sshd-session: pi [priv]
+pi         15617  2.5  0.1   7944  3908 ?        Ss   06:52   0:00 /usr/bin/dbus-daemon --session --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+
+[exit 0]

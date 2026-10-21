@@ -1,0 +1,12 @@
+# 2026-10-22T08:10:01 pi@10.42.0.2
+$ ps -eo pid,etime,args --sort=start_time | tail -7 | cut -c1-150
+
+  24285       00:11 grep ^RESULT
+  24313       00:00 sshd-session: pi [priv]
+  24321       00:00 sshd-session: pi@notty
+  24322       00:00 bash -c mkdir -p pinfer && cd pinfer || exit 1; ps -eo pid,etime,args --sort=start_time | tail -7 | cut -c1-150
+  24324       00:00 ps -eo pid,etime,args --sort=start_time
+  24325       00:00 tail -7
+  24326       00:00 cut -c1-150
+
+[exit 0]

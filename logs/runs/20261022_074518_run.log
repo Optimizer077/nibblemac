@@ -1,0 +1,13 @@
+# 2026-10-22T07:45:18 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; OLD=$(ls ~/pinfer/venvs/pinfer/lib/python3*/site-packages/pinfer/libpinfer.so); PYTHONPATH=tmp/hard/python PINFER_LIB=$OLD PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=golden/qwen35-0.8b/meta.json $V/python -m pytest -q -p no:cacheprovider -rf tmp/hard/tests/python/test_affinity.py 2>&1 | tail -8
+
+E         3
+E         Use -v to get more diff)
+
+tmp/hard/tests/python/test_affinity.py:105: AssertionError
+=========================== short test summary info ============================
+FAILED tmp/hard/tests/python/test_affinity.py::test_load_and_eval_keep_caller_affinity
+FAILED tmp/hard/tests/python/test_affinity.py::test_restricted_caller_mask - ...
+2 failed in 1.53s
+
+[exit 0]

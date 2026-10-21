@@ -1,0 +1,34 @@
+# 2026-10-22T07:47:07 pi@10.42.0.2
+$ cd ~/pinfer && python3 tmp/hard/tests/test_malformed.py --tmp tmp/hard/mal --bin ./engine/pinfer_run_fast --ppl ./engine/pinfer_ppl_fast --model models/qwen35-0.8b-bf16.pq --qmodel models/qwen35-0.8b-q4k-headq4k.pq 2>&1 | grep -v ^PASS | tail -40
+
+43 cases; bin ./engine/pinfer_run_fast; ppl ./engine/pinfer_ppl_fast
+FAIL  hdr-huge-hidden        missing 'bad model dimensions'
+FAIL  hdr-heads-wrap         missing 'bad attention dimensions'
+FAIL  hdr-lin-wrap           missing 'bad linear-attention dimensions'
+FAIL  hdr-eos                exit 0, expected 1; missing 'load failed: -2'; missing 'eos_id'
+FAIL  hdr-theta-inf          exit 0, expected 1; missing 'load failed: -2'; missing 'bad eps / rope_theta'
+FAIL  lin-v-dim-80           killed by signal 11; missing 'load failed: -2'; missing 'lin_v_dim 80'
+FAIL  dir-misaligned         missing 'directory out of bounds or misaligned'
+FAIL  shape-wrap             exit 0, expected 1; missing 'load failed: -2'; missing 'mtp.norm.weight: shape larger than the file'
+FAIL  shape-huge             missing 'norm.weight: shape larger'
+FAIL  shape-zero             missing 'norm.weight: zero dimension'
+FAIL  dtype-unknown          missing 'unknown dtype 99'
+FAIL  dtype-q8-for-bf16      exit 0, expected 1; missing 'load failed: -2'; missing 'layers.0.mlp.up_proj.weight: nbytes'
+FAIL  mtp-shape              missing 'mtp.fc.weight: expected shape'
+FAIL  q-nbytes               exit 0, expected 1; missing 'load failed: -2'; missing 'layers.0.mlp.gate_proj.weight: nbytes'
+FAIL  q-nbytes-at-eof        exit 0, expected 1; missing 'load failed: -2'; missing 'layers.0.mlp.gate_proj.weight: nbytes'
+FAIL  q-rows                 missing 'layers.0.mlp.gate_proj.weight: quantized dtype'
+FAIL  q-cols                 missing 'layers.0.mlp.gate_proj.weight: quantized dtype'
+FAIL  q-ndim                 missing 'layers.0.mlp.gate_proj.weight: quantized dtype'
+FAIL  q-mtp-nbytes           exit 0, expected 1; missing 'load failed: -2'; missing 'mtp.fc.weight: nbytes'
+FAIL  state-other-weights    exit 0, expected 1; missing 'load-state'; missing 'failed (-2)'
+FAIL  state-v1               exit 0, expected 1; missing 'load-state'; missing 'failed (-2)'
+FAIL  state-fingerprint      exit 0, expected 1; missing 'load-state'; missing 'failed (-2)'
+FAIL  ppl-bad-target         missing 'outside the vocabulary'
+FAIL  ppl-negative           missing 'outside the vocabulary'
+FAIL  ppl-chunks0            exit 0, expected 2; missing '--chunks >= 1'
+
+18/43 passed; failed: hdr-huge-hidden, hdr-heads-wrap, hdr-lin-wrap, hdr-eos, hdr-theta-inf, lin-v-dim-80, dir-misaligned, shape-wrap, shape-huge, shape-zero, dtype-unknown, dtype-q8-for-bf16, mtp-shape, q-nbytes, q-nbytes-at-eof, q-rows, q-cols, q-ndim, q-mtp-nbytes, state-other-weights, state-v1, state-fingerprint, ppl-bad-target, ppl-negative, ppl-chunks0
+OVERALL: FAIL
+
+[exit 0]

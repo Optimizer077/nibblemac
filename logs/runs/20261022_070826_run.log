@@ -1,0 +1,11 @@
+# 2026-10-22T07:08:26 pi@10.42.0.2
+$ ls /tmp/pinfer-bench.lock; cat /proc/loadavg; ps aux --sort=-%cpu | head -4
+
+/tmp/pinfer-bench.lock
+1.31 3.09 2.60 1/155 16309
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+pi         16278 64.7  0.3  22876 12232 ?        Ss   07:08   0:00 /usr/lib/systemd/systemd --user
+pi         16305 50.0  0.1   7944  3908 ?        Ss   07:08   0:00 /usr/bin/dbus-daemon --session --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+pi         16298 16.6  0.0   7152  3300 ?        Ss   07:08   0:00 /usr/bin/mpris-proxy
+
+[exit 0]

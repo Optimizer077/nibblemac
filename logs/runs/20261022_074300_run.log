@@ -1,0 +1,10 @@
+# 2026-10-22T07:43:00 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; OLD=$(ls ~/pinfer/venvs/pinfer/lib/python3*/site-packages/pinfer/libpinfer.so); md5sum $OLD; cat $(dirname $OLD)/BUILD_INFO.json; PYTHONPATH=tmp/hard/python PINFER_LIB=$OLD PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=golden/qwen35-0.8b/meta.json $V/python -m pytest -q -p no:cacheprovider tmp/hard/tests/python/test_affinity.py 2>&1 | grep -E assert|Error|passed|failed | head -12
+
+50fff71a50b8711c70a57903b754bc60  /home/pi/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so
+{"version": "0.1.0", "matvec": "fast", "arch": "aarch64", "cc": "aarch64-linux-gnu 15.2.0", "soname": "libpinfer.so.0.1"}
+bash: line 1: Error: command not found
+bash: line 1: passed: command not found
+bash: line 1: failed: command not found
+
+[exit 0]

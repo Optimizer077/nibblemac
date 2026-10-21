@@ -1,0 +1,9 @@
+# 2026-10-22T07:58:57 pi@10.42.0.2
+$ ps -eo pid,etime,args | grep -E pinfer_|flock|lbench|kbench | grep -v grep | cut -c1-160 | head -12
+
+flock: not enough arguments
+Try 'flock --help' for more information.
+bash: line 1: kbench: command not found
+bash: line 1: lbench: command not found
+
+[exit 0]
