@@ -1,0 +1,10 @@
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314,8394,11,424,557,279,3098,314,51895,11,424,557,279,10151,314,279,1814
+load 0.004 s | prefill 64 tok in 3.379 s = 18.938 tok/s | decode 63 tok in 9.117 s = 6.910 tok/s | peak RSS 432.9 MB | matvec=fast threads=4
+spec k=0 draft_vocab=0 | rounds 0 drafted 0 accepted 0 | mean accepted 0.000, 1.000 tok/pass | per pass: mtp 0.0 ms verify 0.0 ms commit 0.0 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-q4k-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 18.9383, "decode_tps": 6.9104, "peak_rss_mb": 432.9, "spec_k": 0, "draft_vocab": 0, "rounds": 0, "drafted": 0, "accepted": 0, "mean_accepted": 0.0000, "accept_rate": 0.0000, "tokens_per_pass": 1.0000, "mtp_ms_per_pass": 0.00, "verify_ms_per_pass": 0.00, "commit_ms_per_pass": 0.00}
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314,8394,11,424,557,279,3098,314,51895,11,424,557,279,10151,314,279,1814
+load 0.004 s | prefill 64 tok in 3.085 s = 20.743 tok/s | decode 63 tok in 5.433 s = 11.595 tok/s | peak RSS 450.6 MB | matvec=fast threads=4
+spec k=3 draft_vocab=32768 | rounds 19 drafted 57 accepted 44 | mean accepted 2.316, 3.316 tok/pass | per pass: mtp 28.8 ms verify 234.0 ms commit 23.1 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-q4k-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 20.7426, "decode_tps": 11.5949, "peak_rss_mb": 450.6, "spec_k": 3, "draft_vocab": 32768, "rounds": 19, "drafted": 57, "accepted": 44, "mean_accepted": 2.3158, "accept_rate": 0.7719, "tokens_per_pass": 3.3158, "mtp_ms_per_pass": 28.83, "verify_ms_per_pass": 234.02, "commit_ms_per_pass": 23.12}
+
+saved bench/results/pinfer-kern4-q4k_20261022_005307.json  valid=True  temp 58.9'C -> 57.9'C

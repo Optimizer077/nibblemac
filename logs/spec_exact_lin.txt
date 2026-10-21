@@ -1,0 +1,22 @@
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"chat27","n":40,"spec":"--spec 0","md5":"c4644585","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"chat27","n":40,"spec":"--spec 2 --draft-vocab 32768","md5":"c4644585","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"chat27","n":40,"spec":"--spec 3 --draft-vocab 32768","md5":"c4644585","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"chat27","n":40,"spec":"--spec 4 --draft-vocab 32768","md5":"c4644585","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"chat27","n":40,"spec":"--spec 1","md5":"c4644585","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"prompt64","n":40,"spec":"--spec 0","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"prompt64","n":40,"spec":"--spec 2 --draft-vocab 32768","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"prompt64","n":40,"spec":"--spec 3 --draft-vocab 32768","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"prompt64","n":40,"spec":"--spec 4 --draft-vocab 32768","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-mix-headq4k","prompt":"prompt64","n":40,"spec":"--spec 1","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"chat27","n":40,"spec":"--spec 0","md5":"08c27da6","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"chat27","n":40,"spec":"--spec 2 --draft-vocab 32768","md5":"08c27da6","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"chat27","n":40,"spec":"--spec 3 --draft-vocab 32768","md5":"08c27da6","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"chat27","n":40,"spec":"--spec 4 --draft-vocab 32768","md5":"08c27da6","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"chat27","n":40,"spec":"--spec 1","md5":"08c27da6","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"prompt64","n":40,"spec":"--spec 0","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"prompt64","n":40,"spec":"--spec 2 --draft-vocab 32768","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"prompt64","n":40,"spec":"--spec 3 --draft-vocab 32768","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"prompt64","n":40,"spec":"--spec 4 --draft-vocab 32768","md5":"3f9a4f66","match":true}
+RESULT {"bench":"spec_exact","bin":"./engine/pinfer_run_lin","model":"qwen35-0.8b-q4k-headq4k","prompt":"prompt64","n":40,"spec":"--spec 1","md5":"3f9a4f66","match":true}
+
+saved bench/results/spec-exact-lin_20261022_004711.json  valid=True  temp 50.1'C -> 56.4'C

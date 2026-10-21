@@ -1,0 +1,146 @@
+{
+  "name": "lbench-v3-chunkmajor",
+  "command": "./kbench/lbench --threads 1,4 --n 1,4,64",
+  "timestamp": "2026-10-22T00:59:24",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "bench": "lbench_exact",
+      "n": 1,
+      "pass": true
+    },
+    {
+      "bench": "lbench_exact",
+      "n": 4,
+      "pass": true
+    },
+    {
+      "bench": "lbench_exact",
+      "n": 64,
+      "pass": true
+    },
+    {
+      "bench": "lbench",
+      "kernel": "neon",
+      "threads": 1,
+      "n": 1,
+      "layers": 18,
+      "us_per_layer": 929.6,
+      "ms_per_token_all_layers": 16.734
+    },
+    {
+      "bench": "lbench",
+      "kernel": "scalar",
+      "threads": 1,
+      "n": 1,
+      "layers": 18,
+      "us_per_layer": 975.6,
+      "ms_per_token_all_layers": 17.56
+    },
+    {
+      "bench": "lbench",
+      "kernel": "neon",
+      "threads": 1,
+      "n": 4,
+      "layers": 18,
+      "us_per_layer": 2294.2,
+      "ms_per_token_all_layers": 10.324
+    },
+    {
+      "bench": "lbench",
+      "kernel": "scalar",
+      "threads": 1,
+      "n": 4,
+      "layers": 18,
+      "us_per_layer": 2905.1,
+      "ms_per_token_all_layers": 13.073
+    },
+    {
+      "bench": "lbench",
+      "kernel": "neon",
+      "threads": 1,
+      "n": 64,
+      "layers": 18,
+      "us_per_layer": 30611.3,
+      "ms_per_token_all_layers": 8.609
+    },
+    {
+      "bench": "lbench",
+      "kernel": "scalar",
+      "threads": 1,
+      "n": 64,
+      "layers": 18,
+      "us_per_layer": 41813.2,
+      "ms_per_token_all_layers": 11.76
+    },
+    {
+      "bench": "lbench",
+      "kernel": "neon",
+      "threads": 4,
+      "n": 1,
+      "layers": 18,
+      "us_per_layer": 705.2,
+      "ms_per_token_all_layers": 12.693
+    },
+    {
+      "bench": "lbench",
+      "kernel": "neon",
+      "threads": 4,
+      "n": 4,
+      "layers": 18,
+      "us_per_layer": 892.1,
+      "ms_per_token_all_layers": 4.014
+    },
+    {
+      "bench": "lbench",
+      "kernel": "neon",
+      "threads": 4,
+      "n": 64,
+      "layers": 18,
+      "us_per_layer": 7917.8,
+      "ms_per_token_all_layers": 2.227
+    }
+  ],
+  "unparsed": [],
+  "stdout": "exact n=1: ok\nRESULT {\"bench\":\"lbench_exact\",\"n\":1,\"pass\":true}\nexact n=4: ok\nRESULT {\"bench\":\"lbench_exact\",\"n\":4,\"pass\":true}\nexact n=64: ok\nRESULT {\"bench\":\"lbench_exact\",\"n\":64,\"pass\":true}\nneon   thr=1 n=1     929.6 us/layer   16.73 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"neon\",\"threads\":1,\"n\":1,\"layers\":18,\"us_per_layer\":929.6,\"ms_per_token_all_layers\":16.734}\nscalar thr=1 n=1     975.6 us/layer   17.56 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"scalar\",\"threads\":1,\"n\":1,\"layers\":18,\"us_per_layer\":975.6,\"ms_per_token_all_layers\":17.560}\nneon   thr=1 n=4    2294.2 us/layer   10.32 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"neon\",\"threads\":1,\"n\":4,\"layers\":18,\"us_per_layer\":2294.2,\"ms_per_token_all_layers\":10.324}\nscalar thr=1 n=4    2905.1 us/layer   13.07 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"scalar\",\"threads\":1,\"n\":4,\"layers\":18,\"us_per_layer\":2905.1,\"ms_per_token_all_layers\":13.073}\nneon   thr=1 n=64   30611.3 us/layer    8.61 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"neon\",\"threads\":1,\"n\":64,\"layers\":18,\"us_per_layer\":30611.3,\"ms_per_token_all_layers\":8.609}\nscalar thr=1 n=64   41813.2 us/layer   11.76 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"scalar\",\"threads\":1,\"n\":64,\"layers\":18,\"us_per_layer\":41813.2,\"ms_per_token_all_layers\":11.760}\nneon   thr=4 n=1     705.2 us/layer   12.69 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"neon\",\"threads\":4,\"n\":1,\"layers\":18,\"us_per_layer\":705.2,\"ms_per_token_all_layers\":12.693}\nneon   thr=4 n=4     892.1 us/layer    4.01 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"neon\",\"threads\":4,\"n\":4,\"layers\":18,\"us_per_layer\":892.1,\"ms_per_token_all_layers\":4.014}\nneon   thr=4 n=64    7917.8 us/layer    2.23 ms/token (18 layers)\nRESULT {\"bench\":\"lbench\",\"kernel\":\"neon\",\"threads\":4,\"n\":64,\"layers\":18,\"us_per_layer\":7917.8,\"ms_per_token_all_layers\":2.227}\nall exact\n",
+  "stderr": "",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-21 21:18:17",
+    "boot_id": "c9020b3d-872b-46b7-b3ce-021ee758b636",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "800000 800000 800000 800000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "42.3'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3584",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-21 21:18:17",
+    "boot_id": "c9020b3d-872b-46b7-b3ce-021ee758b636",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "45.7'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3580",
+    "python": "Python 3.13.5"
+  }
+}

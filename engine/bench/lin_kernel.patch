@@ -1,0 +1,277 @@
+--- ops.h	2026-10-21 21:37:08.325721900 +0900
++++ ops.h	2026-10-22 00:58:54.457565100 +0900
+@@ -31,6 +31,31 @@
+  * (this is what makes prefill and speculative verification cheap). */
+ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n);
+ 
++/* Gated DeltaNet recurrence of one layer over n tokens (forward_lin.c semantics). For each
++ * v-head h (k-head h / rep) and token t, with S [dk][dv]:
++ *   S *= decay;  kv = S^T k;  delta = (v - kv) * beta;  S += k delta^T;  o = S^T q
++ * Both implementations perform exactly these per-element fp32 operations (no fused
++ * multiply-add) in the same order, so they agree bit-for-bit with each other and with the
++ * commit replay below. */
++typedef struct {
++    int n, heads, rep, dk, dv;  /* tokens, v-heads, v-heads per k-head, head dims */
++    int qkv_stride, o_stride;   /* row strides in floats of qkv and o */
++    const float *qkv;           /* [n][qkv_stride]: q | k (heads/rep heads of dk) | v (heads x dv) */
++    const float *decay, *beta;  /* [n][heads] */
++    float *S;                   /* [heads][dk * dv] committed state, updated in place; its
++                                   layout is private to the implementation (zero = reset)... */
++    float *o;                   /* [n][o_stride]: outputs before the gated norm */
++    float *log;                 /* ...unless log != NULL: then S stays untouched (the kernel
++                                   works on a copy) and per (t, head) the log row
++                                   [dk + dv + 1] receives k | delta | decay (pf_lin_log) */
++} pf_lin_args;
++void pf_lin_rule(pf_pool *pool, const pf_lin_args *a);
++
++/* Commit replay: S[h] = S[h] * decay + k x delta for the first `keep` logged tokens (rows of
++ * `log` as written by pf_lin_rule), per element: row *= decay; row += k_i * delta_j. */
++void pf_lin_apply(pf_pool *pool, float *S, const float *log, int keep, int heads, int dk,
++                  int dv);
++
+ /* Embedding lookup: dst[c] = float(W[row][c]). */
+ void pf_get_row(const pf_mat *W, int row, float *dst);
+ 
+--- matvec_ref.c	2026-10-21 21:40:09.907418200 +0900
++++ matvec_ref.c	2026-10-22 00:58:54.457565100 +0900
+@@ -87,3 +87,92 @@
+         memcpy(dst, (const float *)W->data + off, (size_t)W->cols * sizeof(float));
+     }
+ }
++
++/* ---- Gated DeltaNet recurrence, scalar reference (moved here from forward_lin.c) ---- */
++
++/* One head of the gated delta rule. S is [dk][dv] (row = key dim).
++ *   S *= decay;  kv = S^T k;  delta = (v - kv) * beta;  S += k delta^T;  o = S^T q
++ * Two passes over S: (decay, accumulate kv) then (rank-1 update, accumulate o).
++ * On return tmp[0..dv) holds delta (the rollback log records it). */
++static void delta_rule(float *S, const float *q, const float *k, const float *v,
++                       float decay, float beta, float *o, float *tmp, int dk, int dv) {
++    float *kv = tmp;
++    memset(kv, 0, (size_t)dv * sizeof(float));
++    for (int i = 0; i < dk; i++) {
++        float *row = S + (size_t)i * dv;
++        const float ki = k[i];
++        for (int j = 0; j < dv; j++) {
++            row[j] *= decay;
++            kv[j] += row[j] * ki;
++        }
++    }
++    for (int j = 0; j < dv; j++) kv[j] = (v[j] - kv[j]) * beta;  /* kv now holds delta */
++    memset(o, 0, (size_t)dv * sizeof(float));
++    for (int i = 0; i < dk; i++) {
++        float *row = S + (size_t)i * dv;
++        const float ki = k[i], qi = q[i];
++        for (int j = 0; j < dv; j++) {
++            row[j] += ki * kv[j];
++            o[j] += row[j] * qi;
++        }
++    }
++}
++
++static float *lin_scratch;      /* one head's state for logged (verification) passes */
++static size_t lin_scratch_floats;
++
++void pf_lin_rule(pf_pool *pool, const pf_lin_args *a) {
++    (void)pool;
++    const int dk = a->dk, dv = a->dv, kd = (a->heads / a->rep) * dk;
++    const size_t hs = (size_t)dk * dv, logw = (size_t)dk + dv + 1;
++    float tmp[512];   /* delta scratch; lin_v_dim <= 512 (checked in pinfer.c) */
++    if (a->log && lin_scratch_floats < hs) {
++        free(lin_scratch);
++        lin_scratch = malloc(hs * sizeof(float));
++        lin_scratch_floats = lin_scratch ? hs : 0;
++        if (!lin_scratch) abort();
++    }
++    for (int h = 0; h < a->heads; h++) {
++        const int kh = h / a->rep;
++        float *S = a->S + h * hs;
++        if (a->log) {
++            memcpy(lin_scratch, S, hs * sizeof(float));
++            S = lin_scratch;
++        }
++        for (int t = 0; t < a->n; t++) {
++            const float *qkv = a->qkv + (size_t)t * a->qkv_stride;
++            const float *k = qkv + kd + kh * dk;
++            const float decay = a->decay[(size_t)t * a->heads + h];
++            delta_rule(S, qkv + kh * dk, k, qkv + 2 * kd + h * dv, decay,
++                       a->beta[(size_t)t * a->heads + h], a->o + (size_t)t * a->o_stride + h * dv,
++                       tmp, dk, dv);
++            if (a->log) {
++                float *u = a->log + ((size_t)t * a->heads + h) * logw;
++                memcpy(u, k, (size_t)dk * sizeof(float));
++                memcpy(u + dk, tmp, (size_t)dv * sizeof(float));
++                u[dk + dv] = decay;
++            }
++        }
++    }
++}
++
++void pf_lin_apply(pf_pool *pool, float *S, const float *log, int keep, int heads, int dk,
++                  int dv) {
++    (void)pool;
++    const size_t logw = (size_t)dk + dv + 1;
++    for (int h = 0; h < heads; h++) {
++        float *Sh = S + (size_t)h * dk * dv;
++        for (int t = 0; t < keep; t++) {
++            const float *u = log + ((size_t)t * heads + h) * logw;
++            const float *d = u + dk, decay = u[dk + dv];
++            for (int i = 0; i < dk; i++) {
++                float *row = Sh + (size_t)i * dv;
++                const float ki = u[i];
++                for (int j = 0; j < dv; j++) {
++                    row[j] *= decay;
++                    row[j] += ki * d[j];
++                }
++            }
++        }
++    }
++}
+--- matvec_fast.c	2026-10-22 00:45:02.255212700 +0900
++++ matvec_fast.c	2026-10-22 00:58:54.458569300 +0900
+@@ -279,6 +279,13 @@
+         kern_stats_add(W->rows, W->cols, W->dtype, n, now_sec() - t0, weight_bytes(W));
+ }
+ 
++void pf_lin_rule(pf_pool *pool, const pf_lin_args *a) { kern_lin_rule(pool, a); }
++
++void pf_lin_apply(pf_pool *pool, float *S, const float *log, int keep, int heads, int dk,
++                  int dv) {
++    kern_lin_apply(pool, S, log, keep, heads, dk, dv);
++}
++
+ void pf_matvec(pf_pool *pool, const pf_mat *W, const float *x, float *y) {
+     pf_matmul(pool, W, x, y, 1);
+ }
+--- kern.h	2026-10-22 00:58:27.960646600 +0900
++++ kern.h	2026-10-22 00:58:54.459072400 +0900
+@@ -66,18 +66,7 @@
+ /* Gated DeltaNet recurrence of one layer over n tokens (kern_lin.c), the NEON + threaded
+  * form of forward_lin.c's delta_rule, bit-identical to it (same per-element operations and
+  * rounding: no fused multiply-add). Heads run in parallel on the pool. */
+-typedef struct {
+-    int n, heads, rep, dk, dv;  /* tokens, v-heads, v-heads per k-head, head dims */
+-    int qkv_stride, o_stride;   /* row strides in floats of qkv and o */
+-    const float *qkv;           /* [n][qkv_stride]: q | k (heads/rep heads of dk) | v (heads x dv) */
+-    const float *decay, *beta;  /* [n][heads] */
+-    float *S;                   /* [heads][dk * dv] committed state (layout private to the
+-                                   pf_lin_* functions; zero = reset), updated in place... */
+-    float *o;                   /* [n][o_stride]: outputs before the gated norm */
+-    float *log;                 /* ...unless log != NULL: then S stays untouched (the kernel
+-                                   works on an internal copy) and per (t, head) the log row
+-                                   [dk + dv + 1] receives k | delta | decay (pf_lin_log) */
+-} kern_lin_args;
++typedef pf_lin_args kern_lin_args; /* defined in ops.h */
+ void kern_lin_rule(pf_pool *pool, const kern_lin_args *a);
+ 
+ /* Commit replay: S[h] = S[h] * decay + k x delta for the first `keep` logged tokens, same
+--- forward_lin.c	2026-10-21 21:59:51.004290400 +0900
++++ forward_lin.c	2026-10-22 00:58:54.459072400 +0900
+@@ -41,34 +41,6 @@
+     }
+ }
+ 
+-/* One head of the gated delta rule. S is [dk][dv] (row = key dim).
+- *   S *= decay;  kv = S^T k;  delta = (v - kv) * beta;  S += k delta^T;  o = S^T q
+- * Two passes over S: (decay, accumulate kv) then (rank-1 update, accumulate o).
+- * On return tmp[0..dv) holds delta (the rollback log records it). */
+-static void delta_rule(float *S, const float *q, const float *k, const float *v,
+-                       float decay, float beta, float *o, float *tmp, int dk, int dv) {
+-    float *kv = tmp;
+-    memset(kv, 0, (size_t)dv * sizeof(float));
+-    for (int i = 0; i < dk; i++) {
+-        float *row = S + (size_t)i * dv;
+-        const float ki = k[i];
+-        for (int j = 0; j < dv; j++) {
+-            row[j] *= decay;
+-            kv[j] += row[j] * ki;
+-        }
+-    }
+-    for (int j = 0; j < dv; j++) kv[j] = (v[j] - kv[j]) * beta;  /* kv now holds delta */
+-    memset(o, 0, (size_t)dv * sizeof(float));
+-    for (int i = 0; i < dk; i++) {
+-        float *row = S + (size_t)i * dv;
+-        const float ki = k[i], qi = q[i];
+-        for (int j = 0; j < dv; j++) {
+-            row[j] += ki * kv[j];
+-            o[j] += row[j] * qi;
+-        }
+-    }
+-}
+-
+ void pf_linear_attn(pinfer_ctx *ctx, int layer, int n) {
+     const pf_layer *L = &ctx->model.layers[layer];
+     const int C = ctx->conv_dim, kd = ctx->kd, vd = ctx->vd, nv = ctx->lv_heads;
+@@ -76,7 +48,6 @@
+     const float eps = ctx->model.hdr->rms_eps, qscale = 1.0f / sqrtf((float)dk);
+     float *rec = ctx->rec[layer], *conv = ctx->conv[layer];
+     pf_lin_log *lg = ctx->lin_log_on ? ctx->lin_log : NULL;
+-    float tmp[512];   /* delta scratch; lin_v_dim is 128 for every released Qwen3.5 */
+ 
+     pf_matmul(ctx->pool, &L->qkv, ctx->xn, ctx->ta, n);
+     pf_matmul(ctx->pool, &L->z, ctx->xn, ctx->tb, n);
+@@ -106,32 +77,20 @@
+         }
+     }
+ 
+-    /* Per head over all tokens; the repeat_interleave of q/k heads onto v heads is kh. */
+-    for (int h = 0; h < nv; h++) {
+-        const int kh = h / rep;
+-        float *S = rec + (size_t)h * dk * dv;
+-        if (lg) {
+-            memcpy(lg->S, S, (size_t)dk * dv * sizeof(float));
+-            S = lg->S;
+-        }
+-        for (int t = 0; t < n; t++) {
+-            const float *qkv = ctx->ta + (size_t)t * C;
+-            const float *k = qkv + kd + kh * dk, *z = ctx->tb + (size_t)t * vd + h * dv;
+-            const float decay = ctx->aa[(size_t)t * nv + h];
++    /* Recurrence of every head over all tokens (pf_lin_rule: scalar reference or the
++     * threaded NEON kernel); with the log on it leaves `rec` untouched and records
++     * k | delta | decay per (token, head) for pf_lin_commit. */
++    pf_lin_args a = {n, nv, rep, dk, dv, C, vd, ctx->ta, ctx->aa, ctx->ba, rec, ctx->to,
++                     lg ? lg->upd[layer] : NULL};
++    pf_lin_rule(ctx->pool, &a);
++    /* gated RMSNorm: rmsnorm(o) * w * silu(z), per head, plain weight */
++    for (int t = 0; t < n; t++)
++        for (int h = 0; h < nv; h++) {
+             float *oh = ctx->to + (size_t)t * vd + h * dv;
+-            delta_rule(S, qkv + kh * dk, k, qkv + 2 * kd + h * dv, decay,
+-                       ctx->ba[(size_t)t * nv + h], oh, tmp, dk, dv);
+-            if (lg) {
+-                float *u = lg->upd[layer] + ((size_t)t * nv + h) * (dk + dv + 1);
+-                memcpy(u, k, (size_t)dk * sizeof(float));
+-                memcpy(u + dk, tmp, (size_t)dv * sizeof(float));
+-                u[dk + dv] = decay;
+-            }
+-            /* gated RMSNorm: rmsnorm(o) * w * silu(z), per head, plain weight */
++            const float *z = ctx->tb + (size_t)t * vd + h * dv;
+             pf_rmsnorm(oh, oh, L->lin_norm, dv, eps);
+             for (int j = 0; j < dv; j++) oh[j] *= pf_silu(z[j]);
+         }
+-    }
+     pf_matmul(ctx->pool, &L->out, ctx->to, ctx->out, n);
+ }
+ 
+@@ -196,20 +155,6 @@
+                                         : lg->xin[l] + (size_t)(src - S) * C;
+             memcpy(st + (size_t)j * C, from, (size_t)C * sizeof(float));
+         }
+-        for (int h = 0; h < nv; h++) {
+-            float *Sh = ctx->rec[l] + (size_t)h * dk * dv;
+-            for (int t = 0; t < keep; t++) {
+-                const float *u = lg->upd[l] + ((size_t)t * nv + h) * (dk + dv + 1);
+-                const float *d = u + dk, decay = u[dk + dv];
+-                for (int i = 0; i < dk; i++) {
+-                    float *row = Sh + (size_t)i * dv;
+-                    const float ki = u[i];
+-                    for (int j = 0; j < dv; j++) {
+-                        row[j] *= decay;
+-                        row[j] += ki * d[j];
+-                    }
+-                }
+-            }
+-        }
++        pf_lin_apply(ctx->pool, ctx->rec[l], lg->upd[l], keep, nv, dk, dv);
+     }
+ }

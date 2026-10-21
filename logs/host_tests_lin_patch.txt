@@ -1,0 +1,44 @@
+== test_golden (patched scalar build)
+   pos 6: top1 ours   5243 gold   5243 ok  max abs err 1.812e-05 rel 1.129e-06
+   pos 7: top1 ours     11 gold     11 ok  max abs err 2.241e-05 rel 1.284e-06
+   pos 8: top1 ours    421 gold    421 ok  max abs err 2.384e-05 rel 1.292e-06
+   pos 9: top1 ours    628 gold    628 ok  max abs err 2.137e-05 rel 1.116e-06
+   max abs err 3.362e-05, rel max err 1.652e-06 (limit 0.001), top-1 10/10 -> PASS
+
+3. batched prefill (A) vs token-by-token decode path (B)
+   hidden rel max err 0.000e+00, logits rel max err 0.000e+00 (limit 1e-05) -> PASS
+
+4. greedy generation
+   ours: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   gold: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   32/32 match -> PASS
+
+OVERALL: PASS
+== test_spec (patched scalar build)
+    chain 2: rel max err 1.453e-06  argmax ours    383 gold    383
+    chain 3: rel max err 2.000e-06  argmax ours    866 gold    866
+    chain 4: rel max err 1.857e-06  argmax ours   6165 gold   6165
+   chained drafts ours [1542, 383, 866, 6165] gold [1542, 383, 866, 6165] -> PASS
+
+2. exactness: 9 prompts x 7 configs (63 runs, 8 in parallel)
+     golden (10 prompt ids, 32 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+    varied1 (21 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+    varied2 (15 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+    varied3 (11 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+    varied4 (11 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+    varied5 (10 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+    varied6 ( 5 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+    bench64 (64 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+     long74 (74 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok
+   -> PASS
+
+   acceptance (informational): config rounds drafted accepted accept-rate tokens/pass
+           k1    197     192      146       0.760       1.741
+           k2    151     295      192       0.651       2.272
+           k3    133     388      210       0.541       2.579
+           k4    121     464      222       0.478       2.835
+     k3v32768    151     432      192       0.444       2.272
+
+OVERALL: PASS
+
+[exited with code 0]

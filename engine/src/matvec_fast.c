@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/syscall.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "kern.h"
@@ -28,7 +29,7 @@
 #include "pq_quant.h"
 
 #define MAX_THREADS 8
-#define SPIN_ITERS (1 << 16)
+#define SPIN_SEC 0.05 /* idle spin before a worker sleeps (see worker_main) */
 /* Below this many weight bytes per extra thread, waking it costs more than it saves. */
 #define MIN_BYTES_PER_THREAD (32 * 1024)
 
@@ -39,6 +40,8 @@ typedef struct {
     const pf_act *A;
     float *Y;
     int n, units, nthr;
+    kern_task gfn; /* generic job (kern_pool_run); fn is NULL then */
+    void *garg;
 } job_t;
 
 typedef struct {
@@ -60,6 +63,12 @@ struct pf_pool {
 
 static inline void cpu_pause(void) { __asm__ volatile("yield" ::: "memory"); }
 
+static double now_sec(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9;
+}
+
 static void pin_to(int cpu) {
     cpu_set_t set;
     CPU_ZERO(&set);
@@ -69,6 +78,10 @@ static void pin_to(int cpu) {
 
 static void run_job(const job_t *j, int tid) {
     if (tid >= j->nthr) return;
+    if (j->gfn) {
+        j->gfn(j->garg, tid, j->nthr);
+        return;
+    }
     const int u0 = (int)((long)j->units * tid / j->nthr);
     const int u1 = (int)((long)j->units * (tid + 1) / j->nthr);
     int r1 = u1 * 4;
@@ -83,9 +96,18 @@ static void *worker_main(void *p) {
     uint32_t seen = 0;
     for (;;) {
         uint32_t g = atomic_load_explicit(&pool->gen, memory_order_acquire);
-        for (int i = 0; g == seen && i < SPIN_ITERS; i++) {
-            cpu_pause();
-            g = atomic_load_explicit(&pool->gen, memory_order_acquire);
+        if (g == seen) {
+            /* Spin for up to SPIN_SEC before sleeping: inside a decode step the gaps between
+             * matmuls (scalar attention / recurrence on the caller's core) are 0.1-2 ms, and
+             * a futex wake-up after a sleep costs ~0.3 ms per call (measured: out_proj ran
+             * at 2.0 instead of 3.9 GB/s with a 65k-iteration spin). The clock is read every
+             * 1024 polls (~10 us). */
+            const double t0 = now_sec();
+            for (long i = 0; g == seen; i++) {
+                cpu_pause();
+                g = atomic_load_explicit(&pool->gen, memory_order_acquire);
+                if ((i & 1023) == 1023 && now_sec() - t0 > SPIN_SEC) break;
+            }
         }
         if (g == seen) { /* idle for a while: sleep until the next job */
             atomic_fetch_add(&pool->sleepers, 1);
@@ -153,7 +175,15 @@ static void noop_kernel(const pf_mat *W, const float *X, const pf_act *A, float 
 
 void kern_pool_noop(pf_pool *pool) {
     static const pf_mat dummy = {0, 4 * MAX_THREADS, 0, NULL};
-    const job_t job = {noop_kernel, &dummy, NULL, NULL, NULL, 0, MAX_THREADS, pf_pool_threads(pool)};
+    const job_t job = {noop_kernel, &dummy, NULL, NULL, NULL, 0, MAX_THREADS, pf_pool_threads(pool),
+                       NULL, NULL};
+    dispatch(pool, &job);
+}
+
+void kern_pool_run(pf_pool *pool, kern_task fn, void *arg, int max_threads) {
+    int t = pf_pool_threads(pool);
+    if (max_threads > 0 && t > max_threads) t = max_threads;
+    const job_t job = {NULL, NULL, NULL, NULL, NULL, 0, 0, t, fn, arg};
     dispatch(pool, &job);
 }
 
@@ -222,17 +252,38 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
         abort();
     }
     if (n <= 0) return;
-    pf_act act, *A = NULL;
-    if (W->dtype >= PQ_Q8_G32) {
-        const int cols = W->cols, nb = cols / KERN_ACT_BLOCK;
-        const size_t qb = ((size_t)n * cols + 63) & ~(size_t)63, fb = (size_t)n * nb * 4;
-        uint8_t *s = scratch_get(qb + 2 * fb);
-        act = (pf_act){cols, n, (int8_t *)s, (float *)(s + qb), (float *)(s + qb + fb)};
-        kern_quant_act(X, n, cols, (int8_t *)act.q, (float *)act.d, (float *)act.fsum);
-        A = &act;
+    const double t0 = kern_stats_enabled() ? now_sec() : 0.0;
+    /* Large batches (prefill) run in groups of kern_act_group vectors, each group streaming
+     * the weights again: a group's int8 activations (16 x cols bytes) stay in L1 across the
+     * tiles, whereas 64 vectors x 1 KB were re-read from L2 for every 4-row tile (n = 64 ran
+     * at ~35 instead of ~27 cycles per block-vector, KERNELS.md). Per-vector arithmetic is
+     * unchanged, so results stay bit-identical to pf_matvec. */
+    const int G = kern_act_group > 0 && n > kern_act_group ? kern_act_group : n;
+    for (int g0 = 0; g0 < n; g0 += G) {
+        const int gn = n - g0 < G ? n - g0 : G;
+        const float *Xg = X + (size_t)g0 * W->cols;
+        float *Yg = Y + (size_t)g0 * W->rows;
+        pf_act act, *A = NULL;
+        if (W->dtype >= PQ_Q8_G32) {
+            const int cols = W->cols, nb = cols / KERN_ACT_BLOCK;
+            const size_t qb = ((size_t)gn * cols + 63) & ~(size_t)63, fb = (size_t)gn * nb * 4;
+            uint8_t *s = scratch_get(qb + 2 * fb);
+            act = (pf_act){cols, gn, (int8_t *)s, (float *)(s + qb), (float *)(s + qb + fb)};
+            kern_quant_act(Xg, gn, cols, (int8_t *)act.q, (float *)act.d, (float *)act.fsum);
+            A = &act;
+        }
+        job_t job = {fn, W, Xg, A, Yg, gn, (W->rows + 3) / 4, threads_for(W, gn, pool), NULL, NULL};
+        dispatch(pool, &job);
     }
-    job_t job = {fn, W, X, A, Y, n, (W->rows + 3) / 4, threads_for(W, n, pool)};
-    dispatch(pool, &job);
+    if (kern_stats_enabled())
+        kern_stats_add(W->rows, W->cols, W->dtype, n, now_sec() - t0, weight_bytes(W));
+}
+
+void pf_lin_rule(pf_pool *pool, const pf_lin_args *a) { kern_lin_rule(pool, a); }
+
+void pf_lin_apply(pf_pool *pool, float *S, const float *log, int keep, int heads, int dk,
+                  int dv) {
+    kern_lin_apply(pool, S, log, keep, heads, dk, dv);
 }
 
 void pf_matvec(pf_pool *pool, const pf_mat *W, const float *x, float *y) {

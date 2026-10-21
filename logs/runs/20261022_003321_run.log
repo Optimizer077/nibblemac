@@ -1,0 +1,10 @@
+# 2026-10-22T00:33:21 pi@10.42.0.2
+$ ls data; md5sum data/*.ids
+
+chat27.ids
+prompt64.ids
+wikitext2-qwen35.tokens.bin
+4101505adbf3d638f6d668ae064a9107  data/chat27.ids
+1d0e5df230a7d6b0d004ed990e8e6ffe  data/prompt64.ids
+
+[exit 0]

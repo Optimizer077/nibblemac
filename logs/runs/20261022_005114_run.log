@@ -1,0 +1,9 @@
+# 2026-10-22T00:51:14 pi@10.42.0.2
+$ vcgencmd measure_temp; ps -eo etime,pcpu,args --sort=-pcpu | head -3 | cut -c1-120
+
+temp=57.9'C
+    ELAPSED %CPU COMMAND
+      00:18  348 ./kbench/kbench --variant v13-group8 --group 8 --threads 4 --batch 4,16,64 --dtypes q4k --shapes qkv,ga
+      00:00 10.7 sshd-session: pi [priv]
+
+[exit 0]

@@ -1,0 +1,65 @@
+KSTATS     rows   cols dtype   n    calls   ms_total   us/call     GB/s
+KSTATS     6144   1024     4  64       18      383.2   21289.4     0.17
+KSTATS     2048   1024     4  64       18      135.2    7513.1     0.16
+KSTATS     1024   2048     4  64       24      174.9    7285.7     0.16
+KSTATS     3584   1024     4  64       48      550.7   11472.8     0.18
+KSTATS     1024   3584     4  64       24      295.9   12327.4     0.17
+KSTATS     4096   1024     4  64        6       73.7   12288.3     0.19
+KSTATS      512   1024     4  64       12       19.6    1632.9     0.18
+KSTATS       16   1024     4  64       36        8.8     244.6     0.04
+KSTATS   248320   1024     4   1       64     2390.0   37344.0     3.83
+KSTATS     6144   1024     4   1     1134     1052.1     927.8     3.81
+KSTATS     2048   1024     4   1     1134      357.3     315.1     3.74
+KSTATS     1024   2048     4   1     1512      887.5     586.9     2.01
+KSTATS     3584   1024     4   1     3024     1663.3     550.0     3.75
+KSTATS     1024   3584     4   1     1512      828.2     547.7     3.77
+KSTATS     4096   1024     4   1      378      233.9     618.8     3.81
+KSTATS      512   1024     4   1      756       60.4      79.8     3.69
+KSTATS       16   1024     4   1     2268       15.7       6.9     1.33
+KSTATS total calls=11968 ms=9130.3
+KSTATS     rows   cols dtype   n    calls   ms_total   us/call     GB/s
+KSTATS     6144   1024     4   4      342      354.7    1037.0     3.41
+KSTATS     2048   1024     4   4      342      124.5     364.1     3.24
+KSTATS     1024   2048     4   4      480      239.1     498.1     2.37
+KSTATS     3584   1024     4   4      936      571.6     610.7     3.38
+KSTATS     1024   3584     4   4      468      302.1     645.5     3.20
+KSTATS     4096   1024     4   4      126       86.5     686.5     3.44
+KSTATS      512   1024     4   4      252       23.5      93.2     3.17
+KSTATS   248320   1024     4   4       19      774.1   40741.8     3.51
+KSTATS       16   1024     4   4      684       13.1      19.2     0.48
+KSTATS     1024   2048     4   3        2        1.0     500.4     2.36
+KSTATS     4096   1024     4   3        1        0.7     692.8     3.41
+KSTATS      512   1024     4   3        2        0.2      90.1     3.27
+KSTATS     3584   1024     4   3        2        1.1     568.8     3.63
+KSTATS     1024   3584     4   3        1        0.6     581.0     3.55
+KSTATS     6144   1024     4  64       18      309.9   17218.0     0.21
+KSTATS     2048   1024     4  64       18      105.1    5840.4     0.20
+KSTATS     1024   2048     4  64       26      165.3    6357.1     0.19
+KSTATS     3584   1024     4  64       50      504.8   10095.3     0.20
+KSTATS     1024   3584     4  64       25      298.8   11950.4     0.17
+KSTATS     4096   1024     4  64        7       81.1   11585.4     0.20
+KSTATS      512   1024     4  64       14       22.1    1580.6     0.19
+KSTATS     1024   2048     4   2        6        2.9     485.5     2.43
+KSTATS     4096   1024     4   2        3        1.9     643.9     3.66
+KSTATS      512   1024     4   2        6        0.5      85.3     3.46
+KSTATS     3584   1024     4   2        6        3.4     570.8     3.62
+KSTATS     1024   3584     4   2        3        1.7     581.4     3.55
+KSTATS       16   1024     4  64       36        6.9     190.4     0.05
+KSTATS   248320   1024     4   1        1       41.1   41145.4     3.48
+KSTATS    32768   1024     4   1       57      281.2    4934.1     3.83
+KSTATS     1024   2048     4   1       80       26.1     326.8     3.61
+KSTATS     4096   1024     4   1       40       24.8     620.6     3.80
+KSTATS      512   1024     4   1       80        6.3      78.5     3.76
+KSTATS     3584   1024     4   1       80       43.7     545.8     3.78
+KSTATS     1024   3584     4   1       40       21.8     545.5     3.78
+KSTATS total calls=4253 ms=4442.3
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314,8394,11,424,557,279,3098,314,51895,11,424,557,279,10151,314,279,1814
+load 0.006 s | prefill 64 tok in 2.675 s = 23.929 tok/s | decode 63 tok in 8.857 s = 7.113 tok/s | peak RSS 432.9 MB | matvec=fast threads=4
+spec k=0 draft_vocab=0 | rounds 0 drafted 0 accepted 0 | mean accepted 0.000, 1.000 tok/pass | per pass: mtp 0.0 ms verify 0.0 ms commit 0.0 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-q4k-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 23.9293, "decode_tps": 7.1129, "peak_rss_mb": 432.9, "spec_k": 0, "draft_vocab": 0, "rounds": 0, "drafted": 0, "accepted": 0, "mean_accepted": 0.0000, "accept_rate": 0.0000, "tokens_per_pass": 1.0000, "mtp_ms_per_pass": 0.00, "verify_ms_per_pass": 0.00, "commit_ms_per_pass": 0.00}
+generated: 279,1814,11,424,557,279,809,314,279,1814,13,198,2064,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314,8394,11,424,557,279,3098,314,51895,11,424,557,279,10151,314,279,1814
+load 0.005 s | prefill 64 tok in 2.504 s = 25.555 tok/s | decode 63 tok in 4.778 s = 13.184 tok/s | peak RSS 451.7 MB | matvec=fast threads=4
+spec k=3 draft_vocab=32768 | rounds 19 drafted 57 accepted 44 | mean accepted 2.316, 3.316 tok/pass | per pass: mtp 28.6 ms verify 207.9 ms commit 15.0 ms
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-q4k-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 25.5546, "decode_tps": 13.1844, "peak_rss_mb": 451.7, "spec_k": 3, "draft_vocab": 32768, "rounds": 19, "drafted": 57, "accepted": 44, "mean_accepted": 2.3158, "accept_rate": 0.7719, "tokens_per_pass": 3.3158, "mtp_ms_per_pass": 28.58, "verify_ms_per_pass": 207.90, "commit_ms_per_pass": 15.01}
+
+saved bench/results/pinfer-lin2-q4k_20261022_005557.json  valid=True  temp 58.9'C -> 56.9'C

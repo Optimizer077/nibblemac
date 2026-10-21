@@ -1,0 +1,10 @@
+# 2026-10-22T00:50:09 pi@10.42.0.2
+$ pgrep -fa flock | cut -c1-100
+
+14779 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash kbench/spec_exact.sh ./
+14999 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for g in 0 8 16 32; do ./kbe
+15140 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for S in "--spec 0" "--spec 
+15387 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./kbench/lbench --threads 1,
+15436 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -fa flock | cut -c1-100
+
+[exit 0]

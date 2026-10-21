@@ -8,6 +8,7 @@
 #include "pq_quant.h"
 
 int kern_prefetch = 0;
+int kern_act_group = 16;
 
 void kern_quant_act(const float *X, int n, int cols, int8_t *q, float *d, float *fsum) {
     const int nb = cols / KERN_ACT_BLOCK;

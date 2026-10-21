@@ -8,13 +8,17 @@ CFLAGS  := -O3 -mcpu=cortex-a72 -std=c11 -Wall -Wextra -I../src $(EXTRA)
 LDFLAGS := -static -pthread -lm
 ROOT    := ../..
 OUT     := $(ROOT)/build/aarch64
-SRC     := kbench.c kbench_util.c ../src/matvec_fast.c ../src/kern_float.c \
-           ../src/kern_quant.c ../src/kern_act.c
+KSRC    := ../src/matvec_fast.c ../src/kern_float.c ../src/kern_quant.c ../src/kern_act.c \
+           ../src/kern_stats.c ../src/kern_lin.c
+SRC     := kbench.c kbench_util.c $(KSRC)
 HDR     := kbench.h ../src/kern.h ../src/ops.h ../src/pq_format.h ../src/pq_quant.h
 PYTHON  ?= python.exe  # Windows python (has numpy); WSL python3 has none
 GOLDEN  := $(ROOT)/build/kbench_golden.bin
 
-all: $(OUT)/kbench
+all: $(OUT)/kbench $(OUT)/lbench
+
+$(OUT)/lbench: lbench.c $(KSRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) lbench.c $(KSRC) -o $@ $(LDFLAGS)
 
 $(OUT)/kbench: $(SRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)

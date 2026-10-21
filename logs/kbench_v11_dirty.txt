@@ -1,0 +1,20 @@
+dispatch thr=3  411 ns per empty call
+RESULT {"bench":"kbench_dispatch","variant":"v11-dirty0","threads":3,"ns":410.9}
+q4k   out     1024x2048  thr=3 n=1       336.8 us    3.50 GB/s  err fp 9.22e-03 kern 3.53e-07  NOISY
+RESULT {"bench":"kbench","variant":"v11-dirty0","dtype":"q4k","shape":"out","rows":1024,"cols":2048,"threads":3,"n":1,"bytes":1179648,"us":336.75,"gbs":3.503,"rel_err_fp":9.221e-03,"rel_err_kernel":3.531e-07,"prefetch":0,"iters":509,"hot":0,"auto_threads":0,"dirty_kb":0,"group":16,"exact":true,"noisy":true,"foreign_cpu_s":0.100,"ok":true}
+q4k   down    1024x3584  thr=3 n=1       534.2 us    3.86 GB/s  err fp 7.13e-03 kern 3.57e-07 
+RESULT {"bench":"kbench","variant":"v11-dirty0","dtype":"q4k","shape":"down","rows":1024,"cols":3584,"threads":3,"n":1,"bytes":2064384,"us":534.18,"gbs":3.865,"rel_err_fp":7.131e-03,"rel_err_kernel":3.572e-07,"prefetch":0,"iters":291,"hot":0,"auto_threads":0,"dirty_kb":0,"group":16,"exact":true,"noisy":false,"foreign_cpu_s":0.002,"ok":true}
+q4k   ab        16x1024  thr=3 n=1         5.2 us    1.76 GB/s  err fp 8.23e-03 kern 2.36e-07 
+RESULT {"bench":"kbench","variant":"v11-dirty0","dtype":"q4k","shape":"ab","rows":16,"cols":1024,"threads":3,"n":1,"bytes":9216,"us":5.24,"gbs":1.760,"rel_err_fp":8.227e-03,"rel_err_kernel":2.362e-07,"prefetch":0,"iters":65105,"hot":0,"auto_threads":0,"dirty_kb":0,"group":16,"exact":true,"noisy":false,"foreign_cpu_s":-0.009,"ok":true}
+all checks passed (0 failing checks)
+dispatch thr=3  398 ns per empty call
+RESULT {"bench":"kbench_dispatch","variant":"v11-dirty1024","threads":3,"ns":397.8}
+q4k   out     1024x2048  thr=3 n=1       615.4 us    1.92 GB/s  err fp 9.22e-03 kern 3.53e-07 
+RESULT {"bench":"kbench","variant":"v11-dirty1024","dtype":"q4k","shape":"out","rows":1024,"cols":2048,"threads":3,"n":1,"bytes":1179648,"us":615.36,"gbs":1.917,"rel_err_fp":9.221e-03,"rel_err_kernel":3.531e-07,"prefetch":0,"iters":509,"hot":0,"auto_threads":0,"dirty_kb":1024,"group":16,"exact":true,"noisy":false,"foreign_cpu_s":-0.007,"ok":true}
+q4k   down    1024x3584  thr=3 n=1       845.5 us    2.44 GB/s  err fp 7.13e-03 kern 3.57e-07 
+RESULT {"bench":"kbench","variant":"v11-dirty1024","dtype":"q4k","shape":"down","rows":1024,"cols":3584,"threads":3,"n":1,"bytes":2064384,"us":845.51,"gbs":2.442,"rel_err_fp":7.131e-03,"rel_err_kernel":3.572e-07,"prefetch":0,"iters":291,"hot":0,"auto_threads":0,"dirty_kb":1024,"group":16,"exact":true,"noisy":false,"foreign_cpu_s":-0.003,"ok":true}
+q4k   ab        16x1024  thr=3 n=1       213.0 us    0.04 GB/s  err fp 8.23e-03 kern 2.36e-07 
+RESULT {"bench":"kbench","variant":"v11-dirty1024","dtype":"q4k","shape":"ab","rows":16,"cols":1024,"threads":3,"n":1,"bytes":9216,"us":212.98,"gbs":0.043,"rel_err_fp":8.227e-03,"rel_err_kernel":2.362e-07,"prefetch":0,"iters":65105,"hot":0,"auto_threads":0,"dirty_kb":1024,"group":16,"exact":true,"noisy":false,"foreign_cpu_s":0.076,"ok":true}
+all checks passed (0 failing checks)
+
+saved bench/results/kbench-v11-dirty_20261022_004759.json  valid=True  temp 52.5'C -> 53.0'C

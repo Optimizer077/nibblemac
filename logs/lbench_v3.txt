@@ -1,0 +1,27 @@
+exact n=1: ok
+RESULT {"bench":"lbench_exact","n":1,"pass":true}
+exact n=4: ok
+RESULT {"bench":"lbench_exact","n":4,"pass":true}
+exact n=64: ok
+RESULT {"bench":"lbench_exact","n":64,"pass":true}
+neon   thr=1 n=1     929.6 us/layer   16.73 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"neon","threads":1,"n":1,"layers":18,"us_per_layer":929.6,"ms_per_token_all_layers":16.734}
+scalar thr=1 n=1     975.6 us/layer   17.56 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"scalar","threads":1,"n":1,"layers":18,"us_per_layer":975.6,"ms_per_token_all_layers":17.560}
+neon   thr=1 n=4    2294.2 us/layer   10.32 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"neon","threads":1,"n":4,"layers":18,"us_per_layer":2294.2,"ms_per_token_all_layers":10.324}
+scalar thr=1 n=4    2905.1 us/layer   13.07 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"scalar","threads":1,"n":4,"layers":18,"us_per_layer":2905.1,"ms_per_token_all_layers":13.073}
+neon   thr=1 n=64   30611.3 us/layer    8.61 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"neon","threads":1,"n":64,"layers":18,"us_per_layer":30611.3,"ms_per_token_all_layers":8.609}
+scalar thr=1 n=64   41813.2 us/layer   11.76 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"scalar","threads":1,"n":64,"layers":18,"us_per_layer":41813.2,"ms_per_token_all_layers":11.760}
+neon   thr=4 n=1     705.2 us/layer   12.69 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"neon","threads":4,"n":1,"layers":18,"us_per_layer":705.2,"ms_per_token_all_layers":12.693}
+neon   thr=4 n=4     892.1 us/layer    4.01 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"neon","threads":4,"n":4,"layers":18,"us_per_layer":892.1,"ms_per_token_all_layers":4.014}
+neon   thr=4 n=64    7917.8 us/layer    2.23 ms/token (18 layers)
+RESULT {"bench":"lbench","kernel":"neon","threads":4,"n":64,"layers":18,"us_per_layer":7917.8,"ms_per_token_all_layers":2.227}
+all exact
+
+saved bench/results/lbench-v3-chunkmajor_20261022_005924.json  valid=True  temp 42.3'C -> 45.7'C

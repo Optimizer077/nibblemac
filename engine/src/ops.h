@@ -31,6 +31,31 @@ void pf_matvec(pf_pool *pool, const pf_mat *W, const float *x, float *y);
  * (this is what makes prefill and speculative verification cheap). */
 void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n);
 
+/* Gated DeltaNet recurrence of one layer over n tokens (forward_lin.c semantics). For each
+ * v-head h (k-head h / rep) and token t, with S [dk][dv]:
+ *   S *= decay;  kv = S^T k;  delta = (v - kv) * beta;  S += k delta^T;  o = S^T q
+ * Both implementations perform exactly these per-element fp32 operations (no fused
+ * multiply-add) in the same order, so they agree bit-for-bit with each other and with the
+ * commit replay below. */
+typedef struct {
+    int n, heads, rep, dk, dv;  /* tokens, v-heads, v-heads per k-head, head dims */
+    int qkv_stride, o_stride;   /* row strides in floats of qkv and o */
+    const float *qkv;           /* [n][qkv_stride]: q | k (heads/rep heads of dk) | v (heads x dv) */
+    const float *decay, *beta;  /* [n][heads] */
+    float *S;                   /* [heads][dk * dv] committed state, updated in place; its
+                                   layout is private to the implementation (zero = reset)... */
+    float *o;                   /* [n][o_stride]: outputs before the gated norm */
+    float *log;                 /* ...unless log != NULL: then S stays untouched (the kernel
+                                   works on a copy) and per (t, head) the log row
+                                   [dk + dv + 1] receives k | delta | decay (pf_lin_log) */
+} pf_lin_args;
+void pf_lin_rule(pf_pool *pool, const pf_lin_args *a);
+
+/* Commit replay: S[h] = S[h] * decay + k x delta for the first `keep` logged tokens (rows of
+ * `log` as written by pf_lin_rule), per element: row *= decay; row += k_i * delta_j. */
+void pf_lin_apply(pf_pool *pool, float *S, const float *log, int keep, int heads, int dk,
+                  int dv);
+
 /* Embedding lookup: dst[c] = float(W[row][c]). */
 void pf_get_row(const pf_mat *W, int row, float *dst);
 

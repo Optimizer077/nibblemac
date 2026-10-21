@@ -83,11 +83,12 @@ INLINE void q8_tile(const uint8_t *p, int nsb, const pf_act *A, float *Y, int ro
 /* ---------------------------------------------------------------- Q4_G32 / Q4K_G32 */
 /* Both store block k (32 columns) as 4 rows x 16 B of nibbles (low = col j, high = j + 16).
  * A row's block value is d * sum(u * x) - o * sum(x) with per-(row, block) scale d and
- * offset o: Q4 has u = q + 8, so o = 8 d; Q4K has d = D * s6, o = M * m6. With one vector
- * the offset term goes to a separate accumulator `corr` (off the reduction's critical
- * path); with several vectors it is folded into acc directly (no extra registers). */
+ * offset o: Q4 has u = q + 8, so o = 8 d; Q4K has d = D * s6, o = M * m6. The offset term is
+ * folded into acc right after the block's FMA for every nv, so a vector gets bit-identical
+ * results whether it runs alone (pf_matvec) or inside a batch: speculative verification
+ * relies on batched logits equalling the plain-decode logits exactly (KERNELS.md v11). */
 INLINE void q4_block(const uint8_t *q, float32x4_t d4, float32x4_t o4, int blk,
-                     const pf_act *A, int v0, int nv, float32x4_t *acc, float32x4_t *corr) {
+                     const pf_act *A, int v0, int nv, float32x4_t *acc) {
     const size_t base = (size_t)blk * A->n + v0; /* block-major activations */
     const int8_t *xb = A->q + base * 32;
     const float *db = A->d + base, *fs = A->fsum + base;
@@ -111,8 +112,7 @@ INLINE void q4_block(const uint8_t *q, float32x4_t d4, float32x4_t o4, int blk,
         const int32x4_t t = vpaddlq_s16(vpaddq_s16(vpaddq_s16(s[0], s[1]),
                                                    vpaddq_s16(s[2], s[3])));
         acc[v] = vfmaq_f32(acc[v], vcvtq_f32_s32(t), vmulq_n_f32(d4, db[v]));
-        if (nv == 1) corr[0] = vfmaq_n_f32(corr[0], o4, fs[0]);
-        else acc[v] = vfmsq_n_f32(acc[v], o4, fs[v]);
+        acc[v] = vfmsq_n_f32(acc[v], o4, fs[v]);
     }
 }
 
@@ -126,29 +126,35 @@ INLINE void unpack6(const uint8_t *p, uint8x16_t *a, uint8x16_t *b) {
     *b = vorrq_u8(vshrq_n_u8(lo, 4), vshlq_n_u8(h23, 4));
 }
 
-/* 16 u8 (4 blocks x 4 rows) times a per-row fp32 multiplier -> 16 floats. */
-INLINE void u8_scaled(uint8x16_t v, float32x4_t mul, float *out) {
+/* 16 u8 values (4 blocks x 4 rows) times a per-row fp32 multiplier -> 16 floats, without
+ * UCVTF (2.3 cycles on the A72): widen to u32, OR in the exponent of 2^23 so the word reads
+ * as the float 2^23 + v, then one FMA with (mul, -2^23 * mul) leaves v * mul, exact because
+ * v (6 bits) * mul (11-bit fp16 mantissa) fits a float mantissa. */
+INLINE void u8_scaled(uint8x16_t v, float32x4_t mul, float32x4_t nmul, float *out) {
     const uint16x8_t l = vmovl_u8(vget_low_u8(v)), h = vmovl_high_u8(v);
-    vst1q_f32(out + 0, vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(l))), mul));
-    vst1q_f32(out + 4, vmulq_f32(vcvtq_f32_u32(vmovl_high_u16(l)), mul));
-    vst1q_f32(out + 8, vmulq_f32(vcvtq_f32_u32(vmovl_u16(vget_low_u16(h))), mul));
-    vst1q_f32(out + 12, vmulq_f32(vcvtq_f32_u32(vmovl_high_u16(h)), mul));
+    const uint32x4_t w[4] = {vmovl_u16(vget_low_u16(l)), vmovl_high_u16(l),
+                             vmovl_u16(vget_low_u16(h)), vmovl_high_u16(h)};
+    for (int i = 0; i < 4; i++) {
+        const float32x4_t f = vreinterpretq_f32_u32(vorrq_u32(w[i], vdupq_n_u32(0x4B000000u)));
+        vst1q_f32(out + 4 * i, vfmaq_f32(nmul, f, mul));
+    }
 }
 
 /* Q4K: decode one superblock's 6-bit sub-scales / sub-mins into fp32 d[8][4], o[8][4]. */
 INLINE void q4k_scales(const uint8_t *p, float *d, float *o) {
     const __fp16 *h = (const __fp16 *)p;
     const float32x4_t D4 = vcvt_f32_f16(vld1_f16(h)), M4 = vcvt_f32_f16(vld1_f16(h + 4));
+    const float32x4_t nD4 = vmulq_n_f32(D4, -8388608.0f), nM4 = vmulq_n_f32(M4, -8388608.0f);
     uint8x16_t a, b;
     unpack6(p + 16, &a, &b);
-    u8_scaled(a, D4, d), u8_scaled(b, D4, d + 16);
+    u8_scaled(a, D4, nD4, d), u8_scaled(b, D4, nD4, d + 16);
     unpack6(p + 40, &a, &b);
-    u8_scaled(a, M4, o), u8_scaled(b, M4, o + 16);
+    u8_scaled(a, M4, nM4, o), u8_scaled(b, M4, nM4, o + 16);
 }
 
 INLINE void q4_tile(const uint8_t *p, int nsb, const pf_act *A, float *Y, int rows, int r,
                     int v0, int nv, int pf, int kq) {
-    float32x4_t acc[KERN_MAX_NV], corr[1] = {vdupq_n_f32(0.0f)};
+    float32x4_t acc[KERN_MAX_NV];
     float ds[32], os[32]; /* Q4K scales / offsets of the current superblock, [block][row] */
     for (int v = 0; v < nv; v++) acc[v] = vdupq_n_f32(0.0f);
     for (int sb = 0; sb < nsb; sb++, p += 576) {
@@ -159,10 +165,9 @@ INLINE void q4_tile(const uint8_t *p, int nsb, const pf_act *A, float *Y, int ro
         BLOCK_LOOP(nv, k, {
             const float32x4_t d4 = kq ? vld1q_f32(ds + 4 * k) : scale4(sc, k);
             const float32x4_t o4 = kq ? vld1q_f32(os + 4 * k) : vmulq_n_f32(d4, 8.0f);
-            q4_block(codes + k * 64, d4, o4, sb * 8 + k, A, v0, nv, acc, corr);
+            q4_block(codes + k * 64, d4, o4, sb * 8 + k, A, v0, nv, acc);
         })
     }
-    if (nv == 1) acc[0] = vsubq_f32(acc[0], corr[0]);
     store4(acc, Y, rows, r, v0, nv);
 }
 

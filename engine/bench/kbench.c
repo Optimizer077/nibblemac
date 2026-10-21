@@ -8,7 +8,9 @@
  *
  *   kbench [--dtypes f32,bf16,q8,q4,q4k] [--shapes qkv,z,...] [--threads 1,2,3,4]
  *          [--batch 1,2,4,8] [--time 0.15] [--reps 2] [--prefetch BYTES] [--variant NAME]
- *          [--golden FILE] [--check] [--head-f32] [--hot] [--auto]
+ *          [--golden FILE] [--check] [--head-f32] [--hot] [--auto] [--dirty KB] [--group N]
+ * --dirty KB: write a KB buffer before every timed call (as the delta-rule recurrence
+ * leaves ~1 MB of dirty state in L2 right before out_proj in the engine).
  * Prints one `RESULT {json}` line per configuration (for harness/pi.py bench).
  * Exit code 1 if any correctness check fails.
  */
@@ -30,7 +32,7 @@ typedef struct { const char *name; int rows, cols; } shape_t;
 static const shape_t SHAPES[] = {
     {"qkv", 6144, 1024}, {"z", 2048, 1024},   {"out", 1024, 2048},  {"q", 4096, 1024},
     {"kv", 512, 1024},   {"gate", 3584, 1024}, {"down", 1024, 3584}, {"ab", 16, 1024},
-    {"head", 248320, 1024},
+    {"head", 248320, 1024}, {"dhead", 32768, 1024}, /* draft-vocab head */
 };
 typedef struct { const char *name; uint32_t id; } dtype_t;
 static const dtype_t DTYPES[] = {{"f32", PQ_F32}, {"bf16", PQ_BF16}, {"q8", PQ_Q8_G32},
@@ -42,11 +44,11 @@ static const dtype_t DTYPES[] = {{"f32", PQ_F32}, {"bf16", PQ_BF16}, {"q8", PQ_Q
 
 static struct {
     char dtypes[128], shapes[128], variant[64];
-    int threads[8], nthreads, batch[8], nbatch, reps, check, head_f32, hot, autothr;
+    int threads[8], nthreads, batch[8], nbatch, reps, check, head_f32, hot, autothr, dirty_kb;
     double time;
     const char *golden;
-} opt = {"f32,bf16,q8,q4,q4k", "qkv,z,out,q,kv,gate,down,ab,head", "default",
-         {1, 2, 3, 4}, 4, {1, 2, 4, 8}, 4, 2, 0, 0, 0, 0, 0.15, NULL};
+} opt = {"f32,bf16,q8,q4,q4k", "qkv,z,out,q,kv,gate,down,ab,head,dhead", "default",
+         {1, 2, 3, 4}, 4, {1, 2, 4, 8}, 4, 2, 0, 0, 0, 0, 0, 0.15, NULL};
 
 static double now(void) {
     struct timespec ts;
@@ -82,11 +84,14 @@ static timing_t time_calls(pf_pool *pool, uint32_t dtype, int rows, int cols, ui
                            size_t stride, int copies, long it, const float *X, float *Y, int n) {
     timing_t t = {1e30, 1, 1e30};
     double best_any = 1e30;
+    static uint8_t *dirty;
+    if (opt.dirty_kb && !dirty) dirty = malloc((size_t)opt.dirty_kb << 10);
     int clean = 0;
     for (int attempt = 0; attempt < opt.reps + 4 && clean < opt.reps; attempt++) {
         const double b0 = busy_seconds(), s0 = self_seconds(), t0 = now();
         for (long i = 0; i < it; i++) {
             pf_mat W = {dtype, rows, cols, arena + (size_t)(i % copies) * stride};
+            if (dirty) memset(dirty, (int)i, (size_t)opt.dirty_kb << 10);
             pf_matmul(pool, &W, X, Y, n);
         }
         const double wall = now() - t0;
@@ -132,6 +137,8 @@ static void parse_args(int argc, char **argv) {
         else if (!strcmp(a, "--head-f32")) opt.head_f32 = 1;
         else if (!strcmp(a, "--hot")) opt.hot = 1; /* one copy: cache-resident if it fits */
         else if (!strcmp(a, "--auto")) opt.autothr = 1; /* library thread policy */
+        else if (!strcmp(a, "--dirty")) opt.dirty_kb = atoi(v), i++; /* dirty L2 before calls */
+        else if (!strcmp(a, "--group")) kern_act_group = atoi(v), i++; /* 0 = no grouping */
         else { fprintf(stderr, "unknown option %s\n", a); exit(2); }
     }
 }
@@ -157,8 +164,11 @@ static int bench_one(const dtype_t *dt, const shape_t *sh, pf_pool **pools) {
     kb_fill_matrix(dt->id, sh->rows, sh->cols, 42, arena);
     for (int c = 1; c < copies; c++) memcpy(arena + (size_t)c * stride, arena, bytes);
 
-    const int nmax = 8, cols = sh->cols, rows = sh->rows;
+    int nmax = 1;
+    for (int i = 0; i < opt.nbatch; i++) nmax = opt.batch[i] > nmax ? opt.batch[i] : nmax;
+    const int cols = sh->cols, rows = sh->rows;
     float *X = malloc((size_t)nmax * cols * 4), *Y = malloc((size_t)nmax * rows * 4);
+    float *Y1 = malloc((size_t)nmax * rows * 4);
     kb_fill_vec(X, (size_t)nmax * cols, 7);
     /* reference on a row sample (all rows for every real shape except the head) */
     const int nrow = rows < MAX_REF_ROWS ? rows : MAX_REF_ROWS;
@@ -179,7 +189,12 @@ static int bench_one(const dtype_t *dt, const shape_t *sh, pf_pool **pools) {
             for (int v = 0; v < n; v++)
                 for (int k = 0; k < nrow; k++) ys[v * nrow + k] = Y[(size_t)v * rows + idx[k]];
             float e_fp = max_rel(ys, rfp, n, nrow), e_k = quant ? max_rel(ys, rq, n, nrow) : e_fp;
-            const int ok = e_k < 1e-4f && e_fp < (quant ? 5e-2f : 1e-4f);
+            /* bit-exactness: row v of the batched call == pf_matvec on vector v (speculative
+             * verification compares batched logits with plain-decode logits) */
+            for (int v = 0; v < n; v++)
+                pf_matvec(pool, &W0, X + (size_t)v * cols, Y1 + (size_t)v * rows);
+            const int exact = memcmp(Y, Y1, (size_t)n * rows * sizeof(float)) == 0;
+            const int ok = e_k < 1e-4f && e_fp < (quant ? 5e-2f : 1e-4f) && exact;
             fails += !ok;
             timing_t tm = {0, 0, 0};
             long iters = 0;
@@ -200,15 +215,16 @@ static int bench_one(const dtype_t *dt, const shape_t *sh, pf_pool **pools) {
             printf("RESULT {\"bench\":\"kbench\",\"variant\":\"%s\",\"dtype\":\"%s\",\"shape\":\"%s\","
                    "\"rows\":%d,\"cols\":%d,\"threads\":%d,\"n\":%d,\"bytes\":%zu,\"us\":%.2f,"
                    "\"gbs\":%.3f,\"rel_err_fp\":%.3e,\"rel_err_kernel\":%.3e,\"prefetch\":%d,"
-                   "\"iters\":%ld,\"hot\":%d,\"auto_threads\":%d,\"noisy\":%s,"
+                   "\"iters\":%ld,\"hot\":%d,\"auto_threads\":%d,\"dirty_kb\":%d,\"group\":%d,\"exact\":%s,\"noisy\":%s,"
                    "\"foreign_cpu_s\":%.3f,\"ok\":%s}\n",
                    opt.variant, dt->name, sh->name, rows, cols, pf_pool_threads(pool), n, bytes,
-                   us, gbs, e_fp, e_k, kern_prefetch, iters, opt.hot, opt.autothr,
-                   tm.noisy ? "true" : "false", tm.foreign, ok ? "true" : "false");
+                   us, gbs, e_fp, e_k, kern_prefetch, iters, opt.hot, opt.autothr, opt.dirty_kb,
+                   kern_act_group, exact ? "true" : "false", tm.noisy ? "true" : "false", tm.foreign,
+                   ok ? "true" : "false");
             fflush(stdout);
         }
     }
-    free(arena), free(X), free(Y), free(idx), free(rfp), free(rq), free(ys);
+    free(arena), free(X), free(Y), free(Y1), free(idx), free(rfp), free(rq), free(ys);
     return fails;
 }
 

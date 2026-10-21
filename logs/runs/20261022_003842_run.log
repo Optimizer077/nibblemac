@@ -1,0 +1,10 @@
+# 2026-10-22T00:38:42 pi@10.42.0.2
+$ uptime | sed "s/.*load/load/"; vcgencmd measure_temp; ps -eo etime,pcpu,args --sort=-pcpu | head -3 | cut -c1-110
+
+load average: 2.49, 1.71, 1.98
+temp=48.2'C
+    ELAPSED %CPU COMMAND
+      03:23  188 ./kbench/kbench --variant v11-exact --threads 1,4 --batch 1,2,3,4,5,8 --time 0.1 --reps 2
+      00:00 16.6 sshd-session: pi [priv]
+
+[exit 0]

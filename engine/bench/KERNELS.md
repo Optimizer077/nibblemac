@@ -308,3 +308,190 @@ with a Q8 head 74 + 63 = ~137 ms (~7.3 tok/s). llama.cpp Q4_0 measured 5.6 tok/s
   keeps the output at higher precision for a reason).
 - mtp.* (speculative head): Q8 for mtp.fc (Q4K 9.1%, Q4 11.7%), Q4K for the rest.
 - Avoid F32/BF16 for large matrices (2-4x the bytes; only for debugging/reference).
+
+---
+## Part 2 (2026-10-22): end-to-end profile, bit-exactness, Q4K, the recurrence
+
+### Where a decode step goes (PF_KERN_STATS matmul profile + gprof)
+`engine/src/kern_stats.c`: with `PF_KERN_STATS=1` pf_matmul logs wall time per (shape, dtype,
+n) and prints the table at exit (stderr, saved in the bench JSON). Engine binaries built from
+my sources: `engine/pinfer_run_kern*` on the Pi (never the shared `pinfer_run_fast`).
+
+Q4K-headq4k (the shipping model), 4 threads, 64-token prompt, 64 generated
+(`bench/results/pinfer-kstats-q4k-plain_20261022_003014.json`,
+`pinfer-kstats-q4k-spec3_20261022_003024.json`):
+
+| | per plain decode step | per spec k=3 verify pass (n = 4) |
+|---|---|---|
+| layer matmuls | 80.3 ms | 92.6 ms (x1.15) |
+| output head (248320 x 1024) | 37.2 ms | 41.3 ms (x1.11) |
+| **matmul total** | **117.5 ms** | **133.9 ms (x1.14)** |
+| everything else (scalar forward.c / forward_lin.c) | 27.5 ms | ~105 ms (4 tokens x ~26 ms) |
+| step / pass total | 145 ms (6.89 tok/s) | 239 ms verify + 28.6 MTP + 23.1 commit |
+
+So the batched matmuls already cost 1.14x a single vector (kbench's 1.10 plus the dirty-L2
+effect below); the verify-pass ratio of 1.65 comes from the per-token work outside the
+kernels, which batching does not amortise. Same picture for Q4 (`pinfer-kstats-q4-*`): matmul
+121 ms of 146 per step; verify 230 ms = 133 matmul + ~97 other. The Q4K vs Q4 spec gap
+(11.40 vs 12.38 tok/s) is 3.7% verify time (Q4K n=4 matmuls are 4% slower, as in kbench) and
+5.3% fewer accepted tokens per pass (3.32 vs 3.50: different drafts) - not a kernel defect.
+
+gprof of a single-threaded run (`-pg` build `engine/pinfer_run_pg`, `-t 1`, 64 prompt + 24
+generated; `logs/runs/20261022_002035_run.log`): kern_q4 81.3%, **pf_linear_attn 10.2%
+(14.3 ms per token: delta rule, conv, norms)**, expf 1.6% (2.3 ms/token), pf_full_attn 1.3%
+(1.8 ms/token), silu/rmsnorm/quant_act ~1%. The delta-rule recurrence is the one item big
+enough to matter: 18 layers x 16 heads x 2 passes over a 64 KB state per token.
+
+Prefill (n = 64 in one chunk): matmuls 1.50 s of 3.1 s (Q4K: qkv 19.0 ms, gate/up 11.2,
+down 12.9, out 7.1 per call at n = 64, i.e. ~35 cycles per block-vector vs 27 at n = 4: the
+64 x 1 KB int8 activations no longer fit L1 and stream from L2 for every tile); the other
+1.6 s is the same per-token scalar work (26 ms/token). Target 30 tok/s = 2.1 s per 64
+tokens: not reachable from the matmul side alone.
+
+### Pool spin (v10b, kept but no effect on the numbers)
+Workers now spin up to 50 ms before the futex sleep (was 65k polls ~0.5 ms). Hypothesis was
+that out_proj (1024x2048, 554 us in the engine vs 303 us in kbench) paid a wake-up after the
+recurrence; `pinfer-kstats-q4-plain-spin_20261022_002034.json` shows out_proj unchanged
+(614 us; that run was ~8% slower overall: 54 C and other agents' unlocked jobs). The real
+cause is the recurrence leaving 1 MB of dirty state lines in L2 that are written back while
+out_proj streams its weights (kbench `--dirty 1024` reproduces it, see below). That traffic
+(18 MB/token) is unavoidable with an fp32 state; it belongs to the decode floor
+(437 MB weights + 36 MB state = 473 MB/token = 113 ms at 4.2 GB/s; we are at 145).
+
+### v11 - bit-exactness of pf_matmul(n) rows vs pf_matvec (REQUIRED by speculation)
+Root cause: for Q4_G32 / Q4K_G32 the single-vector pass (nv == 1) accumulated the offset
+term `o * sum(x)` in a separate register (`corr`, v2) and subtracted it at the end, while the
+batched passes folded it into `acc` after each block - two different rounding sequences, so
+batched verify logits differed from plain-decode logits in the last bits and an argmax
+near-tie flipped a token (lead's chat27 prompt, mix-headq4k model). F32, BF16 and Q8 were
+already identical (same instruction sequence per vector for every nv; the int8 activation
+quantization is per vector and the integer dot products are exact).
+Fix: every nv uses the fold-in form (`acc = fma(cvt(t), d*dx, acc); acc = fms(acc, o, fs)`).
+kbench now checks, for every dtype x shape x threads x n, that row v of pf_matmul(n) equals
+pf_matvec on vector v with memcmp (`exact` in RESULT; a mismatch is a failing check);
+`engine/bench/spec_exact.sh` checks on the Pi that `--spec k` generates exactly the tokens
+of `--spec 0` for both models x two prompts x k = 0..4.
+
+### v12 - Q4K scale decode without UCVTF
+`u8_scaled`: the 6-bit sub-scales are widened to u32, OR-ed with the exponent of 2^23 and
+scaled with one FMA against (D, -2^23 D) instead of UCVTF (2.3 cycles) + FMUL. Exact (6-bit
+value x 11-bit fp16 mantissa fits a float mantissa). Saves ~20 cycles per superblock of the
+~115 the decode cost; the batched Q4K block work itself (~27 cycles per block-vector:
+16 SMULL/SMLAL, 4 reduction ops, SCVTF, FMUL, FMLA, FMLS, 2 loads) is at the instruction
+floor of this format - per-32-column activation scales force a float conversion per block.
+A k-quant style integer path (t * s6 accumulated in int32, one SCVTF per superblock) needs a
+per-256-column activation scale (llama.cpp's Q8_K) and would gain ~6%; not done because it
+changes the activation numerics the PPL was measured with.
+
+### Recurrence kernel `engine/src/kern_lin.c` (not wired in: needs engine-core files)
+`kern_lin_rule`: the delta rule of one layer over n tokens, NEON over the 128 value columns
+in chunks of 32 (kv / o accumulators stay in registers across the 128 key rows), threaded
+over the 16 heads through a new generic pool job (`kern_pool_run`). `kern_lin_apply`: the
+commit replay, threaded the same way. Both keep the scalar code's exact per-element
+operations (separate multiply and add, no FMA; per-column accumulation order over i), so the
+state, outputs and rollback log are bit-identical to forward_lin.c - `engine/bench/lbench.c`
+checks this (in-place, logged-on-scratch, and commit replay for n = 1 / 4 / 64; passed under
+qemu and on the Pi) and times both. Integration = `engine/bench/lin_kernel.patch` (ops.h
+gains `pf_lin_rule` / `pf_lin_apply`, matvec_ref.c receives the scalar code moved out of
+forward_lin.c, forward_lin.c calls the contract); applied to a scratch copy to measure
+(`engine/pinfer_run_lin` on the Pi); `tests/test_golden.py` and `tests/test_spec.py` run
+against that copy's host build.
+
+### Results (2026-10-22 00:40-00:50)
+- **Exactness sweep** `bench/results/kbench-v11-exact_20261022_004156.json`: all 5 dtypes x
+  10 shapes (incl. head 248320 and draft head 32768) x threads 1,4 x n = 1,2,3,4,5,8: every
+  configuration `exact` (memcmp of pf_matmul rows vs pf_matvec), all error checks pass.
+- **Cost of the fix** (hot, 1 thread, `kbench-v11-foldin-cost_20261022_004219.json`, old =
+  kbench-v10 with `corr`): Q4 n=1 out 442 -> 424 us, kv 107 -> 100; Q4K n=1 out 514 -> 503,
+  kv 125 -> 123; n=4 Q4 1214 -> 1209, Q4K out 1386 -> 1305 (v12 scale decode). The fold-in
+  form is slightly *faster* (one register less in the unrolled n=1 loop). No speed cost.
+- **Spec vs plain tokens on the Pi** (`engine/bench/spec_exact.sh`, 40 tokens, k = 0..4):
+  old shared `pinfer_run_fast` (`spec-exact-old_20261022_004457.json`): mix-headq4k /
+  chat27 mismatches for every k >= 1 (plain 0d45f4c6, spec c4644585), the other 3 model x
+  prompt pairs match. Fixed kernels (`spec-exact-lin_20261022_004711.json`, binary with the
+  recurrence patch): **20/20 match**; the plain output of mix/chat27 is now c4644585 (the
+  n=1 path rounds like the batched path did, so the near-tie resolves the other way).
+- **Dirty-L2 experiment** `kbench-v11-dirty_20261022_004759.json` (Q4K, 3 threads, n=1):
+  writing 1 MB before every call (memset itself ~208 us, measured on the 16-row shape)
+  turns out 1024x2048 from 337 us into 615 - 208 = ~407 us and down 1024x3584 from 534 into
+  ~637 us: the write-back of 1 MB of dirty lines costs the next streaming matmul ~20-25%.
+  In the engine out_proj follows the recurrence (1 MB dirty state) and measures 554-614 us.
+- **Recurrence kernel, first version (token-outer)** `lbench-v1_20261022_004227.json`,
+  ms per token for all 18 layers, cold state: scalar 1 thread n=1 20.7 / n=4 13.5 /
+  n=64 11.7; NEON 1 thread 24.0 / 13.5 / 10.3; NEON 4 threads **13.7 / 6.2 / 4.4**.
+  n=1 is DRAM-bound (36 MB of state traffic per token; 1 thread NEON is even slower than
+  the scalar full-row sweep because the 128 B column-chunk reads stride through the rows);
+  n >= 4 was L2-bandwidth-bound (256 KB of L2 traffic per head-token), hence v2 below.
+- **Patched scalar build (host)**: `tests/test_golden.py` PASS (A vs B 0.0 error, greedy
+  32/32), `tests/test_spec.py` PASS (all prompts, k = 0..4 and k3/v32768 exact);
+  `logs/host_tests_lin_patch.txt`.
+
+### Recurrence kernel v2 - column chunks outer, tokens inner (L1-resident chunk)
+kv, delta and o are per value column, so S can be processed in 32-column chunks (16 KB)
+with the chunk loop outside the token loop: for n > 1 a chunk stays in L1 for all tokens and
+both passes. n = 1 keeps 64-column chunks (256 B runs per row for the DRAM stream). Still
+bit-identical (per-column operation order unchanged). The commit replay is chunked the same
+way. Numbers: lbench-v2 (below).
+
+### Batched activations in groups of 16 (v13, prefill)
+pf_matmul splits n > 16 into groups of 16 vectors; each group re-streams the weights but its
+int8 activations (16 x cols B) stay in L1 across the tiles. At n = 64 the un-grouped kernel
+re-read 64 KB of activations from L2 per 4-row tile (35 cycles per block-vector instead of
+27). Per-vector arithmetic unchanged (exactness checked up to n = 33 under qemu, n = 64 on
+the Pi). Numbers: kbench-v13-group (below).
+
+### Results v2 / v13 (2026-10-22 00:50-00:56)
+- **Grouping (v13)** `bench/results/kbench-v13-group_20261022_005221.json`, Q4K, 4 threads,
+  ms per call at n = 64 for group 0 / 8 / 16 / 32: qkv 18.8 / 17.6 / **17.0** / 18.2;
+  gate 11.0 / 10.4 / **9.9** / 11.0; down 13.0 / **11.0** / 11.9 / 11.8; out 6.9 / 6.6 / 6.7 /
+  6.5. Group 16 kept (default): -9% on the big prefill matmuls, n = 4 unchanged (no
+  grouping below 16). At n = 64 the kernel now runs at the n = 4 rate (~31-33 cycles per
+  block-vector with 4 threads).
+- **Recurrence v2 (column chunks, [i][j] layout)** `lbench-v2-chunk_20261022_005246.json`:
+  4 threads n = 1 / 4 / 64: 12.6 / 5.7 / 4.6 ms per token (v1: 13.7 / 6.2 / 4.4). Still far
+  from compute-bound at n >= 4 (should be ~1 ms/token at n = 64): the 512 B row stride puts
+  a 16 KB chunk on 64 of the 256 L1 sets (2-way) -> L1 conflict misses, L2-bound. Hence the
+  chunk-major state layout (v3, below).
+- **End-to-end, Q4K-headq4k, 4 threads, 64 prompt / 64 generated**
+  (`pinfer-kstats-q4k-*_20261022_0030*.json` before; `pinfer-kern4-q4k_20261022_005307.json`
+  = kernels only (fix + v12 + v13); `pinfer-lin3-q4k_20261022_005*.json` = kernels +
+  recurrence v2 patch):
+
+| | before | kernels only | + recurrence v2 |
+|---|---|---|---|
+| plain decode tok/s | 6.89 | 6.91 | **7.13** |
+| prefill tok/s (plain / spec run) | 20.7 / 19.5 | 18.9 / 20.7 | 21.8 / 24.6 |
+| spec k=3 dv=32768 tok/s | 11.40 | 11.59 | **13.02** |
+| verify ms per pass (n = 4) | 239.1 | 234.0 | **209.7** |
+| MTP / commit ms per pass | 28.6 / 23.1 | 28.8 / 23.1 | 28.8 / **16.3** |
+| tokens per pass | 3.316 | 3.316 | 3.316 |
+| spec == plain tokens (20 configs) | 19/20 (old binary) | 20/20 | 20/20 |
+
+### Recurrence v3 - chunk-major state layout (final) `lbench-v3-chunkmajor_20261022_005924.json`
+ms per token for all 18 layers, cold state: 1 thread NEON n=1 / 4 / 64: 16.7 / 10.3 / 8.6
+(scalar row-major: 17.6 / 13.1 / 11.8); **4 threads: 12.7 / 4.0 / 2.2** (v2: 12.6 / 5.7 /
+4.6). n = 1 stays DRAM-bound (36 MB of state per token); n >= 4 is now compute/L2-bound at
+the expected rate. Bit-exact against the scalar reference through a layout conversion
+(lbench converts [i][j] <-> [j/32][i][j%32] before comparing).
+
+### Final end-to-end (`pinfer_run_lin4` = fixed kernels + v12 + v13 + recurrence v3 patch)
+`bench/results/pinfer-lin4-q4k_20261022_010*.json`, Q4K-headq4k, 4 threads, prompt64:
+
+| | before (`pinfer-kstats-q4k-*_0030*`) | final | change |
+|---|---|---|---|
+| plain decode | 6.89 tok/s (145 ms) | **7.23 tok/s** (138 ms) | +5% |
+| prefill, 64 tokens | 20.7 tok/s | **27.0 tok/s** | +30% |
+| spec k=2 dv=32768 | (11.0 on Q4) | **12.12 tok/s** | |
+| spec k=3 dv=32768 | 11.40 tok/s | **13.42 tok/s** | +18% |
+| verify pass n=4 / n=3 | 239.1 ms / - | **204.4 / 183.8 ms** | |
+| verify / plain-step ratio, k=3 / k=2 | 1.65 / - | **1.48 / 1.33** | |
+| MTP / commit per pass (k=3) | 28.6 / 23.1 ms | 28.6 / **14.1** ms | |
+| spec == plain tokens, 20 configs | 19/20 | 20/20 | |
+
+Composition of the final n = 4 verify pass (204 ms): matmuls 134 ms (layers 92 + head 42;
+1.13x the single-vector 119 ms), recurrence ~16 ms (4 x 4.0), **remaining scalar code
+~55 ms (4 x ~14 ms: conv_step with 6144 expf per layer, l2norm, gated norm + silu, the MLP
+silu*up (86k expf per token), full attention, argmax)**. The 1.15x target (159 ms) needs that
+last part down to ~6 ms per token; it lives in forward.c / forward_lin.c (engine-core).
+Prefill (27 tok/s = 2.37 s): matmuls 1.58 s (n = 64 at the n = 4 rate), recurrence 0.14 s,
+remaining scalar ~0.65 s; 30 tok/s needs ~0.25 s more from the same scalar code.

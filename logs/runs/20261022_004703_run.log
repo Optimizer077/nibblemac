@@ -1,0 +1,11 @@
+# 2026-10-22T00:47:03 pi@10.42.0.2
+$ pgrep -fa flock | cut -c1-120; uptime
+
+14451 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash kbench/spec_exact.sh ./engine/pinfer_run_li
+14574 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./kbench/kbench --variant v11-dirty0 --threads 3
+14779 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash kbench/spec_exact.sh ./engine/pinfer_run_ke
+14999 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for g in 0 8 16 32; do ./kbench/kbench --variant
+15018 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -fa flock | cut -c1-120; uptime
+ 00:47:03 up  3:28,  5 users,  load average: 4.06, 2.96, 2.38
+
+[exit 0]
