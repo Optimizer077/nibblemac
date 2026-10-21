@@ -136,9 +136,10 @@ def cmd_chat(a: argparse.Namespace) -> int:
                 continue
             messages.append({"role": "user", "content": line})
             if a.reprefill or not ctx_ids:
-                prompt: str | list[int] = m.apply_chat_template(messages, True, a.think)
+                text = m.apply_chat_template(messages, True, a.think)
+                prompt: str | list[int] = text
                 if not a.reprefill:
-                    ctx_ids = m.tokenize(prompt)
+                    ctx_ids = m.tokenize(text)
                     prompt = ctx_ids
             else:
                 ctx_ids = ctx_ids + m.tokenize("\n" + _turn_suffix(line, a.think))

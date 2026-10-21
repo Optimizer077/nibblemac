@@ -95,7 +95,6 @@ def _iter_ex(model: Model, fn: Any, prompt: Any, ids: list[int], n_ctx: int,
     """Streaming path: C call ``fn`` (reset + prefill, or continuation) in a worker thread,
     tokens handed over through a queue. ``ids`` are the tokens fed by this call, ``n_ctx``
     the context length after its prefill."""
-    lib = model._lib
     stops = sorted(stop_ids - {model.eos_id})
     stop_arr = (ctypes.c_int32 * max(1, len(stops)))(*stops)
     n_max = min(max_new_tokens, max(0, model.max_ctx - n_ctx))
@@ -121,7 +120,7 @@ def _iter_ex(model: Model, fn: Any, prompt: Any, ids: list[int], n_ctx: int,
             result["n"] = fn(
                 model._handle(), prompt, len(ids), out, n_max, ctypes.byref(sp),
                 ctypes.byref(opts), ctypes.byref(stats), ctypes.byref(status))
-        except BaseException as e:  # surfaced in the consumer thread
+        except BaseException as e:  # noqa: BLE001 — every error is re-raised in the consumer thread
             result["error"] = e
         finally:
             tokens.put(_DONE)
@@ -160,15 +159,17 @@ def _iter_blocking(model: Model, prompt: Any, ids: list[int], max_new_tokens: in
                    stop_ids: set[int], state: dict[str, Any], sp: SpecParams,
                    stats: SpecStats) -> Iterator[int]:
     """Fallback for libraries without the extended API (see module docstring)."""
-    lib = model._lib
+    generate = model._lib.pinfer_generate_greedy
+    if generate is None:  # iter_speculative takes this path only when the library has it
+        raise NotImplementedError("libpinfer has no pinfer_generate_greedy")
     n_max = min(max_new_tokens, model.max_ctx - len(ids))
     if n_max <= 0:
         state["finish_reason"] = "context"
         return
     out = (ctypes.c_int32 * n_max)()
     t0 = time.perf_counter()
-    n = lib.pinfer_generate_greedy(model._handle(), prompt, len(ids), out, n_max,
-                                   ctypes.byref(sp), ctypes.byref(stats))
+    n = generate(model._handle(), prompt, len(ids), out, n_max, ctypes.byref(sp),
+                 ctypes.byref(stats))
     state["decode_seconds"] = time.perf_counter() - t0
     if n < 0:
         raise errors.from_code(n, "pinfer_generate_greedy")
