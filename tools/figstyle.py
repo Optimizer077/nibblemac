@@ -1,33 +1,55 @@
 """Shared style for the README figures (tools/make_figures*.py).
 
-Every figure is rendered twice from the validated dataviz reference palette: `<name>.png` on the
-light surface and `<name>-dark.png` on the dark surface. The dark tokens are the palette's own
-dark-surface steps (selected, not an inverted light figure); README.md shows the file matching the
-reader's GitHub theme through a <picture> element. Categorical hues are used in fixed slot order.
-Text wears ink tokens, never a series colour; the one exception is a label set inside a filled
-mark, which takes whichever theme extreme (surface or ink) contrasts more with that fill.
+Every figure is rendered in two layouts and two themes, four PNGs:
+
+    <name>.png, <name>-dark.png                 desktop: GitHub's 838 CSS px README column, at 2x (1676 px)
+    <name>-mobile.png, <name>-mobile-dark.png   phones: a 360 CSS px column, at 3x (1080 px)
+
+README.md picks one with <picture> sources on `(max-width: 600px)` and `(prefers-color-scheme: dark)`.
+Each layout renders at DPI = 72 x its scale, so one point is one CSS px at display size: the font
+sizes, line widths, marker sizes and bar thicknesses below are CSS px as the reader sees them. A
+figure function draws both layouts; where the phone needs a different arrangement (stacked panels,
+names above bars, legend in the header) it branches on `L.mobile`.
+
+Colours come from the validated dataviz reference palette. The dark tokens are the palette's own
+dark-surface steps (selected, not an inverted light figure). Categorical hues are used in fixed slot
+order. Text wears ink tokens, never a series colour; the one exception is a label set inside a filled
+mark, which takes whichever theme extreme (surface or ink) contrasts more with that fill. One axis per
+panel, never a dual axis; thin marks; a legend for two or more series; direct labels used selectively.
 """
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
+from typing import Any, Literal, cast
+from weakref import WeakKeyDictionary
 
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg, RendererAgg
+from matplotlib.figure import Figure
+from matplotlib.font_manager import FontProperties
+from matplotlib.legend import Legend
 from matplotlib.lines import Line2D
+from matplotlib.text import Text
+from PIL import Image  # a matplotlib dependency
 
 matplotlib.use("Agg")  # files only; switching after the pyplot import is fine while no figure exists
 logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "docs" / "figures"
-DPI = 160
-# Mark sizes, in saved pixels. GitHub fits README images to its ~860 px column, i.e. scales these
-# 1100-1400 px wide figures by ~0.6-0.75: 34 px renders at ~22 CSS px (the bar cap is 24 px).
-BAR_PX = 34
-GAP_PX = 3  # surface gap between touching marks (~2 CSS px)
-LINE_PT = 1.4  # line width in points (~3 px saved, ~2 CSS px)
-RING_PT = 1.4  # surface-coloured ring around dots and line markers
+FONTS = ["Segoe UI", "DejaVu Sans", "sans-serif"]
+# Mark sizes in CSS px at display size (= points, see the docstring); dataviz mark specs.
+GAP = 2.0  # surface gap between touching marks
+NAME_GAP = 4.0  # between a phone row's name and its bars
+LINE = 2.0  # line width
+MARKER = 10.0  # marker diameter; the surface ring covers 1 px of it, leaving an 8 px dot
+RING = 2.0  # surface-coloured ring around dots and line markers
+DASH = (0, (4, 3))  # the one dash pattern: reference rules and the "before" series
+PAD = 0.9  # tight_layout outer pad, in font sizes (~12 CSS px)
+PANEL_PAD = 1.8  # gap between small multiples, in font sizes (~23 CSS px)
 
 
 @dataclass(frozen=True)
@@ -58,30 +80,95 @@ DARK = Theme("dark", "-dark", surface="#1a1a19", ink="#f0efec", ink2="#c3c2b7", 
 THEMES = (LIGHT, DARK)
 
 
-def setup(t: Theme) -> None:
-    """Matplotlib defaults for theme `t`; call before drawing that theme's figures."""
+@dataclass(frozen=True)
+class Layout:
+    """One display target: the column width it is drawn for, its pixel density and type sizes (CSS px)."""
+
+    name: str
+    suffix: str  # file-name suffix before the theme's: "" (desktop) or "-mobile"
+    css_width: int  # width of the column the figure fills, CSS px
+    scale: int  # PNG pixels per CSS px (2 = retina desktop, 3 = phone)
+    text: float  # ticks, axis labels, legends, value labels
+    title: float
+    sub: float  # subtitle under the title
+    panel: float  # panel titles of small multiples
+    bar: float  # bar thickness (dataviz cap: 24)
+
+    @property
+    def mobile(self) -> bool:
+        return self.name == "mobile"
+
+    @property
+    def dpi(self) -> float:
+        return 72.0 * self.scale
+
+    @property
+    def width_px(self) -> int:
+        return self.css_width * self.scale
+
+    @property
+    def margin(self) -> float:
+        """Outer margin in CSS px: the tight_layout pad, so the header lines up with the axes' outer edge."""
+        return PAD * self.text
+
+
+DESKTOP = Layout("desktop", "", css_width=838, scale=2, text=13, title=18, sub=14, panel=15, bar=20)
+MOBILE = Layout("mobile", "-mobile", css_width=360, scale=3, text=13, title=16, sub=13, panel=14, bar=16)
+LAYOUTS = (DESKTOP, MOBILE)
+
+
+def setup(t: Theme, L: Layout) -> None:
+    """Matplotlib defaults for theme `t` in layout `L`; call before drawing that pair's figures."""
     plt.rcParams.update({
-        "font.family": ["Segoe UI", "DejaVu Sans", "sans-serif"],
-        "text.color": t.ink,
+        "font.family": FONTS,
+        "font.size": L.text,
+        "axes.labelsize": L.text,
+        "xtick.labelsize": L.text,
+        "ytick.labelsize": L.text,
+        "legend.fontsize": L.text,
+        "axes.titlesize": L.panel,
         "axes.titleweight": "semibold",
-        "axes.titlesize": 11.5,
-        "legend.fontsize": 9,
+        "axes.titlepad": 8,
+        "axes.labelpad": 6,
+        "axes.linewidth": 1.0,
+        "xtick.major.pad": 5,
+        "ytick.major.pad": 5,
+        "text.color": t.ink,
         "legend.frameon": False,
         "legend.labelcolor": t.ink2,
+        "legend.handlelength": 1.6,
+        "legend.handletextpad": 0.5,
+        "legend.borderaxespad": 0.3,
         "figure.facecolor": t.surface,
         "axes.facecolor": t.surface,
         "savefig.facecolor": t.surface,
     })
 
 
-def new_fig(t: Theme, w: float = 8.0, h: float = 4.2, ncols: int = 1, **kw) -> tuple:
-    """Figure on the theme surface: (fig, ax), or (fig, axes) when ncols > 1."""
-    fig, axes = plt.subplots(1, ncols, figsize=(w, h), dpi=DPI, **kw)
+def new_fig(t: Theme, L: Layout, body: float, nrows: int = 1, ncols: int = 1, **kw) -> tuple[Figure, Any]:
+    """Figure the width of `L`'s column with a body (everything under the header) `body` CSS px tall.
+
+    Returns (fig, ax), or (fig, axes) for small multiples. header() then grows it by the header.
+    """
+    fig, axes = plt.subplots(nrows, ncols, figsize=(L.css_width / 72, body / 72), dpi=L.dpi, **kw)
     fig.patch.set_facecolor(t.surface)
     return fig, axes
 
 
-def style(ax: plt.Axes, t: Theme, ylabel: str = "", xlabel: str = "", grid: str = "y") -> None:
+def get_renderer(fig: Figure) -> RendererAgg:
+    """The figure's Agg renderer, for measuring text in display pixels."""
+    return cast(FigureCanvasAgg, fig.canvas).get_renderer()
+
+
+def _root(ax: plt.Axes) -> Figure:
+    """The top-level figure of `ax` (these figures have no subfigures)."""
+    fig = ax.figure
+    assert isinstance(fig, Figure)
+    return fig
+
+
+def style(ax: plt.Axes, t: Theme, ylabel: str = "", xlabel: str = "",
+          grid: Literal["x", "y"] | None = "y") -> None:
     """Recessive chrome: no top/right spines, hairline grid on one axis, secondary-ink labels."""
     ax.set_facecolor(t.surface)
     for side in ("top", "right"):
@@ -91,31 +178,80 @@ def style(ax: plt.Axes, t: Theme, ylabel: str = "", xlabel: str = "", grid: str 
     ax.tick_params(colors=t.muted, labelcolor=t.ink2, length=0)
     ax.grid(visible=False)
     if grid:
-        ax.grid(axis=grid, color=t.grid, linewidth=0.8)
+        ax.grid(axis=grid, color=t.grid, linewidth=1.0)
     ax.set_axisbelow(True)
     ax.set_ylabel(ylabel, color=t.ink2)
     ax.set_xlabel(xlabel, color=t.ink2)
 
 
-def title(ax: plt.Axes, t: Theme, text: str, sub: str | None = None) -> None:
-    """Left-aligned title with an optional subtitle line in secondary ink."""
-    ax.set_title(text, color=t.ink, loc="left", pad=16 if sub else 8)
-    if sub:
-        ax.text(0, 1.015, sub, transform=ax.transAxes, color=t.ink2, fontsize=8.5, va="bottom")
+def panel_title(ax: plt.Axes, t: Theme, text: str) -> None:
+    """Left-aligned title of one small multiple."""
+    ax.set_title(text, color=t.ink, loc="left")
 
 
-def fig_title(fig: plt.Figure, t: Theme, text: str, sub: str | None = None) -> tuple | None:
-    """Figure-level title for small multiples, with an optional subtitle line under it.
+def wrap(fig: plt.Figure, text: str, size: float, width: float, weight: str = "normal") -> str:
+    """`text` broken at spaces into lines no wider than `width` CSS px, measured in this figure's font.
 
-    tight_layout keeps the axes clear of a suptitle by itself but ignores fig.text, so with a
-    subtitle this returns the layout rect (12 px lower) to pass to px_to_data() and save().
+    A " / " between alternatives never starts or ends a line.
     """
-    fig.suptitle(text, color=t.ink, x=0.02, y=0.98, ha="left", va="top", fontweight="semibold")
-    if not sub:
-        return None
-    h_px = fig.get_figheight() * fig.dpi
-    fig.text(0.02, 1 - 44 / h_px, sub, color=t.ink2, fontsize=8.5, va="top")
-    return (0, 0, 1, 1 - 12 / h_px)
+    text = text.replace(" / ", "\u00a0/\u00a0")
+    renderer = get_renderer(fig)
+    prop = FontProperties(family=FONTS, size=size, weight=weight)
+    limit = width * fig.dpi / 72
+
+    def fits(s: str) -> bool:
+        return renderer.get_text_width_height_descent(s, prop, ismath=False)[0] <= limit
+
+    lines: list[str] = []
+    for para in text.split("\n"):
+        cur = ""
+        for word in para.split(" "):
+            trial = f"{cur} {word}" if cur else word
+            if cur and not fits(trial):
+                lines.append(cur)
+                cur = word
+            else:
+                cur = trial
+        lines.append(cur)
+    return "\n".join(lines).replace("\u00a0", " ")
+
+
+def header(fig: plt.Figure, t: Theme, L: Layout, text: str, sub: str | None = None,
+           handles: list | None = None, ncol: int = 1) -> tuple:
+    """Title, optional subtitle and optional legend stacked at the top left, wrapped to the column.
+
+    new_fig() sized only the body; this grows the figure by the header's measured height and returns
+    the layout rect under it, to pass to px_to_data() and save().
+    """
+    renderer = get_renderer(fig)
+    width = L.css_width - 2 * L.margin
+    x = L.margin / L.css_width
+    blocks: list[Text | Legend] = [fig.text(x, 1, wrap(fig, text, L.title, width, "semibold"), color=t.ink, fontsize=L.title,
+                       fontweight="semibold", va="top", ha="left", linespacing=1.25)]
+    gaps = [L.margin - 2]  # above the title (its line box adds ~2 px)
+    if sub:
+        blocks.append(fig.text(x, 1, wrap(fig, sub, L.sub, width), color=t.ink2, fontsize=L.sub,
+                               va="top", ha="left", linespacing=1.35))
+        gaps.append(5)
+    if handles:
+        blocks.append(fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(x, 1),
+                                 bbox_transform=fig.transFigure, ncol=ncol, borderpad=0, borderaxespad=0,
+                                 columnspacing=1.6))
+        gaps.append(10)
+    heights = [b.get_window_extent(renderer).height * 72 / fig.dpi for b in blocks]  # CSS px
+    body = fig.get_figheight() * 72
+    head = sum(gaps) + sum(heights) + 4  # tight_layout adds its own pad under this
+    total = body + head
+    fig.set_figheight(total / 72)
+    y = 0.0
+    for b, gap, h in zip(blocks, gaps, heights):
+        y += gap
+        if isinstance(b, Legend):
+            b.set_bbox_to_anchor((x, 1 - y / total), transform=fig.transFigure)
+        else:
+            b.set_y(1 - y / total)
+        y += h
+    return (0, 0, 1, 1 - head / total)
 
 
 def slot_lim(first: float, last: float, half: float = 0.3) -> tuple[float, float]:
@@ -125,15 +261,97 @@ def slot_lim(first: float, last: float, half: float = 0.3) -> tuple[float, float
     return lo - margin, hi + margin
 
 
-def px_to_data(ax: plt.Axes, n_px: float, axis: str = "x", rect: tuple | None = None) -> float:
-    """Data units that render as `n_px` saved pixels along `axis`.
+def tight(fig: plt.Figure, rect: tuple | None = None) -> None:
+    """The one layout call, shared by px_to_data() and save() so both see the same axes boxes."""
+    fig.tight_layout(pad=PAD, h_pad=PANEL_PAD, w_pad=PANEL_PAD, rect=rect)
+
+
+# Axes boxes of the last px_to_data() layout per figure: save() checks its own layout still matches, so
+# a mark sized in px cannot silently drift (an artist added later must stay inside the axes or set
+# in_layout=False).
+_SIZED: WeakKeyDictionary[Figure, list] = WeakKeyDictionary()
+
+
+def _boxes(fig: Figure) -> list[tuple[float, ...]]:
+    """Every axes box (x0, y0, width, height) in PNG pixels."""
+    w, h = fig.get_figwidth() * fig.dpi, fig.get_figheight() * fig.dpi
+    return [(x0 * w, y0 * h, bw * w, bh * h) for x0, y0, bw, bh in (a.get_position().bounds for a in fig.axes)]
+
+
+def px_to_data(ax: plt.Axes, css: float, axis: str = "x", rect: tuple | None = None) -> float:
+    """Data units that render as `css` CSS px along `axis` at display size.
 
     Lays the figure out exactly as save() will (pass the same rect), so call it after the
-    limits, ticks, labels and titles are set and before drawing the marks it sizes.
+    limits, ticks, labels, header and legends are set and before drawing the marks it sizes.
     """
-    ax.figure.tight_layout(rect=rect)
+    fig = _root(ax)
+    tight(fig, rect)
+    _SIZED[fig] = _boxes(fig)
+    n_px = css * fig.dpi / 72
     (x0, y0), (x1, y1) = ax.transData.inverted().transform([(0.0, 0.0), (n_px, n_px)])
     return abs(x1 - x0) if axis == "x" else abs(y1 - y0)
+
+
+def name_above(ax: plt.Axes, t: Theme, name: str, y_top: float) -> None:
+    """Category name over its bars (phone layout of horizontal bars): left-aligned at x = 0.
+
+    `y_top` is the data y of the upper edge of the row's top bar; the axis must be inverted
+    (first row on top) or the name lands under the bar.
+    """
+    ax.annotate(name, (0, y_top), xytext=(0, NAME_GAP), textcoords="offset points", ha="left", va="bottom",
+                color=t.ink2, annotation_clip=False)
+
+
+def hbar_axis(ax: plt.Axes, L: Layout, names: list[str], rect: tuple | None) -> tuple[float, float]:
+    """Row axis for horizontal bars, first row on top: (data units per CSS px on y, name line height).
+
+    Desktop: the names are y tick labels. Phone: they go above each row (name_above), so the y ticks,
+    the left spine and the grid go (every bar there carries its value). Call after the x limits,
+    chrome and header are set; this lays the figure out.
+    """
+    n = len(names)
+    ax.set_ylim(n - 0.5, -0.5)  # inverted: first row on top
+    ax.set_yticks([] if L.mobile else range(n), [] if L.mobile else names)
+    if L.mobile:
+        ax.spines["left"].set_visible(False)
+        ax.grid(visible=False)
+    return px_to_data(ax, 1, axis="y", rect=rect), (L.text * 1.35 + NAME_GAP if L.mobile else 0)
+
+
+def hbar_rows(ax: plt.Axes, t: Theme, L: Layout, names: list[str], values: list[list], colors: list[list],
+              fmt: str, rect: tuple | None) -> None:
+    """Horizontal bars, one row per name, first row on top; a row's bars stack downward 2 px apart.
+
+    values[i] lists row i's bars (None skips one) and colors[i] their fills; each bar end carries
+    its value. Names as in hbar_axis().
+    """
+    unit, name_h = hbar_axis(ax, L, names, rect)
+    for i, (name, vals, cols) in enumerate(zip(names, values, colors)):
+        bars = [(v, c) for v, c in zip(vals, cols) if v is not None]
+        group = len(bars) * L.bar + (len(bars) - 1) * GAP
+        top = i + (name_h - group) / 2 * unit  # name + bars centred on the slot
+        for j, (v, c) in enumerate(bars):
+            y = top + (j * (L.bar + GAP) + L.bar / 2) * unit
+            ax.barh(y, v, height=L.bar * unit, color=c)
+            ax.annotate(fmt.format(v), (v, y), xytext=(4, 0), textcoords="offset points", va="center",
+                        color=t.ink)
+        if L.mobile:
+            name_above(ax, t, name, top)
+
+
+def label_inside(ax: plt.Axes, t: Theme, x: float, y: float, text: str, fill: str, span: float,
+                 pad: float = 5) -> bool:
+    """Label centred in a bar segment `span` data units wide; dropped (False) unless it fits with `pad` CSS px a side.
+
+    Call after the layout is final (px_to_data), since it measures the segment in pixels.
+    """
+    fig = _root(ax)
+    label = ax.text(x, y, text, ha="center", va="center", color=on_fill(t, fill))
+    span_px = abs(ax.transData.transform((span, 0))[0] - ax.transData.transform((0, 0))[0])
+    if label.get_window_extent(get_renderer(fig)).width + 2 * pad * fig.dpi / 72 > span_px:
+        label.remove()
+        return False
+    return True
 
 
 def _luminance(color: str) -> float:
@@ -161,19 +379,32 @@ def on_fill(t: Theme, fill: str) -> str:
 
 def ring(t: Theme) -> dict:
     """Marker kwargs for ax.plot: the surface ring that keeps overlapping markers legible."""
-    return {"markeredgecolor": t.surface, "markeredgewidth": RING_PT}
+    return {"markeredgecolor": t.surface, "markeredgewidth": RING}
 
 
-def line_key(color: str, label: str) -> Line2D:
+def line_key(color: str, label: str, dashed: bool = False) -> Line2D:
     """Legend handle for a line series: line and marker without the ring, which would cut the short key."""
-    return Line2D([], [], color=color, linewidth=LINE_PT, marker="o", markersize=7, label=label)
+    return Line2D([], [], color=color, linewidth=LINE, marker="o", markersize=MARKER - RING,
+                  linestyle=DASH if dashed else "-", label=label)
 
 
-def save(fig: plt.Figure, t: Theme, name: str, rect: tuple | None = None) -> None:
-    """Lay out and write docs/figures/<name><suffix>.png."""
+def save(fig: plt.Figure, t: Theme, L: Layout, name: str, rect: tuple | None = None, layout: bool = True) -> None:
+    """Lay out (unless `layout` is False: a schematic placed by hand) and write
+    docs/figures/<name><layout suffix><theme suffix>.png."""
     OUT.mkdir(parents=True, exist_ok=True)
-    fig.tight_layout(rect=rect)
-    path = OUT / f"{name}{t.suffix}.png"
-    fig.savefig(path, facecolor=t.surface)
+    path = OUT / f"{name}{L.suffix}{t.suffix}.png"
+    if layout:
+        tight(fig, rect)
+        sized = _SIZED.get(fig)
+        if sized and any(abs(a - b) > 0.5 for old, new in zip(sized, _boxes(fig)) for a, b in zip(old, new)):
+            raise ValueError(f"{path.name}: the final layout moved the axes after marks were sized in px")
+    buf = BytesIO()
+    fig.savefig(buf, format="png", facecolor=t.surface)
     plt.close(fig)
-    logger.info("wrote %s", path)
+    img = Image.open(buf).convert("RGB")
+    if img.width != L.width_px:
+        raise ValueError(f"{path.name}: {img.width} px wide, the {L.name} layout needs {L.width_px}")
+    # 256-colour palette, no dithering: flat fills and anti-aliased text survive it (on the 2026-10-22
+    # render no file's dominant colours moved and text crops looked identical) and the files shrink ~60%.
+    img.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE).save(path, optimize=True)
+    logger.info("wrote %s (%d x %d)", path.name, img.width, img.height)

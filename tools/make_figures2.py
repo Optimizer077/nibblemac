@@ -1,4 +1,6 @@
-"""'How it works' figures for the README (docs/figures/*.png and *-dark.png), from the logged measurements.
+"""'How it works' figures for the README, from the logged measurements: four PNGs per figure in
+docs/figures/, desktop and phone layouts in the light and dark themes (`<name>.png`, `-dark`,
+`-mobile`, `-mobile-dark`).
 
 Sources: engine/CORE.md (per-step profile), engine/bench/KERNELS.md (kernel GB/s, quantization
 error), engine/SPEC.md (MTP acceptance), notes.md (memband, kernel experiment), bench/results/,
@@ -12,25 +14,35 @@ import logging
 import struct
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Patch
 
 from figstyle import (
-    BAR_PX,
-    DPI,
-    GAP_PX,
+    DASH,
+    GAP,
+    LAYOUTS,
+    MARKER,
     ROOT,
     THEMES,
+    Layout,
     Theme,
-    fig_title,
+    get_renderer,
+    hbar_axis,
+    hbar_rows,
+    header,
+    label_inside,
+    name_above,
     new_fig,
     on_fill,
+    panel_title,
     px_to_data,
     ring,
     save,
     setup,
     slot_lim,
     style,
-    title,
+    wrap,
 )
 
 logger = logging.getLogger(__name__)
@@ -60,176 +72,292 @@ BYTES = [("output head (= input embedding, tied)", 143_036_416), ("linear attent
          ("full attention, 6 layers", 24_809_472), ("MLPs, 24 layers", 148_733_952),
          ("MTP draft head (read only when drafting)", 11_524_096)]
 PQ_MODEL = ROOT / "models" / "pq" / "qwen35-0.8b-q4k-headq4k.pq"
-GAP_PT = GAP_PX * 72 / DPI  # surface-coloured edge that opens the gap between stacked segments
+STACK_BAR = 24.0  # CSS px: a single stacked bar carries labels inside, so it takes the dataviz cap
 
 
-def fig_step_breakdown(t: Theme) -> None:
-    """Stacked horizontal bars: where a plain decode step and a verify pass spend their time."""
-    fig, ax = new_fig(t, 8.6, 2.9)
+def fig_step_breakdown(t: Theme, L: Layout) -> None:
+    """Stacked horizontal bars: where a plain decode step and a verify pass spend their time.
+
+    Desktop: names as y labels, totals at the bar ends. Phone: name and total above each bar.
+    """
     colors = [t.blue, t.orange, t.aqua]
     rows = [("plain decode step\n(1 token)", STEP_PLAIN), ("speculative verify pass\n(k=3: 4 positions at once)", STEP_VERIFY)]
-    ax.set_yticks([0, 1], [r[0] for r in rows])
+    totals = [sum(ms for _, ms in parts) for _, parts in rows]
+    if L.mobile:
+        names = [f"plain decode step (1 token): {totals[0]:.0f} ms",
+                 f"verify pass (k=3: 4 positions): {totals[1]:.0f} ms"]
+    else:
+        names = [name for name, _ in rows]
+    fig, ax = new_fig(t, L, 190 if L.mobile else 180)
     style(ax, t, xlabel="milliseconds (Q4K model, 4 threads)", grid="x")
-    ax.set_xlim(0, 260)
-    ax.set_ylim(1.4, -0.4)  # inverted: plain step on top
-    title(ax, t, "Where a token's time goes", "Reading 437 MB of weights dominates; verifying 3 drafts (4 positions) costs only 1.24× one token")
-    ax.legend(handles=[Patch(color=c, label=n) for (n, _), c in zip(STEP_PLAIN, colors)], loc="center right", fontsize=8.5)
-    h = px_to_data(ax, BAR_PX, axis="y")
+    ax.set_xlim(0, 166 if L.mobile else 200)
+    keys = [Patch(color=c, label=n) for (n, _), c in zip(STEP_PLAIN, colors)]
+    rect = header(fig, t, L, "Where a token's time goes",
+                  "Reading 437 MB of weights dominates; verifying 3 drafts (4 positions) costs only 1.24× one token",
+                  handles=keys, ncol=1 if L.mobile else 2)
+    unit, name_h = hbar_axis(ax, L, names, rect)
     for i, (_, parts) in enumerate(rows):
+        y = i + name_h / 2 * unit
         left = 0.0
         for (_, ms), c in zip(parts, colors):
-            ax.barh(i, ms, left=left, color=c, height=h, edgecolor=t.surface, linewidth=GAP_PT)
-            if ms > 10:
-                ax.text(left + ms / 2, i, f"{ms:.0f} ms", ha="center", va="center", color=on_fill(t, c), fontsize=9)
+            ax.barh(y, ms, left=left, color=c, height=STACK_BAR * unit, edgecolor=t.surface, linewidth=GAP)
+            label_inside(ax, t, left + ms / 2, y, f"{ms:.0f} ms", c, ms)
             left += ms
-        ax.text(left + 2, i, f"{left:.0f} ms total", va="center", color=t.ink, fontsize=9)
-    save(fig, t, "step_breakdown")
+        if L.mobile:
+            name_above(ax, t, names[i], y - STACK_BAR / 2 * unit)
+        else:
+            ax.annotate(f"{left:.0f} ms total", (left, y), xytext=(6, 0), textcoords="offset points",
+                        va="center", color=t.ink)
+    save(fig, t, L, "step_breakdown", rect)
 
 
-def fig_bandwidth(t: Theme) -> None:
+def fig_bandwidth(t: Theme, L: Layout) -> None:
     """Bars: effective weight-streaming speed of each kernel against the DRAM ceiling."""
-    fig, ax = new_fig(t, 7.5, 3.6)
+    fig, ax = new_fig(t, L, 300 if L.mobile else 290)
     x = list(range(len(KERNEL_GBS)))
-    ax.set_xticks(x, [f"{n}\n{thr} thr" for n, _, thr in KERNEL_GBS])
+    if L.mobile:  # "Q8 (8.5 bit)" -> "Q8 / 8.5 bit" on two lines: a phone slot is ~60 px
+        ticks = [f"{n.replace(' (', chr(10)).rstrip(')')}\n{thr} thr" for n, _, thr in KERNEL_GBS]
+    else:
+        ticks = [f"{n}\n{thr} thr" for n, _, thr in KERNEL_GBS]
+    ax.set_xticks(x, ticks)
     style(ax, t, ylabel="GB/s of weights streamed")
     ax.set_xlim(*slot_lim(0, len(x) - 1))
     ax.set_ylim(0, 5)
-    title(ax, t, "Matrix kernels run at the memory wall",
-          "Cortex-A72, best thread count per format; one core already saturates DRAM, so decode speed = bandwidth ÷ bytes per token")
-    ax.bar(x, [v for _, v, _ in KERNEL_GBS], color=t.blue, width=px_to_data(ax, BAR_PX))
+    ceiling = Line2D([], [], color=t.muted, linewidth=1.2, linestyle=DASH,
+                     label=f"DRAM read ceiling {MEMBAND:.2f} GB/s (memband, 1 thread)")
+    rect = header(fig, t, L, "Matrix kernels run at the memory wall",
+                  "Cortex-A72, best thread count per format; one core already saturates DRAM, so decode speed = "
+                  "bandwidth ÷ bytes per token", handles=[ceiling])
+    ax.bar(x, [v for _, v, _ in KERNEL_GBS], color=t.blue, width=px_to_data(ax, L.bar + 4, rect=rect))
+    box = {"boxstyle": "square,pad=0.15", "fc": t.surface, "ec": "none"}  # breaks the rule under a label
     for i, (_, v, _) in enumerate(KERNEL_GBS):
-        ax.text(i, v + 0.06, f"{v:.2f}", ha="center", color=t.ink, fontsize=9)
-    ax.axhline(MEMBAND, color=t.axis, linewidth=1, linestyle=(0, (4, 3)), zorder=0.8)  # behind the bars
-    ax.text(len(x) - 0.5, MEMBAND + 0.08, f"DRAM read ceiling {MEMBAND:.1f} GB/s (memband)", ha="right", color=t.ink2, fontsize=8.5)
-    save(fig, t, "kernel_bandwidth")
+        ax.annotate(f"{v:.2f}", (i, v), xytext=(0, 4), textcoords="offset points", ha="center", va="bottom",
+                    color=t.ink, bbox=box)
+    ax.axhline(MEMBAND, color=t.muted, linewidth=1.2, linestyle=DASH, zorder=0.8)  # behind the bars
+    save(fig, t, L, "kernel_bandwidth", rect)
 
 
-def fig_quant(t: Theme) -> None:
-    """Two small multiples: weight error (bars from zero) and perplexity (dots: no zero baseline)."""
-    fig, (a1, a2) = new_fig(t, 8.4, 3.4, ncols=2)
+def fig_quant(t: Theme, L: Layout) -> None:
+    """Two small multiples: weight error (bars from zero) and perplexity (dots: no zero baseline).
+
+    Desktop: side by side. Phone: stacked.
+    """
+    if L.mobile:
+        fig, (a1, a2) = new_fig(t, L, 470, nrows=2)
+    else:
+        fig, (a1, a2) = new_fig(t, L, 280, ncols=2)
     x = list(range(len(QUANT)))
     for ax in (a1, a2):
-        ax.set_xticks(x, [q[0] for q in QUANT])
+        ax.set_xticks(x, [q[0].replace(" (", "\n(") for q in QUANT])
         ax.set_xlim(*slot_lim(0, len(x) - 1))
-    style(a1, t, ylabel="relative RMS weight error (%)")
+    style(a1, t)
+    panel_title(a1, t, "Relative RMS weight error (%)")
     a1.set_ylim(0, 10.5)
-    style(a2, t, ylabel="perplexity, wikitext-2 (lower is better)")
+    style(a2, t)
+    panel_title(a2, t, "Perplexity, wikitext-2 (lower is better)")
     a2.set_ylim(17, 22.5)
-    rect = fig_title(fig, t, "Quantization formats: the same bits, very different quality",
-                     "Q4K's asymmetric 32-column groups with 6-bit sub-scales keep Q4_K_M quality; symmetric Q4 loses 17% like llama.cpp's Q4_0")
-    a1.bar(x, [q[1] for q in QUANT], color=t.blue, width=px_to_data(a1, BAR_PX, rect=rect))
+    rect = header(fig, t, L, "Quantization formats: the same bits, very different quality",
+                  "Q4K's asymmetric 32-column groups with 6-bit sub-scales keep Q4_K_M quality; symmetric Q4 "
+                  "loses 17% like llama.cpp's Q4_0")
+    a1.bar(x, [q[1] for q in QUANT], color=t.blue, width=px_to_data(a1, L.bar + 4, rect=rect))
+    a2.plot(x, [q[2] for q in QUANT], "o", ms=MARKER + 1, color=t.blue, **ring(t))
     for i, q in enumerate(QUANT):
-        a1.text(i, q[1] + 0.2, f"{q[1]:.1f}%" if q[1] else "exact", ha="center", color=t.ink, fontsize=9)
-    a2.plot(x, [q[2] for q in QUANT], "o", ms=8.4, color=t.blue, **ring(t))
-    for i, q in enumerate(QUANT):
-        a2.annotate(f"{q[2]:.2f}", (i, q[2]), xytext=(0, 8), textcoords="offset points", ha="center", color=t.ink, fontsize=9)
-    save(fig, t, "quantization", rect=rect)
+        a1.annotate(f"{q[1]:.1f}%" if q[1] else "exact", (i, q[1]), xytext=(0, 4), textcoords="offset points",
+                    ha="center", va="bottom", color=t.ink)
+        a2.annotate(f"{q[2]:.2f}", (i, q[2]), xytext=(0, 9), textcoords="offset points", ha="center",
+                    va="bottom", color=t.ink)
+    save(fig, t, L, "quantization", rect)
 
 
-def fig_acceptance(t: Theme) -> None:
-    """Two small multiples: acceptance per draft position, and the semantics controls."""
-    fig, (a1, a2) = new_fig(t, 8.6, 3.4, ncols=2, gridspec_kw={"width_ratios": [4, 3]})
-    for ax, rows in ((a1, ACCEPT), (a2, CONTROLS)):
-        ax.set_xticks(range(len(rows)), [r[0] for r in rows])
-        ax.tick_params(axis="x", labelsize=8)
-        ax.set_xlim(*slot_lim(0, len(rows) - 1))
+# Tick labels of the acceptance figure, keyed by Layout.mobile: the names of ACCEPT / CONTROLS (keep
+# them in step, same order) re-broken for each layout's slot width.
+ACCEPT_TICKS = {False: ["1st draft", "2nd\n(given 1st ok)", "3rd\n(given 1–2 ok)", "4th\n(given 1–3 ok)"],
+                True: ["1st\ndraft", "2nd\ngiven\n1st ok", "3rd\ngiven\n1–2 ok", "4th\ngiven\n1–3 ok"]}
+CONTROL_TICKS = {False: ["as specified", "hidden state taken\nbefore final norm", "concat order\nswapped"],
+                 True: ["as\nspecified", "hidden state\ntaken before\nfinal norm", "concat\norder\nswapped"]}
+
+
+def fig_acceptance(t: Theme, L: Layout) -> None:
+    """Two small multiples: acceptance per draft position, and the semantics controls.
+
+    Desktop: side by side. Phone: stacked.
+    """
+    if L.mobile:
+        fig, (a1, a2) = new_fig(t, L, 520, nrows=2)
+    else:
+        fig, (a1, a2) = new_fig(t, L, 300, ncols=2, gridspec_kw={"width_ratios": [4, 3]})
+    for ax, ticks, n in ((a1, ACCEPT_TICKS[L.mobile], len(ACCEPT)), (a2, CONTROL_TICKS[L.mobile], len(CONTROLS))):
+        ax.set_xticks(range(n), ticks)
+        ax.set_xlim(*slot_lim(0, n - 1))
         ax.set_ylim(0, 105)
-    style(a1, t, ylabel="drafts accepted by the full model (%)")
-    style(a2, t, ylabel="1st-draft acceptance (%)")
-    rect = fig_title(fig, t, "The built-in MTP draft head is right 87% of the time — and we proved we wired it correctly",
-                     "651 positions of prose, code, Q&A and Chinese; later drafts are more often right because accepted text is predictable text")
-    a2.legend(handles=[Patch(color=t.blue, label="our implementation"), Patch(color=t.orange, label="deliberately wrong control")],
-              loc="upper right")
-    a1.bar(range(len(ACCEPT)), [a[1] * 100 for a in ACCEPT], color=t.blue, width=px_to_data(a1, BAR_PX, rect=rect))
-    for i, a in enumerate(ACCEPT):
-        a1.text(i, a[1] * 100 + 1.5, f"{a[1] * 100:.0f}%", ha="center", color=t.ink, fontsize=9)
+        ax.set_yticks([0, 25, 50, 75, 100])
+        style(ax, t)
+    panel_title(a1, t, "Drafts accepted by the full model (%)")
+    panel_title(a2, t, "1st-draft acceptance (%)")
+    keys = [Patch(color=t.blue, label="our implementation"), Patch(color=t.orange, label="deliberately wrong control")]
+    rect = header(fig, t, L, "The built-in MTP draft head is right 87% of the time — and we proved we wired it correctly",
+                  "651 positions of prose, code, Q&A and Chinese; later drafts are more often right because "
+                  "accepted text is predictable text", handles=keys, ncol=1 if L.mobile else 2)
+    w = px_to_data(a1, L.bar + 4, rect=rect)
+    a1.bar(range(len(ACCEPT)), [a[1] * 100 for a in ACCEPT], color=t.blue, width=w)
     a2.bar(range(len(CONTROLS)), [c[1] * 100 for c in CONTROLS], color=[t.blue, t.orange, t.orange],
-           width=px_to_data(a2, BAR_PX, rect=rect))
-    for i, c in enumerate(CONTROLS):
-        a2.text(i, c[1] * 100 + 1.5, f"{c[1] * 100:.1f}%", ha="center", color=t.ink, fontsize=9)
-    save(fig, t, "mtp_acceptance", rect=rect)
+           width=px_to_data(a2, L.bar + 4, rect=rect))
+    for ax, rows, fmt in ((a1, ACCEPT, "{:.0f}%"), (a2, CONTROLS, "{:.1f}%")):
+        for i, (_, v) in enumerate(rows):
+            ax.annotate(fmt.format(v * 100), (i, v * 100), xytext=(0, 4), textcoords="offset points",
+                        ha="center", va="bottom", color=t.ink)
+    save(fig, t, L, "mtp_acceptance", rect)
 
 
-def fig_os(t: Theme) -> None:
-    """Grouped bars: the custom-kernel experiment changed nothing."""
-    fig, ax = new_fig(t, 8.0, 3.4)
+def fig_os(t: Theme, L: Layout) -> None:
+    """Grouped bars: the custom-kernel experiment changed nothing.
+
+    Desktop: vertical pairs per setup. Phone: horizontal pairs with each setup's name above them.
+    """
+    keys = [Patch(color=t.blue, label="plain decode"), Patch(color=t.orange, label="speculative (k=3)")]
+    title = "What did not help: a custom split-core kernel"
+    sub = ("Same binary and model; three one-time boots of 6.18.50-pinfer — all within 1%, because the engine "
+           "is DRAM-bound")
+    if L.mobile:
+        fig, ax = new_fig(t, L, 330)
+        style(ax, t, xlabel="tokens / s", grid="x")
+        ax.set_xlim(0, 19)
+        ax.set_xticks([0, 5, 10, 15])
+        rect = header(fig, t, L, title, sub, handles=keys, ncol=2)
+        hbar_rows(ax, t, L, [o[0].replace("\n", " ") for o in OS_EXP], [[o[1], o[2]] for o in OS_EXP],
+                  [[t.blue, t.orange]] * len(OS_EXP), "{:.2f}", rect)
+        save(fig, t, L, "os_experiment", rect)
+        return
+    fig, ax = new_fig(t, L, 280)
     x = list(range(len(OS_EXP)))
-    ax.set_xticks(x, [o[0] for o in OS_EXP], fontsize=8.5)
+    ax.set_xticks(x, [o[0] for o in OS_EXP])
     style(ax, t, ylabel="tokens / s")
     ax.set_xlim(*slot_lim(0, len(x) - 1, half=0.36))
-    ax.set_ylim(0, 19)
-    title(ax, t, "What did not help: a custom split-core kernel",
-          "Same binary and model; three one-time boots of 6.18.50-pinfer — all within 1%, because the engine is DRAM-bound")
-    w = px_to_data(ax, BAR_PX)
-    off = px_to_data(ax, (BAR_PX + GAP_PX) / 2)
-    ax.bar([i - off for i in x], [o[1] for o in OS_EXP], width=w, color=t.blue, label="plain decode")
-    ax.bar([i + off for i in x], [o[2] for o in OS_EXP], width=w, color=t.orange, label="speculative (k=3)")
+    ax.set_ylim(0, 17)
+    ax.set_yticks([0, 5, 10, 15])
+    rect = header(fig, t, L, title, sub, handles=keys, ncol=2)
+    w = px_to_data(ax, L.bar, rect=rect)
+    off = px_to_data(ax, (L.bar + GAP) / 2, rect=rect)
+    ax.bar([i - off for i in x], [o[1] for o in OS_EXP], width=w, color=t.blue)
+    ax.bar([i + off for i in x], [o[2] for o in OS_EXP], width=w, color=t.orange)
     for i, o in enumerate(OS_EXP):
-        ax.text(i - off, o[1] + 0.3, f"{o[1]:.2f}", ha="center", color=t.ink, fontsize=8.5)
-        ax.text(i + off, o[2] + 0.3, f"{o[2]:.2f}", ha="center", color=t.ink, fontsize=8.5)
-    ax.legend(loc="upper right", ncol=2)
-    save(fig, t, "os_experiment")
+        for dx, v in ((-off, o[1]), (off, o[2])):
+            ax.annotate(f"{v:.2f}", (i + dx, v), xytext=(0, 4), textcoords="offset points", ha="center",
+                        va="bottom", color=t.ink)
+    save(fig, t, L, "os_experiment", rect)
 
 
-def fig_spec_schematic(t: Theme) -> None:
-    """Block schematic of one speculative round."""
-    fig, ax = new_fig(t, 8.6, 3.0)
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 30)
+# The three stages of a speculative round: heading, then two lines of detail (box text).
+SPEC_STEPS = [("1. Draft", "MTP head guesses 3 tokens\n(1 layer, ~27 ms, draft vocab 32K)"),
+              ("2. Verify in ONE weight pass", "full model scores 4 positions\n(437 MB read once, ~160 ms)"),
+              ("3. Accept the matching prefix", "+ 1 token of the full model's own\n→ 3.3 tokens per round on average")]
+SPEC_ARROWS = ["3 drafts", "verdicts"]
+SPEC_NOTE = ("Output is token-for-token identical to plain greedy decoding (every kept token is the full "
+             "model's own choice); only the speed changes.")
+
+
+def fig_spec_schematic(t: Theme, L: Layout) -> None:
+    """Block schematic of one speculative round, drawn in CSS px on an axes that fills the body.
+
+    Desktop: the three boxes in a row, each as wide as its text. Phone: stacked, arrows pointing down.
+    """
+    fills = [t.orange, t.blue, t.aqua]
+    pad, line_h = 14.0, L.text * 1.35  # box padding and text line height, CSS px
+    box_h = 3 * line_h + 2 * pad
+    width = L.css_width - 2 * L.margin
+    probe, _ = new_fig(t, L, 10)  # a scratch figure to measure the box texts and the note
+    note = wrap(probe, SPEC_NOTE, L.text, width)
+    renderer = get_renderer(probe)
+
+    def text_w(s: str, weight: str = "normal") -> float:
+        txt = probe.text(0, 0, s, fontsize=L.text, fontweight=weight, linespacing=1.35)
+        return txt.get_window_extent(renderer).width * 72 / probe.dpi
+
+    widths = [max(text_w(h, "semibold"), text_w(b)) + 2 * pad for h, b in SPEC_STEPS]
+    note_lines = note.count("\n") + 1
+    plt.close(probe)
+    arrow_v = 46.0  # phone: vertical arrow length between boxes
+    if L.mobile:
+        body = 3 * box_h + 2 * arrow_v + 16 + note_lines * line_h + L.margin
+    else:
+        body = box_h + 18 + note_lines * line_h + L.margin
+    fig, ax = new_fig(t, L, body)
     ax.axis("off")
+    rect = header(fig, t, L, "One round of MTP speculative decoding")
+    ax.set_position((0, 0, 1, rect[3]))
+    ax.set_xlim(0, L.css_width)
+    ax.set_ylim(body, 0)  # y down, in CSS px from the top of the body
 
-    def box(x: float, y: float, w: float, h: float, text: str, fc: str) -> None:
-        ax.add_patch(FancyBboxPatch((x, y), w, h, boxstyle="round,pad=0.3,rounding_size=1.2", fc=fc, ec="none"))
-        ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", color=on_fill(t, fc), fontsize=8.6)
+    def box(x: float, y: float, w: float, step: tuple, fc: str) -> None:
+        ax.add_patch(FancyBboxPatch((x, y), w, box_h, boxstyle="round,pad=0,rounding_size=6", fc=fc, ec="none"))
+        ink = on_fill(t, fc)
+        ax.text(x + w / 2, y + pad, step[0], ha="center", va="top", color=ink, fontweight="semibold")
+        ax.text(x + w / 2, y + pad + line_h, step[1], ha="center", va="top", color=ink, linespacing=1.35)
 
-    def arrow(x1: float, x2: float, y: float, text: str = "") -> None:
-        ax.add_patch(FancyArrowPatch((x1, y), (x2, y), arrowstyle="-|>", mutation_scale=12, color=t.muted, linewidth=1.4))
-        if text:
-            ax.text((x1 + x2) / 2, y + 3.2, text, ha="center", color=t.ink2, fontsize=7.6)
+    def arrow(p: tuple, q: tuple) -> None:
+        ax.add_patch(FancyArrowPatch(p, q, arrowstyle="-|>", mutation_scale=14, color=t.muted, linewidth=1.6,
+                                     shrinkA=0, shrinkB=0))
 
-    box(1, 10, 22, 10, "1. Draft\nMTP head guesses 3 tokens\n(1 layer, ~27 ms, draft vocab 32K)", t.orange)
-    arrow(23.6, 29.4, 15, "3 drafts")
-    box(30, 10, 30, 10, "2. Verify in ONE weight pass\nfull model scores 4 positions\n(437 MB read once, ~160 ms)", t.blue)
-    arrow(60.6, 66.4, 15, "verdicts")
-    box(67, 10, 32, 10, "3. Accept the matching prefix\n+ 1 token of the full model's own\n→ 3.3 tokens per round on average", t.aqua)
-    ax.text(50, 3.5, "Output is token-for-token identical to plain greedy decoding (every kept token is the full model's own choice); only the speed changes.",
-            ha="center", color=t.ink2, fontsize=8.6)
-    ax.text(0, 27.5, "One round of MTP speculative decoding", color=t.ink, fontsize=11.5, fontweight="semibold")
-    save(fig, t, "speculative_schematic")
+    x0 = L.margin
+    if L.mobile:
+        y = 0.0
+        for i, (step, fc) in enumerate(zip(SPEC_STEPS, fills)):
+            box(x0, y, width, step, fc)
+            y += box_h
+            if i < 2:
+                arrow((L.css_width / 2, y + 6), (L.css_width / 2, y + arrow_v - 6))
+                ax.text(L.css_width / 2 + 12, y + arrow_v / 2, SPEC_ARROWS[i], ha="left", va="center",
+                        color=t.ink2)
+                y += arrow_v
+        y_note = y + 16
+    else:
+        span = (width - sum(widths)) / 2  # the two arrow gaps share what the boxes leave
+        x = x0
+        for i, (step, fc, w) in enumerate(zip(SPEC_STEPS, fills, widths)):
+            box(x, 0, w, step, fc)
+            x += w
+            if i < 2:
+                arrow((x + 6, box_h / 2), (x + span - 6, box_h / 2))
+                ax.text(x + span / 2, box_h / 2 - 6, SPEC_ARROWS[i], ha="center", va="bottom", color=t.ink2)
+                x += span
+        y_note = box_h + 18
+    ax.text(x0, y_note, note, ha="left", va="top", color=t.ink2, linespacing=1.35)
+    save(fig, t, L, "speculative_schematic", layout=False)
 
 
-def fig_bytes(t: Theme) -> None:
+def fig_bytes(t: Theme, L: Layout) -> None:
     """One stacked bar: the Q4K model's bytes by part, i.e. what every decode step has to stream."""
-    fig, ax = new_fig(t, 8.0, 3.0)
+    fig, ax = new_fig(t, L, 140)
     mb = [b / 1e6 for _, b in BYTES]
     total, plain = sum(mb), sum(mb[:-1])
     colors = [t.blue, t.orange, t.aqua, t.yellow, t.magenta]  # slot order = stack order (validated adjacent pairs)
     style(ax, t, xlabel="MB (10⁶ bytes)", grid="x")
-    ax.set_xlim(0, 460)
-    ax.set_ylim(-0.5, 0.75)
+    ax.set_xlim(0, 480 if L.mobile else 460)
     ax.set_yticks([])
     ax.spines["left"].set_visible(False)
-    title(ax, t, "Where a token's bytes go",
-          "Tensor bytes of the 437 MB Q4K model by part (from the .pq tensor directory); decode speed = bandwidth ÷ bytes read per token")
-    ax.legend(handles=[Patch(color=c, label=f"{name}: {v:.1f} MB") for (name, _), v, c in zip(BYTES, mb, colors)],
-              loc="upper left", bbox_to_anchor=(0, -0.42), ncol=2, columnspacing=2.4)
-    h = px_to_data(ax, BAR_PX, axis="y")
-    per_px = px_to_data(ax, 1)
-    renderer = fig.canvas.get_renderer()
+    keys = [Patch(color=c, label=f"{name}: {v:.1f} MB") for (name, _), v, c in zip(BYTES, mb, colors)]
+    rect = header(fig, t, L, "Where a token's bytes go",
+                  "Tensor bytes of the 437 MB Q4K model by part (from the .pq tensor directory); decode speed = "
+                  "bandwidth ÷ bytes read per token", handles=keys, ncol=1 if L.mobile else 2)
+    # y in CSS px: the bar centred at 0, the bracket and its caption above it.
+    ax.set_ylim(0, 1)
+    h_css = 1 / px_to_data(ax, 1, axis="y", rect=rect)
+    above = STACK_BAR / 2 + 7 + 7 + 4 + L.text * 1.35 + 6  # bar half, gap, bracket, gap, caption, air
+    ax.set_ylim(above - h_css, above)
+    per_px = px_to_data(ax, 1, rect=rect)
     left = 0.0
     for i, (v, c) in enumerate(zip(mb, colors)):
-        ax.barh(0, v, left=left, height=h, color=c, edgecolor=t.surface, linewidth=GAP_PT)
-        label = ax.text(left + v / 2, 0, f"{100 * v / total:.1f}%", ha="center", va="center", color=on_fill(t, c), fontsize=9)
-        if label.get_window_extent(renderer).width + 12 > v / per_px:  # does not fit with 6 px a side
-            label.remove()  # an interior segment leaves its value to the legend
-            if i == len(mb) - 1:  # the last segment has a free end: label it outside
-                ax.text(left + v + 4 * per_px, 0, f"{100 * v / total:.1f}%", va="center", color=t.ink, fontsize=9)
+        ax.barh(0, v, left=left, height=STACK_BAR, color=c, edgecolor=t.surface, linewidth=GAP)
+        # an interior segment too narrow for its value leaves it to the legend; the last one has a free end
+        if not label_inside(ax, t, left + v / 2, 0, f"{100 * v / total:.1f}%", c, v) and i == len(mb) - 1:
+            ax.text(left + v + 4 * per_px, 0, f"{100 * v / total:.1f}%", va="center", color=t.ink,
+                    in_layout=False)  # may overhang the axes into the outer pad; must not move the axes
         left += v
-    y0, y1 = h / 2 + px_to_data(ax, 7, axis="y"), h / 2 + px_to_data(ax, 14, axis="y")
-    ax.plot([0, 0, plain, plain], [y0, y1, y1, y0], color=t.muted, linewidth=1, solid_joinstyle="miter")
-    ax.text(plain / 2, y1 + px_to_data(ax, 4, axis="y"), f"every plain decode step reads these {plain:.1f} MB",
-            ha="center", va="bottom", color=t.ink2, fontsize=8.5)
-    save(fig, t, "bytes_per_token")
+    y0, y1 = STACK_BAR / 2 + 7, STACK_BAR / 2 + 14
+    ax.plot([0, 0, plain, plain], [y0, y1, y1, y0], color=t.muted, linewidth=1.2, solid_joinstyle="miter")
+    ax.text(plain / 2, y1 + 4, f"every plain decode step reads these {plain:.1f} MB", ha="center", va="bottom",
+            color=t.ink2, bbox={"boxstyle": "square,pad=0.2", "fc": t.surface, "ec": "none"})  # breaks the grid
+    save(fig, t, L, "bytes_per_token", rect)
 
 
 def _part(name: str, full_mask: int) -> int:
@@ -247,9 +375,9 @@ def _part(name: str, full_mask: int) -> int:
 def pq_bytes(path: Path) -> list[int]:
     """Bytes per BYTES part, summed over a .pq tensor directory (header and 128-byte entries: engine/FORMAT.md)."""
     with path.open("rb") as f:
-        header = f.read(4096)
-        n_tensors, dir_offset = struct.unpack_from("<IQ", header, 12)
-        full_mask = struct.unpack_from("<I", header, 88)[0]
+        header_ = f.read(4096)
+        n_tensors, dir_offset = struct.unpack_from("<IQ", header_, 12)
+        full_mask = struct.unpack_from("<I", header_, 88)[0]
         f.seek(dir_offset)
         directory = f.read(128 * n_tensors)
     sums = [0] * len(BYTES)
@@ -278,10 +406,11 @@ FIGURES = (fig_step_breakdown, fig_bandwidth, fig_quant, fig_acceptance, fig_os,
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     check_bytes()
-    for t in THEMES:
-        setup(t)
-        for make in FIGURES:
-            make(t)
+    for L in LAYOUTS:
+        for t in THEMES:
+            setup(t, L)
+            for make in FIGURES:
+                make(t, L)
 
 
 if __name__ == "__main__":

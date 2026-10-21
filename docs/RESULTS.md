@@ -21,6 +21,8 @@ Contents: [scoreboard](#1-scoreboard) · [formats](#2-pinfer-by-weight-format) �
 ## 1. Scoreboard
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/decode_speed-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/decode_speed-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/decode_speed-dark.png">
   <img alt="Decode speed on the Pi 4: pinfer Q4K 7.9 tokens/s plain and 16.5 tokens/s with exact speculative decoding; MNN int4 6.7, llama.cpp 4.1 to 5.6, ONNX Runtime GenAI int4 3.1." src="figures/decode_speed.png">
 </picture>
@@ -42,6 +44,8 @@ Contents: [scoreboard](#1-scoreboard) · [formats](#2-pinfer-by-weight-format) �
 - MNN's best decode is at 2 threads (6.31 at 4), its best prefill at 4; llama.cpp Q8_0 decodes fastest at 2.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/speed_vs_quality-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/speed_vs_quality-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/speed_vs_quality-dark.png">
   <img alt="Decode speed against wikitext-2 perplexity: pinfer Q4K sits at Q4_K_M quality (18.50 vs 18.59) and decodes faster than every llama.cpp format." src="figures/speed_vs_quality.png">
 </picture>
@@ -76,6 +80,8 @@ by 0.2 and costs 11% of the speculative speed.
 ## 3. Speculative decoding
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/speculative_k-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/speculative_k-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/speculative_k-dark.png">
   <img alt="Tokens per verification pass rise from 2.63 at k=2 to 3.94 at k=4, while decode speed peaks at k=3 with 16.5 tokens/s." src="figures/speculative_k.png">
 </picture>
@@ -95,6 +101,8 @@ The verify / plain-step ratio at k=3 fell from 1.65 (`pinfer-kstats-q4k-spec3_20
 Part 2, `engine/CORE.md`).
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/mtp_acceptance-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/mtp_acceptance-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/mtp_acceptance-dark.png">
   <img alt="The MTP draft head is accepted 87 to 94 percent of the time at every draft position; two deliberately mis-wired controls drop first-draft acceptance to 54.5 and 0.3 percent." src="figures/mtp_acceptance.png">
 </picture>
@@ -138,6 +146,8 @@ docstring 2.331 → 4.503 (1.93×). Every speculative run generated exactly the 
 ## 4. Prefill
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/prefill_speed-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/prefill_speed-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/prefill_speed-dark.png">
   <img alt="Prefill of a 64-token prompt: pinfer 37.4 tokens/s, MNN int4 30.9, llama.cpp 14.8 to 17.1, ONNX Runtime GenAI int4 9.9." src="figures/prefill_speed.png">
 </picture>
@@ -188,6 +198,8 @@ Q4K default, 4 threads, 32 generated tokens. Prompts `bench/common/ctx{64,512,20
 first N tokens of `bench/quality/wikitext2-qwen35.tokens.bin`; "64 Dickens" is `prompt64`.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/context_length-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/context_length-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/context_length-dark.png">
   <img alt="After the attention rewrite, plain decode at a 4096-token context is 6.4 tokens/s with the fp32 KV cache and 6.7 with fp16 (5.6 before; llama.cpp 3.4), and prefill of a 4096-token prompt is 28 tokens/s (18 before)." src="figures/context_length.png">
 </picture>
@@ -232,6 +244,8 @@ llama.cpp Q4_K_M at the same KV depth (`llama-bench -d`, f16 KV): 5.48 / 5.23 / 
 ## 7. Where the time goes
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/step_breakdown-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/step_breakdown-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/step_breakdown-dark.png">
   <img alt="A plain decode step takes 128 ms, 119 ms of it streaming weights; a verify pass over 4 positions takes about 160 ms." src="figures/step_breakdown.png">
 </picture>
@@ -254,6 +268,8 @@ That estimate counts the whole file; the MTP head (11.5 MB) is read only when dr
 streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_figures2.py`):
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/bytes_per_token-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/bytes_per_token-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/bytes_per_token-dark.png">
   <img alt="The 437 MB Q4K model by part: MLPs 148.7 MB, tied output head 143.0 MB, linear attention 108.4 MB, full attention 24.8 MB, MTP head 11.5 MB; a plain decode step reads everything except the MTP head." src="figures/bytes_per_token.png">
 </picture>
@@ -261,6 +277,8 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
 **How the speed was built up**, one verified step at a time:
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/progress-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/progress-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/progress-dark.png">
   <img alt="Decode speed after each verified optimization step, from 1.55 tokens/s in scalar C to 7.88 plain and 16.49 speculative." src="figures/progress.png">
 </picture>
@@ -276,6 +294,8 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
 ## 8. Kernels and memory bandwidth
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/kernel_bandwidth-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/kernel_bandwidth-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/kernel_bandwidth-dark.png">
   <img alt="Every matrix kernel streams weights at 3.86 to 4.33 GB/s, at the 4.20 GB/s memband ceiling." src="figures/kernel_bandwidth.png">
 </picture>
@@ -319,6 +339,8 @@ Q4K is 11–22% lower error than Q4 at the same 4.5 bits; perplexity (§5) confi
 The figure plots one rounded value per format next to its perplexity.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/quantization-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/quantization-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/quantization-dark.png">
   <img alt="Q4K and symmetric Q4 both spend 4.5 bits per weight, but Q4K keeps perplexity at 18.50 (bf16 17.93) while Q4 rises to 21.61." src="figures/quantization.png">
 </picture>
@@ -342,6 +364,8 @@ All within 1%: the engine is DRAM-bound and the A72 already hides the TLB cost o
 each reboot shows prefill ~20 instead of ~27 tok/s (cold page cache), which led to the `--bench` warm-up.
 
 <picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/os_experiment-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/os_experiment-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/os_experiment-dark.png">
   <img alt="Stock kernel, custom kernel, isolated tickless cores and 2 MB huge pages all give 7.2 to 7.3 tokens/s plain and 13.35 to 13.51 speculative." src="figures/os_experiment.png">
 </picture>
