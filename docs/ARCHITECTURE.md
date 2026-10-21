@@ -56,7 +56,7 @@ Norm weights are stored as the effective multiplier `1 + w` (Qwen3.5 zero-centre
 gated norm inside Gated DeltaNet, which uses `w` as is (`engine/FORMAT.md`).
 
 ```mermaid
-flowchart LR
+flowchart TB
     x["x [1024]<br/>residual stream"] --> n1["RMSNorm"]
     n1 --> mix["mixer:<br/>Gated DeltaNet or<br/>gated full attention"]
     mix --> a1(("+"))
@@ -187,7 +187,7 @@ One file per model, little-endian, written by `tools/convert.py`, mapped read-on
 `engine/src/model.c` (format v1, `engine/FORMAT.md`, structs in `engine/src/pq_format.h`).
 
 ```mermaid
-flowchart LR
+flowchart TB
     hdr["offset 0<br/>pq_header<br/>zero-padded to 4096 B"] --> dir["offset 4096<br/>tensor directory<br/>n_tensors x 128 B"]
     dir --> pad["zero padding to<br/>a 4096-B boundary"]
     pad --> data["offset data_offset<br/>tensor data<br/>each tensor 64-B aligned"]
@@ -209,14 +209,14 @@ superblock size is a multiple of 64, so each scale line starts a cache line and 
 contiguous byte range (requires `rows % 4 == 0`, `cols % 256 == 0`, true for every Qwen3.5 matrix).
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph tile ["tile t = rows 4t .. 4t+3, superblocks in column order"]
-        direction LR
+        direction TB
         s0["superblock 0<br/>cols 0-255"] --> s1["superblock 1<br/>cols 256-511"] --> sn["more superblocks<br/>until the last column"]
     end
     s0 --> q4k
     subgraph q4k ["one Q4K_G32 superblock = 576 B"]
-        direction LR
+        direction TB
         sl["scale line, 64 B<br/>D[4] fp16, M[4] fp16<br/>s[32] and m[32], 6-bit each"] --> b0["block 0: cols 0-31<br/>rows 0..3 x 16 B of nibbles"]
         b0 --> bm["blocks 1 to 6"] --> b7["block 7: cols 224-255"]
     end
