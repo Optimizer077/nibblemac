@@ -12,6 +12,34 @@ speculative decoding**, 37 tok/s prefill, at llama.cpp-Q4_K_M quality (perplexit
 Design: [docs/design.md](docs/design.md) · Plan: [task_plan.md](task_plan.md) · Library guide:
 [docs/library.md](docs/library.md) · Findings: [notes.md](notes.md)
 
+## Results (Raspberry Pi 4 Model B Rev 1.1, 4 GB, stock Raspberry Pi OS kernel, 4 threads)
+Every number below was taken on the real board through `harness/pi.py bench`, which records
+temperature and throttle flags and marks a run invalid if the Pi throttled; the source file of
+each number is listed in [notes.md](notes.md). Figures: `tools/make_figures.py`.
+
+![Decode speed by engine](docs/figures/decode_speed.png)
+
+pinfer's own 4.5-bit format (`Q4K`) matches llama.cpp's Q4_K_M quality; its symmetric `Q4` is as
+lossy as Q4_0 and is not used. Speculative decoding is exact (same tokens as plain greedy):
+
+![Speed vs quality](docs/figures/speed_vs_quality.png)
+
+How the speed was reached, step by step (each step verified against the fp32 reference):
+
+![Progress](docs/figures/progress.png)
+
+Prefill leads every baseline since the per-token ops were vectorized; long contexts are the
+current work (Phase 6 in `task_plan.md`): decode drops 29% at a 4096-token context and the
+speculative gain shrinks, because the attention path is compute-bound there.
+
+![Prefill](docs/figures/prefill_speed.png)
+![Context length](docs/figures/context_length.png)
+![Speculative k](docs/figures/speculative_k.png)
+
+What did **not** help, measured and kept for the record: a custom kernel with isolated, tickless
+cores and 2 MB huge pages for the weights (all < 1%: the engine is DRAM-bound), software
+prefetch (slower on the A72), and 8-wide batched passes (register spills).
+
 ## Layout
 ```
 engine/include/pinfer.h   public C API              engine/src/          model loader, forward pass,
