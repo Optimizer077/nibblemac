@@ -1,0 +1,7 @@
+# 2026-10-22T01:29:36 pi@10.42.0.2
+$ uname -r; cat /sys/devices/system/cpu/isolated
+
+6.18.50+rpt-rpi-v8
+
+
+[exit 0]

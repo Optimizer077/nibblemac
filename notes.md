@@ -105,3 +105,21 @@ NEON kernels, `bench/results/spec-exact-final_20261022_*.json`). The earlier div
 verify pass rounding the Q4/Q4K offset term differently from the single-token pass) is fixed.
 Verify-pass cost vs one decode step (Q4K, final): 1.33 (k=2) / 1.48 (k=3); what remains is ~14 ms/token
 of scalar code (conv expf, norms, SiLU, attention) — the next lever, together with prefill (MNN 30.9).
+
+## Custom kernel 6.18.50-pinfer — effect on speed (2026-10-22 01:25–01:29, one-time tryboots)
+Same binary (`pinfer_run_fast` @ `af06041`), same model (`q4k-headq4k`), 4 threads, 64+64 tokens.
+
+| Kernel | cmdline extras | memband 1/2/4 thr GB/s | plain tok/s | spec k=3 tok/s | Result files |
+|---|---|---|---|---|---|
+| stock 6.18.50+rpt-rpi-v8 | — | 4.20 / 4.08 / 4.07 (21 Oct) | 7.26 | 13.35 | `pinfer-final-q4k_20261022_011230.json` |
+| 6.18.50-pinfer (K1) | none | 4.20 / 4.18 / 4.29 | 7.28 | 13.51 | `memband-k1-*`, `pinfer-k1-pinfer-kernel-q4k_20261022_012707.json` |
+| 6.18.50-pinfer (K2) | `isolcpus=nohz,domain,managed_irq,1-3 nohz_full=1-3 rcu_nocbs=1-3 irqaffinity=0` | 4.36 / 4.19 / 4.60 | 7.21 | 13.45 | `memband-k2-*`, `pinfer-k2-splitcore-q4k_20261022_012856.json` |
+
+Verdict: the kernel build (NO_HZ_FULL/context tracking compiled in) costs nothing, and core
+isolation + tickless cores change decode by < 1% — the engine is DRAM-bound and there was
+little jitter to remove. 4-thread memband rises 4.07 → 4.60 GB/s under isolation (no
+housekeeping on cores 1–3), which the engine does not translate into tok/s because its decode
+already uses 1–3 threads for streaming. Still untested: huge pages for the weights
+(`madvise(MADV_HUGEPAGE)` on an anonymous copy; THP is `madvise` on this kernel).
+The Pi runs the stock kernel again (a plain reboot ends the tryboot); the custom kernel stays
+installed side by side (`docs/pi-state.md` #4).
