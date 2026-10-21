@@ -3,8 +3,9 @@
  * each chunk is context only, logits at positions ctx/2 .. ctx-2 predict the next token.
  *
  *   pinfer_ppl -m model.pq -f tokens.bin [-c 512] [--chunks 64] [-t 4] [--kv-dtype 0|1|2]
- * tokens.bin: raw little-endian int32 token ids (bench/quality/make_tokens.py).
- * Prints progress and one `RESULT {json}` line.
+ * tokens.bin: raw little-endian int32 token ids (bench/quality/make_tokens.py). Every id the
+ * chunks use is checked against the vocabulary before the first forward pass (a scored
+ * target indexes the logits directly). Prints progress and one `RESULT {json}` line.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <math.h>
@@ -24,15 +25,17 @@ static double now_sec(void) {
     return ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
+/* The whole file as int32 ids; NULL (n = 0) if unreadable, empty or not a multiple of 4. */
 static int32_t *read_tokens(const char *path, long *n) {
+    *n = 0;
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    long bytes = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    int32_t *t = malloc((size_t)bytes);
-    *n = (t && fread(t, 1, (size_t)bytes, f) == (size_t)bytes) ? bytes / 4 : 0;
+    long bytes = fseek(f, 0, SEEK_END) == 0 ? ftell(f) : -1;
+    int32_t *t = bytes > 0 && bytes % 4 == 0 && fseek(f, 0, SEEK_SET) == 0
+                     ? malloc((size_t)bytes) : NULL;
+    if (t && fread(t, 1, (size_t)bytes, f) == (size_t)bytes) *n = bytes / 4;
     fclose(f);
+    if (*n == 0) { free(t); return NULL; }
     return t;
 }
 
@@ -57,7 +60,10 @@ int main(int argc, char **argv) {
         else if (!strcmp(argv[i], "--kv-dtype") && i + 1 < argc) kv_dtype = atoi(argv[++i]);
         else { fprintf(stderr, "usage: %s -m model.pq -f tokens.bin [-c 512] [--chunks N] [-t T] [--kv-dtype D]\n", argv[0]); return 2; }
     }
-    if (!model || !tok_path || ctx_len < 4) { fprintf(stderr, "need -m and -f\n"); return 2; }
+    if (!model || !tok_path || ctx_len < 4 || chunks < 1) {
+        fprintf(stderr, "need -m and -f, -c >= 4 and --chunks >= 1\n");
+        return 2;
+    }
 
     long n_tok = 0;
     int32_t *tok = read_tokens(tok_path, &n_tok);
@@ -72,6 +78,12 @@ int main(int argc, char **argv) {
     pinfer_ctx *ctx = pinfer_load(model, &p, &err);
     if (!ctx) { fprintf(stderr, "load failed: %d\n", err); return 1; }
     int vocab = pinfer_n_vocab(ctx);
+    for (long i = 0; i < (long)chunks * ctx_len; i++)
+        if (tok[i] < 0 || tok[i] >= vocab) {
+            fprintf(stderr, "%s: token %ld = %d outside the vocabulary [0, %d)\n", tok_path, i,
+                    tok[i], vocab);
+            return 1;
+        }
     float *logits = malloc((size_t)SUB * vocab * sizeof(float));
     if (!logits) { fprintf(stderr, "out of memory\n"); return 1; }
 
@@ -104,7 +116,7 @@ int main(int argc, char **argv) {
     double var = sum2 / scored - mean * mean;
     double ppl = exp(mean);
     /* Same uncertainty estimate as llama-perplexity: d(ppl) = ppl * stderr(nll). */
-    double ppl_err = ppl * sqrt(var > 0 ? var / (scored - 1) : 0);
+    double ppl_err = ppl * sqrt(var > 0 && scored > 1 ? var / (scored - 1) : 0);
     double secs = now_sec() - t0;
     printf("RESULT {\"engine\":\"pinfer\",\"tool\":\"pinfer_ppl\",\"kernels\":\"%s\",\"model_file\":\"%s\","
            "\"ctx\":%d,\"chunks\":%d,\"tokens_scored\":%ld,\"threads\":%d,\"ppl\":%.4f,"
