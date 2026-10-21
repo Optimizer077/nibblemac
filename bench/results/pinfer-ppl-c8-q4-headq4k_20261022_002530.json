@@ -1,0 +1,63 @@
+{
+  "name": "pinfer-ppl-c8-q4-headq4k",
+  "command": "./engine/pinfer_ppl_fast -m models/qwen35-0.8b-q4-headq4k.pq -f data/wikitext2-qwen35.tokens.bin --chunks 8 -t 4",
+  "timestamp": "2026-10-22T00:25:30",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "engine": "pinfer",
+      "tool": "pinfer_ppl",
+      "kernels": "fast",
+      "model_file": "models/qwen35-0.8b-q4-headq4k.pq",
+      "ctx": 512,
+      "chunks": 8,
+      "tokens_scored": 2040,
+      "threads": 4,
+      "ppl": 21.5756,
+      "ppl_err": 1.50373,
+      "seconds": 295.5
+    }
+  ],
+  "unparsed": [],
+  "stdout": "RESULT {\"engine\":\"pinfer\",\"tool\":\"pinfer_ppl\",\"kernels\":\"fast\",\"model_file\":\"models/qwen35-0.8b-q4-headq4k.pq\",\"ctx\":512,\"chunks\":8,\"tokens_scored\":2040,\"threads\":4,\"ppl\":21.5756,\"ppl_err\":1.50373,\"seconds\":295.5}\n",
+  "stderr": "[1/8] ppl 11.9839  (13.6 tok/s)\n[2/8] ppl 18.4143  (13.7 tok/s)\n[3/8] ppl 18.3356  (13.8 tok/s)\n[4/8] ppl 19.0811  (13.8 tok/s)\n[5/8] ppl 18.7733  (13.8 tok/s)\n[6/8] ppl 19.6853  (13.8 tok/s)\n[7/8] ppl 20.1062  (13.9 tok/s)\n[8/8] ppl 21.5756  (13.9 tok/s)\n",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-21 21:18:17",
+    "boot_id": "c9020b3d-872b-46b7-b3ce-021ee758b636",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "54.0'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3536",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-21 21:18:17",
+    "boot_id": "c9020b3d-872b-46b7-b3ce-021ee758b636",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "52.5'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3541",
+    "python": "Python 3.13.5"
+  }
+}
