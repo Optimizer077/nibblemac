@@ -6,6 +6,7 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 ## 2026-10-22
 
 ### Added
+- Private GitHub repository `Optimizer077/piquant`; result figures in `docs/figures/` (`tools/make_figures.py`).
 - Engine: NEON per-token ops (`forward_ops.c`, bit-exact scalar twins), threaded attention/MLP,
   `pf_pool_run`, `--bench` warm-up; opt-in `PINFER_HUGEPAGES`; Phase 6 context-window plan.
 - `bench/BASELINES.md`: MNN / ORT GenAI / LiteRT-LM / PyTorch attempts and results.

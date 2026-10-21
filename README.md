@@ -1,4 +1,6 @@
-# pinfer — Raspberry-Pi-4-native inference for Qwen3.5-0.8B
+# piquant / pinfer — Raspberry-Pi-4-native inference for Qwen3.5-0.8B
+
+Repository: private, `github.com/Optimizer077/piquant` (engine and Python package are called `pinfer`).
 
 A C inference engine + Python package written for the Pi 4's Cortex-A72 (NEON only, no dot-product
 instructions, ~4.2 GB/s DRAM), with its own 4-/8-bit weight formats and exact self-speculative
