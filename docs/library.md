@@ -5,9 +5,11 @@ pinfer runs **Qwen3.5-0.8B** on a Raspberry Pi 4. It ships as
 - a Python package, `pinfer` (ctypes binding, HF `tokenizers`, sampling, chat template, streaming);
 - a command, `pinfer` (`generate`, `chat`, `bench`, `convert`, `info`).
 
-> **Status 0.1.0:** the published wheels contain the **reference** (scalar) kernels, built with `MATVEC=ref`.
-> They are correct (they match the transformers fp32 reference exactly on greedy decoding) but slow: about 1.5 tok/s decode on the Pi 4 with bf16 weights.
-> The NEON kernels (`MATVEC=fast`) and quantized models will replace them. The Python and C APIs stay the same.
+> **Status 0.1.0 (2026-10-22):** the aarch64 wheel `pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl`
+> contains the NEON kernels (`MATVEC=fast`); the x86-64 wheel contains the scalar reference kernels.
+> Recommended model file: `qwen35-0.8b-q4k-headq4k.pq` (`pinfer convert ... --quant q4k`, 437 MB):
+> 6.8 tok/s plain greedy, 11.6 tok/s with `--speculative`, perplexity 18.48 (bf16: 17.93). See §7.
+> Not published anywhere yet; no license chosen.
 
 ---
 
@@ -206,18 +208,35 @@ The suite covers:
 `PINFER_TEST_REQUIRE=1` turns a missing model, tokenizer or golden file into a failure instead of a skip.
 
 ## 7. Performance notes
-_Placeholder._ Measured numbers belong in `notes.md` (taken through `harness/pi.py bench` only). Current reference build on the Pi: about 2.0 tok/s prefill and 1.5 tok/s decode, bf16, 1 thread (`bench/results/pinfer-ref-bf16_20261021_214710.json`).
-- Python overhead per decode step: one ctypes call plus a numpy argmax over 248,320 logits. This is small compared with a decode step at these speeds. Measure it again once the fast kernels land.
-- `pinfer bench` measures the speed through the Python API. Use `pinfer_run --bench` for C-only numbers.
+All numbers: Raspberry Pi 4 (4 GB, Cortex-A72 @ 1.5 GHz), 4 threads, 64-token prompt, 64 generated
+tokens, stock Raspberry Pi OS kernel, taken through `harness/pi.py bench` (the full table with
+result-file paths is the "Scoreboard" in `notes.md`).
+
+| Model file (`pinfer convert` option) | Size | Decode tok/s plain | Decode tok/s `--speculative` | Prefill tok/s | Perplexity (wikitext-2) |
+|---|---|---|---|---|---|
+| `--quant q4k` (**recommended**) | 437 MB | 6.8 | 11.6 | 19 | 18.48 |
+| `--quant q8` | 823 MB | 4.2 | 8.7 | 12 | 17.96 |
+| bf16 (default) | 1.55 GB | 2.3 | 4.1 | 11 | 17.93 |
+| llama.cpp v0.7.0 Q4_K_M, same Pi | 542 MB | 5.4 | — | 15 | 18.59 |
+| MNN 3.6 int4, same Pi | ~450 MB | 6.7 | — | 31 | — |
+
+- Decode is memory-bandwidth-bound (one Cortex-A72 core already saturates the ~4.2 GB/s DRAM);
+  tok/s ≈ 4.2 GB/s ÷ bytes of weights per token, minus overheads. Speculative decoding with the
+  model's MTP head gets past that ceiling by verifying several drafted tokens per weight pass.
+- `--speculative` defaults: k = 2 drafts, draft vocabulary 32768 (drafts only consider the first
+  32768 token ids; acceptance is unchanged on English and code, the draft step is 5× cheaper).
+  `--spec-k 3` is ~8% faster on long answers.
+- Exactness: with the scalar kernels speculative output is token-identical to plain greedy. With the
+  NEON kernels the batched verify pass and the single-token pass can round differently, so at a
+  near-tie the argmax may flip and the two continuations diverge (seen on one chat prompt with a
+  mixed-precision file; not on the recommended file). A fix making the batched kernel bit-identical
+  to the single-token kernel is in progress.
+- Python overhead is negligible: `pinfer bench` (Python API) gives the same tok/s as `pinfer_run --bench` (C).
+- `--quant q4` (symmetric 4-bit) is as fast as `q4k` but loses quality (perplexity 21.6, like llama.cpp Q4_0); prefer `q4k`.
 
 ## 8. Known limitations and proposed C API additions
 - No sdist: a source distribution would need the C sources and a compiler on the target.
-- `pinfer_generate_greedy` has three gaps:
-  - it stops only at EOS;
-  - it returns `E_CTX_FULL` without the tokens it produced;
-  - it cannot stream.
-
-  Proposed additions: `const int32_t *stop_ids, int n_stop`, a partial count on context overflow, and a per-token callback `int (*on_token)(int32_t tok, void *user)` that returns non-zero to stop.
+- `pinfer_generate_greedy_ex` (added 2026-10-21) covers stop tokens, partial output on context overflow and a per-token callback; the Python package uses it when present and falls back to `pinfer_generate_greedy` otherwise.
 - There is no way to ask the library which kernels it was built with. Proposed: `const char *pinfer_build_info(void)`. Until then Python reads the `BUILD_INFO.json` that sits next to the `.so`.
 - The library prints diagnostics with `fprintf(stderr)` / `perror`. Proposed: `void pinfer_set_log_callback(void (*cb)(int level, const char *msg, void *user), void *user)`.
 - The tokenizer path is not stored in the `.pq` file. Proposed: an optional key-value metadata section in the format, and `const char *pinfer_meta_get(const pinfer_ctx *, const char *key)`. The sidecar directory covers this for now.
