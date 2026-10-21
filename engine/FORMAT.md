@@ -70,3 +70,38 @@ finally `logits = embed · norm(h)`.
   64 dims of each head, rotate-half style within those 64 (pairs i, i+32),
   `inv_freq[i] = θ^(−2i/64)`, position = token index. Causal softmax attention with GQA (4 query
   heads per KV head), scale 1/√256. `o *= sigmoid(gate)`; output `o_proj o`.
+
+## Quantized dtypes
+Owned by the kernels work. Constants: `engine/src/pq_quant.h`; reference quantizers and
+packers: `tools/quant.py` (`quantize_pack(dtype, w)`); kernels: `engine/src/kern_quant.c`.
+Rationale and measurements: `engine/bench/KERNELS.md`.
+
+**Shape rule.** `rows % 4 == 0` and `cols % 256 == 0` (true for every Qwen3.5 matrix).
+`nbytes = rows/4 · cols/256 · SB` with `SB` the superblock size below.
+
+**Tiling (all quantized dtypes).** Rows are taken 4 at a time: tile `t` = rows `4t..4t+3`.
+Tiles are stored in order; each tile is `cols/256` superblocks in column order; superblock
+`sb` covers columns `256·sb .. 256·sb+255` of the tile's 4 rows. A superblock is one 64-byte
+**scale line** followed by the **codes** of 8 blocks of 32 columns (block `k` = columns
+`256·sb + 32k ..+31`), block after block, and inside a block row `i = 0..3` after row. SB is a
+multiple of 64, so every scale line starts on a cache line and each thread streams one
+contiguous range. "Row `i`" below means row `4t+i`; `[k][i]` arrays are stored at index `4k+i`.
+
+| id | name | bits/weight | SB bytes | scale line (64 B) | codes of block k, row i | weight value |
+|---|---|---|---|---|---|---|
+| 2 | Q8_G32 | 8.5 | 1088 | fp16 `d[k][i]` (32 × 2 B) | `int8 q[32]` at `64 + 128k + 32i` | `d · q`, `q ∈ [-127, 127]` |
+| 3 | Q4_G32 | 4.5 | 576 | fp16 `d[k][i]` | 16 B at `64 + 64k + 16i`, nibbles (below) | `d · (u − 8)` |
+| 4 | Q4K_G32 | 4.5 | 576 | bytes 0–7 fp16 `D[i]`; 8–15 fp16 `M[i]`; 16–39 6-bit `s[k][i]`; 40–63 6-bit `m[k][i]` | as Q4_G32 | `D[i]·s · u − M[i]·m` |
+
+- **Nibbles** (Q4_G32, Q4K_G32): byte `j` (0..15) of a block row holds column `j` in its low
+  nibble and column `j + 16` in its high nibble; `u ∈ [0, 15]`.
+- **6-bit arrays** (Q4K_G32): 32 values `v[0..31]` (index `4k+i`) in 24 bytes: byte `j`
+  (0..15) = `(v[j] & 15) | (v[j+16] & 15) << 4`; byte `16 + j` (0..7) =
+  `v[j]>>4 | (v[j+8]>>4)<<2 | (v[j+16]>>4)<<4 | (v[j+24]>>4)<<6`. `s, m ∈ [0, 63]`;
+  `D, M ≥ 0` are per row and per 256 columns (k-quant style: a 32-column asymmetric group
+  with the cost of 0.5 bit/weight of metadata).
+- fp16 is IEEE binary16. Quantizers in `tools/quant.py`: Q8 absmax; Q4 signed-extreme scale
+  with a small scale search + least-squares refit; Q4K per-group least-squares (scale, min)
+  then 6-bit rounding under per-row maxima, with refits.
+- Not part of the file: at run time the kernels quantize activations to int8 per 32 columns
+  (scale = absmax/127), so a quantized matmul result also carries that rounding.
