@@ -3,8 +3,11 @@
  * wall time per phase and per call kind (single token, batched prefill / MTP rows, logged
  * verify pass) and print a table to stderr at exit. Together with PF_KERN_STATS (matmul
  * time, kern_stats.c) this shows what a decode step or verify pass is made of. One getenv
- * at the first call; off = one load of a flag per section. */
+ * at the first call; off = one atomic load of a flag per section. The table is
+ * process-wide: with several contexts on several threads the sums are a mutex-guarded mix of
+ * all of them, so profile one context at a time. */
 #define _POSIX_C_SOURCE 200809L
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -36,19 +39,34 @@ static void print_stats(void) {
     }
 }
 
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+/* pf_stats_on: -1 until the first call, then 0 / 1, set once by a compare-exchange and read
+ * with atomic loads (the public pinfer_argmax may run on any thread). Not pthread_once: that
+ * symbol would raise the library's glibc requirement from 2.33 to 2.34 (engine/pkg). */
+static int enabled(void) {
+    int v = __atomic_load_n(&pf_stats_on, __ATOMIC_ACQUIRE);
+    if (v >= 0) return v;
+    int want = getenv("PF_FWD_STATS") != NULL;
+    if (!__atomic_compare_exchange_n(&pf_stats_on, &v, want, 0, __ATOMIC_ACQ_REL,
+                                     __ATOMIC_ACQUIRE))
+        return v;   /* another thread won; v holds its value */
+    if (want) atexit(print_stats);
+    return want;
+}
+
 double pf_stats_now(void) {
-    if (pf_stats_on < 0) {
-        pf_stats_on = getenv("PF_FWD_STATS") != NULL;
-        if (pf_stats_on) atexit(print_stats);
-    }
-    if (!pf_stats_on) return 0.0;
+    if (!enabled()) return 0.0;
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (double)ts.tv_sec + (double)ts.tv_nsec * 1e-9;
 }
 
 void pf_stats_add(int phase, int kind, double t0) {
-    if (pf_stats_on <= 0) return;
-    sec[phase][kind] += pf_stats_now() - t0;
+    if (enabled() <= 0) return;
+    const double dt = pf_stats_now() - t0;
+    pthread_mutex_lock(&lock);
+    sec[phase][kind] += dt;
     calls[phase][kind]++;
+    pthread_mutex_unlock(&lock);
 }
