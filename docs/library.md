@@ -1,11 +1,11 @@
-# pinfer library guide (v0.1.0)
+# pinfer library guide (v0.2.0)
 
 pinfer runs **Qwen3.5-0.8B** on a Raspberry Pi 4. It ships as
 - a C library, `libpinfer.so` / `libpinfer.a`, with one header, `pinfer.h`. Token ids go in, logits come out;
 - a Python package, `pinfer` (ctypes binding, HF `tokenizers`, sampling, chat template, streaming);
 - a command, `pinfer` (`generate`, `chat`, `bench`, `convert`, `info`).
 
-> **Status 0.1.0 (2026-10-22):** the aarch64 wheel `pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl`
+> **Status 0.2.0 (unreleased, 2026-10-22):** the aarch64 wheel `pinfer-0.2.0-py3-none-manylinux_2_34_aarch64.whl`
 > contains the NEON kernels (`MATVEC=fast`); the x86-64 wheel contains the scalar reference kernels.
 > Recommended model file: `qwen35-0.8b-q4k-headq4k.pq` (`pinfer convert ... --quant q4k`, 437 MB):
 > 7.9 tok/s plain greedy, 16.5 tok/s with `--speculative --spec-k 3`, 37 tok/s prefill, perplexity 18.48 (bf16: 17.93). See §7.
@@ -23,7 +23,7 @@ pip download --dest pi-wheels --python-version 3.13 --implementation cp --only-b
     --platform manylinux_2_28_aarch64 --platform manylinux_2_27_aarch64 \
     --platform manylinux_2_17_aarch64 --platform manylinux2014_aarch64 \
     numpy tokenizers jinja2            # + pytest for the test suite
-cp build/dist/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl pi-wheels/
+cp build/dist/pinfer-0.2.0-py3-none-manylinux_2_34_aarch64.whl pi-wheels/
 # copy pi-wheels/ to the Pi, then on the Pi:
 python3 -m venv ~/venvs/pinfer
 ~/venvs/pinfer/bin/pip install --no-index --find-links pi-wheels "pinfer[chat]"
@@ -32,7 +32,7 @@ Give `--platform` once for each manylinux tag. A single `manylinux_2_28` tag doe
 
 ### PC / x86-64 Linux (for development and tests)
 ```bash
-pip install build/dist/pinfer-0.1.0-py3-none-manylinux_2_33_x86_64.whl "jinja2"
+pip install build/dist/pinfer-0.2.0-py3-none-manylinux_2_33_x86_64.whl "jinja2"
 ```
 Windows cannot load the Linux `.so`, so use WSL. `import pinfer` and `pinfer convert` still work on Windows, because the library is loaded lazily.
 
@@ -50,7 +50,7 @@ The wheel targets need a Python that has `hatchling` installed (`WHEEL_PY`, defa
 make -C engine install PREFIX=/opt/pinfer                    # host
 make -C engine install TARGET=pi PREFIX=/usr/local DESTDIR=/tmp/pi-stage   # Pi tree to copy over
 ```
-This installs `include/pinfer.h`, `lib/libpinfer.a`, `lib/libpinfer.so.0.1.0` (with the symlinks `libpinfer.so.0.1` and `libpinfer.so`) and `lib/pkgconfig/pinfer.pc`.
+This installs `include/pinfer.h`, `lib/libpinfer.a`, `lib/libpinfer.so.0.2.0` (with the symlinks `libpinfer.so.0.2` and `libpinfer.so`) and `lib/pkgconfig/pinfer.pc`.
 
 ---
 
@@ -113,7 +113,7 @@ A complete script is in `examples/python/generate.py`.
 |---|---|
 | `Model.load(path, tokenizer=None, n_threads=4, max_ctx=4096, lib_path=None, kv_dtype="fp32")` | Map a `.pq` file. `tokenizer`: a `Tokenizer`, a path, `None` (search), or `False` (none). `kv_dtype`: `"fp32"` (exact), `"fp16"` or `"int8"` KV cache (§9). |
 | `model.generate(prompt, max_new_tokens=128, *, temperature=0, top_p=1, top_k=0, seed=None, stop=None, stop_token_ids=None, stream=False, reuse_prefix=True, speculative=False, spec_k=None, draft_vocab=None, spec_adaptive=None)` | `prompt` is text or token ids. Returns a `GenerationResult`, or a `TextStream` when `stream=True`. `spec_adaptive=True` lets the engine lower `spec_k` when that is faster (§9). |
-| `model.save_state()` / `model.load_state(data)` | Snapshot / restore the whole context (recurrent + conv states, KV cache, MTP cache, tokens, last logits) as `bytes`; continuation is bit-exact. ~20 MB + 24 KB per token. §9. |
+| `model.save_state()` / `model.load_state(data)` | Snapshot / restore the whole context (recurrent + conv states, KV cache, MTP cache, tokens, last logits) as `bytes`; continuation is bit-exact. ~20 MB + 24 KB per token. A state loads only into a model of the same `.pq` file and `kv_dtype`: otherwise `ModelFormatError`, naming what differs (`pinfer.state`). §9. |
 | `model.context_tokens` / `model.supports_state` | Token ids currently in the engine's context / library has the state API. |
 | `model.chat(messages, max_new_tokens=512, *, enable_thinking=False, tools=None, **generate_kwargs)` | Applies the chat template, then calls `generate`. |
 | `model.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False, tools=None, use_jinja=None)` | Returns the prompt text. |
@@ -135,6 +135,8 @@ A complete script is in `examples/python/generate.py`.
 - **Prefix reuse (`reuse_prefix=True`).** If the new prompt extends the tokens already in the context, only the new tokens are evaluated — also for `speculative=True` (the library's `pinfer_generate_greedy_cont`). The engine's batched and token-by-token paths agree bit for bit, so the result equals a fresh run. `GenerationResult.cached_tokens` tells how many tokens were reused.
 - **Context limit.** A prompt longer than `max_ctx` raises `ContextOverflowError`. When the context fills during generation, the result ends with `finish_reason="context"`.
 - **Threads.** A `Model` is not thread-safe; use one per thread. The weights are memory-mapped, so several models share the page cache. ctypes releases the GIL during C calls.
+- **CPU affinity.** The library never changes the calling thread's affinity. The NEON build pins its `n_threads - 1` worker threads to the 2nd..n-th CPU of the caller's mask (CPUs 1–3 normally) and uses at most as many threads as that mask has CPUs. Up to 0.1.0 it pinned the thread that called `pinfer_load` to CPU 0, and every thread the application created afterwards inherited that single core.
+- **Profiling.** `PF_FWD_STATS=1` / `PF_KERN_STATS=1` print phase and matmul tables at exit. They are process-wide (mutex-guarded since 0.2.0): with several models on several threads the tables sum all of them, so profile one at a time.
 - **Speculative decoding** (`speculative=True`) calls `pinfer_generate_greedy`. The output is the same tokens as plain greedy decoding. The call is blocking, so a stream delivers its text only after the call returns. The C function stops only at EOS: other stop tokens are applied afterwards, so any tokens generated past them are wasted work. See the proposals in §7.
 
 ### Command line
@@ -176,12 +178,12 @@ cc app.c -I/opt/pinfer/include /opt/pinfer/lib/libpinfer.a -lm -pthread   # stat
 | `pinfer_reset`, `pinfer_n_past`, `pinfer_n_vocab`, `pinfer_eos_id`, `pinfer_argmax`, `pinfer_version` | |
 | `pinfer_has_mtp`, `pinfer_default_spec_params`, `pinfer_generate_greedy`, `pinfer_generate_greedy_ex` | Speculative greedy decoding with the MTP head (see `engine/src/spec.c`). `pinfer_spec_params.adaptive = 1`: k is an upper bound, the engine picks the fastest k per round (§9). |
 | `pinfer_generate_greedy_cont(...)` | `pinfer_generate_greedy_ex` without the reset: the prompt is appended to the context (after `pinfer_eval`, `pinfer_state_load` or an earlier generation, whose last returned token is not yet in context and should lead the prompt). |
-| `pinfer_state_size(ctx)`, `pinfer_state_save(ctx, buf, cap)`, `pinfer_state_load(ctx, buf, len)` | Snapshot / restore the context (recurrent + conv states, KV rows, MTP rows). Blob tied to the model file and `kv_dtype`; `E_FORMAT` otherwise, `E_CTX_FULL` if it holds more tokens than `max_ctx`. |
+| `pinfer_state_size(ctx)`, `pinfer_state_save(ctx, buf, cap)`, `pinfer_state_load(ctx, buf, len)` | Snapshot / restore the context (recurrent + conv states, KV rows, MTP rows). The blob (state format 2) carries a 64-bit fingerprint of the model file (its header, tensor directory and sampled weights) and is tied to it and to `kv_dtype`: `E_FORMAT` for another file, KV format or format version (0.1 blobs included), `E_CTX_FULL` if it holds more tokens than `max_ctx`. |
 | `pinfer_params.kv_dtype` | `PINFER_KV_F32` (0, default), `PINFER_KV_F16`, `PINFER_KV_I8`: KV-cache storage (§9). |
 
 Error codes: `PINFER_OK` 0, `E_IO` −1, `E_FORMAT` −2, `E_NOMEM` −3, `E_ARG` −4, `E_CTX_FULL` −5.
 
-**ABI note (2026-10-22).** `pinfer_params` gained `kv_dtype` and `pinfer_spec_params` gained `adaptive` (both at the end, zero = the old behaviour). Callers that zero-initialise the structs through `pinfer_default_params` / `pinfer_default_spec_params` are source-compatible; binaries built against the older header must be rebuilt (0.x: any minor release may change the ABI).
+**ABI note (0.2.0).** After 0.1.0, `pinfer_params` gained `kv_dtype` and `pinfer_spec_params` gained `adaptive` (both at the end, zero = the old behaviour), so the version is 0.2.0 and the SONAME `libpinfer.so.0.2`. Callers that zero-initialise the structs through `pinfer_default_params` / `pinfer_default_spec_params` are source-compatible; binaries built against the 0.1 header must be rebuilt (0.x: any minor release may change the ABI). State blobs saved by 0.1 are refused (format 2).
 
 **ABI.** The shared library exports only `pinfer_*` symbols (linker version script `engine/pkg/pinfer.map`). In the static archive, every other global symbol is made local (`ld -r` followed by `objcopy --keep-global-symbol`). While the version is 0.x, the SONAME is `libpinfer.so.MAJOR.MINOR`, because any minor release may change the ABI. `make -C engine check-lib` verifies the exports, the NEEDED libraries and the glibc symbol versions.
 
@@ -210,7 +212,12 @@ The suite covers:
 - sampling statistics;
 - streaming and stop strings;
 - error handling: missing or corrupt model, invalid token, context overflow, closed model, missing tokenizer;
+- state blobs refused for another model file (same layout, other weights), another `kv_dtype`, format version 1 or a flipped fingerprint (`test_state.py`);
+- the caller's CPU affinity before and after `pinfer_load` / `pinfer_eval`, with a full and a restricted mask, and the workers' pinning on the NEON build (`test_affinity.py`);
+- one version in `pinfer.h`, `pyproject.toml`, the package, the library and its SONAME (`test_version.py`);
 - the CLI.
+
+C-level checks outside pytest: `tests/test_malformed.py` (43 broken `.pq` files, state blobs and token files must fail with the documented error and no sanitizer report; run it on the sanitizer build, `make -C engine host SAN=address,undefined`) and `tests/test_long_context.py` (logits up to 8192 tokens vs the fp32 transformers reference). Details: `engine/HARDENING.md`.
 
 `PINFER_TEST_REQUIRE=1` turns a missing model, tokenizer or golden file into a failure instead of a skip.
 

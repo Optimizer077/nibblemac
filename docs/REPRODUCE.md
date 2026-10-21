@@ -126,7 +126,8 @@ make -C engine/bench            # build/aarch64/kbench, build/aarch64/lbench
 - The kbench golden file comes from Windows Python with numpy:
   `python tools/quant.py golden build/kbench_golden.bin`.
 - Library and wheels: `make -C engine lib`, `make -C engine check-lib` (fails if the Pi `.so` needs a glibc
-  newer than 2.41), `make -C engine wheel-pi` → `build/dist/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl`.
+  newer than 2.41), `make -C engine wheel-pi MATVEC=fast` → `build/dist/pinfer-0.2.0-py3-none-manylinux_2_34_aarch64.whl`
+  (SONAME `libpinfer.so.0.2`; 0.1.0 is described in `docs/release-0.1.0.md`).
   Installation: `docs/library.md`.
 
 Push from the project root on Windows (`push` sets mode 755 on everything and logs the size and SHA-256
@@ -194,7 +195,12 @@ make -C engine                                     # host binary, MATVEC=ref
 /root/venv-ref/bin/python tests/test_spec.py       # MTP head vs reference; --spec k == plain for 9 prompts
 /root/venv-ref/bin/python tests/test_state.py      # state save/restore (Phase 6)
 make -C engine/bench test-qemu                     # kernel golden + correctness checks under qemu
+make -C engine host SAN=address,undefined          # sanitizer build -> build/host-san/engine/
+python3 tests/test_malformed.py                    # 43 broken .pq / state / token files fail cleanly
+/root/venv-ref/bin/python tests/test_long_context.py   # logits to 8192 tokens vs fp32 reference (~45 min)
 ```
+The three `tests/test_*.py` gates also run on the sanitizer build (`--bin build/host-san/engine/pinfer_run`,
+with `UBSAN_OPTIONS=halt_on_error=1`); `engine/HARDENING.md` has the results and the long-context table.
 
 On the Pi, speculative output must equal plain output for 2 models × 2 prompts × 5 configurations:
 
