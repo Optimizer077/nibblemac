@@ -68,3 +68,27 @@ Decode ceiling ≈ 4.2 GB/s ÷ weight bytes per token, e.g. ~0.4 GB of 4-bit wei
 | fast2, 4 thr | bench64 | 2.308 | k=2, draft vocab 32768 | 4.130 (1.79×) | `bench/results/pinfer-spec-fast2-dickens64-k2-v32768_20261021_234027.json` |
 | fast2, 4 thr | French history | 2.326 | k=2, draft vocab 32768 | 3.272 (1.41×) | `bench/results/pinfer-spec-fast2-french-k2-v32768_20261021_233722.json` |
 | fast2, 4 thr | quicksort code | 2.331 | k=2, draft vocab 32768 | 4.503 (1.93×) | `bench/results/pinfer-spec-fast2-quicksort-k2-v32768_20261021_233856.json` |
+
+## Scoreboard — Qwen3.5-0.8B on the Pi 4 (2026-10-21/22, 64-token prompt `bench/common/prompt64`, 64 generated, all runs valid)
+Speed: `bench/results/pinfer-fast-*_20261021_23*.json`, `llamacpp-*`, `mnn-*`, `ort-*`.
+Quality: wikitext-2 test, first 8 chunks × 512 (2040 scored tokens), llama-perplexity protocol
+(`bench/quality/ppl_pc_c8.sh` for GGUF on the PC, `engine/tools/pinfer_ppl` on the Pi,
+tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
+
+| Engine | Format | File | Decode tok/s plain | Decode tok/s MTP spec | Prefill tok/s | PPL (c8) |
+|---|---|---|---|---|---|---|
+| pinfer | Q4_G32 + Q4 head | 437 MB | **6.88** | **12.56** (k=3, dv 32768) | 21.3 | pending |
+| pinfer | Q4K (v_proj, mtp.fc Q8) + Q4K head | 439 MB | **6.88** | 10.98 (k=3, dv 32768) | 16.3 | **18.50** |
+| pinfer | same + Q8 head | 567 MB | 5.72 | 9.77 (k=3) | 13.7 | pending |
+| pinfer | Q8_G32 + Q8 head | 823 MB | 4.22 | 8.73 (k=4, dv 16384) | 12.2 | pending |
+| pinfer | bf16 | 1.55 GB | 2.27 | 4.13 (k=2) | 11.0 | = reference |
+| MNN 3.6 | int4 HQQ block64 | ~450 MB | 6.67 (t=2) | — | **30.9** | — |
+| llama.cpp v0.7.0 | Q4_0 | 513 MB | 5.59 | — | 15.7 | 21.25 |
+| llama.cpp v0.7.0 | Q4_K_M | 542 MB | 5.41 | — | 14.8 | 18.59 |
+| llama.cpp v0.7.0 | Q8_0 | 834 MB | 4.12 (t=2) | — | 17.1 | 17.97 |
+| llama.cpp v0.7.0 | bf16 | 1.56 GB | — | — | — | 17.93 |
+| ONNX Runtime GenAI 0.18 | int4 rtn acc4 | — | 3.10 | — | 9.9 | — |
+
+Speculative decoding is exact (identical tokens to plain greedy, `tests/test_spec.py`).
+Verify-pass cost vs one decode step (bf16): 1.07 / 1.27 / 1.38 / 1.61 for k=1..4 — the
+remaining lever together with prefill (MNN leads there).
