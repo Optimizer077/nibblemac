@@ -1,0 +1,73 @@
+pinfer kernel build  variant=4k  steps='config'  log=/mnt/e/Personal_tries/Raspberry_Pi/logs/kernel/build-4k-20261021-224648.log
+host: Linux DESKTOP-DFIK5HO 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 GNU/Linux
+gcc:  aarch64-linux-gnu-gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+jobs: 20
+
+=== [22:46:48] source: https://github.com/raspberrypi/linux @ cff533aec2fa601846766b32ff57204e0a61bed7 -> /root/src/linux-rpi
+commit cff533aec2fa601846766b32ff57204e0a61bed7
+committer-date 2026-09-10T13:34:30+01:00
+subject configs: Enable the MXL86110 PHY driver
+Makefile version: 6.18.50
+
+=== [22:46:48] config: stock 6.18.50+rpt-rpi-v8 + pinfer.config
+Using /root/src/kbuild-pinfer-4k/.config as base
+Merging /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config
+Value of CONFIG_LOCALVERSION is redefined by fragment /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config:
+Previous value: CONFIG_LOCALVERSION="-v8"
+New value: CONFIG_LOCALVERSION="-pinfer"
+
+Value of CONFIG_NO_HZ_IDLE is redefined by fragment /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config:
+Previous value: CONFIG_NO_HZ_IDLE=y
+New value: # CONFIG_NO_HZ_IDLE is not set
+
+Value of CONFIG_NO_HZ_FULL is redefined by fragment /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config:
+Previous value: # CONFIG_NO_HZ_FULL is not set
+New value: CONFIG_NO_HZ_FULL=y
+
+Value of CONFIG_TICK_CPU_ACCOUNTING is redefined by fragment /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config:
+Previous value: CONFIG_TICK_CPU_ACCOUNTING=y
+New value: # CONFIG_TICK_CPU_ACCOUNTING is not set
+
+Value of CONFIG_VIRT_CPU_ACCOUNTING_GEN is redefined by fragment /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config:
+Previous value: # CONFIG_VIRT_CPU_ACCOUNTING_GEN is not set
+New value: CONFIG_VIRT_CPU_ACCOUNTING_GEN=y
+
+Value of CONFIG_HUGETLBFS is redefined by fragment /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config:
+Previous value: # CONFIG_HUGETLBFS is not set
+New value: CONFIG_HUGETLBFS=y
+
+Value of CONFIG_TRANSPARENT_HUGEPAGE is redefined by fragment /mnt/e/Personal_tries/Raspberry_Pi/os/kernel/pinfer.config:
+Previous value: # CONFIG_TRANSPARENT_HUGEPAGE is not set
+New value: CONFIG_TRANSPARENT_HUGEPAGE=y
+
+#
+# merged configuration written to /root/src/kbuild-pinfer-4k/.config (needs make)
+#
+make: Entering directory '/root/src/linux-rpi'
+make[1]: Entering directory '/root/src/kbuild-pinfer-4k'
+  GEN     Makefile
+#
+# configuration written to .config
+#
+make[1]: Leaving directory '/root/src/kbuild-pinfer-4k'
+make: Leaving directory '/root/src/linux-rpi'
+CONFIG_CONTEXT_TRACKING_USER             want=y            got=y            OK
+CONFIG_CPU_ISOLATION                     want=y            got=y            OK
+CONFIG_HUGETLBFS                         want=y            got=y            OK
+CONFIG_HUGETLB_PAGE                      want=y            got=y            OK
+CONFIG_HZ_PERIODIC                       want=n            got=n            OK
+CONFIG_LOCALVERSION                      want=-pinfer      got=-pinfer      OK
+CONFIG_LOCALVERSION_AUTO                 want=n            got=n            OK
+CONFIG_NO_HZ_COMMON                      want=y            got=y            OK
+CONFIG_NO_HZ_FULL                        want=y            got=y            OK
+CONFIG_NO_HZ_IDLE                        want=n            got=n            OK
+CONFIG_RCU_NOCB_CPU                      want=y            got=y            OK
+CONFIG_READ_ONLY_THP_FOR_FS              want=y            got=y            OK
+CONFIG_TICK_CPU_ACCOUNTING               want=n            got=n            OK
+CONFIG_TRANSPARENT_HUGEPAGE              want=y            got=y            OK
+CONFIG_TRANSPARENT_HUGEPAGE_ALWAYS       want=n            got=n            OK
+CONFIG_TRANSPARENT_HUGEPAGE_MADVISE      want=y            got=y            OK
+CONFIG_VIRT_CPU_ACCOUNTING_GEN           want=y            got=y            OK
+diffconfig: 52 changed symbols -> logs/kernel/diffconfig-4k.txt
+
+=== [22:46:52] done (5 s total)

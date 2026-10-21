@@ -1,0 +1,63 @@
+## dry run
+PASS: dry-run wrote nothing
+## install
+-rw-r--r-- 1 root root    56411 Oct 21 22:53 bcm2711-rpi-400.dtb
+-rw-r--r-- 1 root root    39913 Oct 21 22:53 bcm2711-rpi-cm4-io.dtb
+-rw-r--r-- 1 root root    56928 Oct 21 22:53 bcm2711-rpi-cm4.dtb
+-rw-r--r-- 1 root root    53824 Oct 21 22:53 bcm2711-rpi-cm4s.dtb
+-rw-r--r-- 1 root root      141 Oct 21 22:53 cmdline.txt
+-rw-r--r-- 1 root root 25799168 Oct 21 22:53 kernel8-pinfer.img
+drwxr-xr-x 2 root root    20480 Oct 21 22:53 overlays
+   overlays: 386
+== tryboot.txt tail:
+# pinfer-kernel BEGIN (tryboot only; written 20261021-225304 by install_tryboot.sh)
+[all]
+os_prefix=pinfer/
+kernel=kernel8-pinfer.img
+# pinfer-kernel END
+== pinfer cmdline:
+console=serial0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR panic=10
+
+NEXT (one-time test boot of 6.18.50-pinfer):
+    sudo reboot '0 tryboot'
+then check:   uname -r   (expect 6.18.50-pinfer)
+              od -An -tu4 --endian=big /proc/device-tree/chosen/bootloader/tryboot   (expect 1)
+If it does not come back within ~3 minutes: power-cycle -> stock kernel.
+Keep it:      sudo ./make_permanent.sh   (only while running 6.18.50-pinfer)
+Undo:         sudo ./rollback.sh [--purge]
+Split-core:   sudo ./splitcore_cmdline.sh on   (edits /root/src/pinfer-installtest/boot/firmware/pinfer/cmdline.txt only)
+PASS: stock files unchanged after install
+PASS: depmod produced modules.dep (1914 lines)
+PASS: tryboot.txt starts with config.txt verbatim
+PASS: tryboot.txt selects pinfer
+## make_permanent while running stock -> must refuse
+ERROR: running 6.18.50+rpt-rpi-v8, not 6.18.50-pinfer: tryboot the pinfer kernel first (sudo reboot '0 tryboot')
+PASS: refused
+## splitcore
+console=serial0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR panic=10 isolcpus=nohz,domain,managed_irq,1-3 nohz_full=1-3 rcu_nocbs=1-3 irqaffinity=0 transparent_hugepage=madvise hugepagesz=2M hugepages=480
+PASS: split-core flags
+PASS: re-run idempotent, hugepages removed
+PASS: off restores stock+panic=10
+PASS: stock cmdline untouched by splitcore
+## make_permanent while running pinfer
+os_prefix=pinfer/
+kernel=kernel8-pinfer.img
+# pinfer-kernel END
+Reboot normally to confirm; undo with: sudo ./rollback.sh
+config.txt already has a pinfer-kernel block:
+PASS: make_permanent idempotent
+PASS: permanent block added once
+## rollback
+removed pinfer block from config.txt (backup config.txt.rollback-20261021-225306)
+moved tryboot.txt -> tryboot.txt.rollback-20261021-225306
+next normal reboot boots: kernel8.img (default)
+PASS: config.txt byte-identical to original after rollback
+PASS: tryboot.txt moved aside
+config.txt has no pinfer block (already stock)
+refusing --purge while running 6.18.50-pinfer; reboot to stock first
+PASS: purge refused while running pinfer
+purged /root/src/pinfer-installtest/boot/firmware/pinfer, /lib/modules/6.18.50-pinfer
+next normal reboot boots: kernel8.img (default)
+PASS: purged
+PASS: stock files still unchanged
+ALL-TESTS-PASSED

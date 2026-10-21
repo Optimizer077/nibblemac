@@ -1,0 +1,17 @@
+pinfer kernel build  variant=4k  steps='stage'  log=/mnt/e/Personal_tries/Raspberry_Pi/logs/kernel/build-4k-20261021-224536.log
+host: Linux DESKTOP-DFIK5HO 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 GNU/Linux
+gcc:  aarch64-linux-gnu-gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+jobs: 20
+
+=== [22:45:36] source: https://github.com/raspberrypi/linux @ cff533aec2fa601846766b32ff57204e0a61bed7 -> /root/src/linux-rpi
+commit cff533aec2fa601846766b32ff57204e0a61bed7
+committer-date 2026-09-10T13:34:30+01:00
+subject configs: Enable the MXL86110 PHY driver
+Makefile version: 6.18.50
+
+=== [22:45:36] stage: kernelrelease=6.18.50-pinfer
+mirror verified against SHA256SUMS (4 case-colliding files only in the tarball)
+staged: build/kernel/6.18.50-pinfer (61M), image 25M, modules 29M, 1914 .ko files
+tarball: build/kernel/pinfer-kernel-6.18.50-pinfer.tar.gz (33M) sha256 ae32ffcc416b7f71fdfcdcf1122e456819f127e332b3b7001f5662c7c3906cd1
+
+=== [22:46:27] done (51 s total)

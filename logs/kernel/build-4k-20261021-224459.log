@@ -1,0 +1,13 @@
+pinfer kernel build  variant=4k  steps='stage'  log=/mnt/e/Personal_tries/Raspberry_Pi/logs/kernel/build-4k-20261021-224459.log
+host: Linux DESKTOP-DFIK5HO 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 GNU/Linux
+gcc:  aarch64-linux-gnu-gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+jobs: 20
+
+=== [22:44:59] source: https://github.com/raspberrypi/linux @ cff533aec2fa601846766b32ff57204e0a61bed7 -> /root/src/linux-rpi
+commit cff533aec2fa601846766b32ff57204e0a61bed7
+committer-date 2026-09-10T13:34:30+01:00
+subject configs: Enable the MXL86110 PHY driver
+Makefile version: 6.18.50
+
+=== [22:44:59] stage: kernelrelease=6.18.50-pinfer
+cp: cannot stat 'n': No such file or directory
