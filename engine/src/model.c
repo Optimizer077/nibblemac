@@ -139,6 +139,28 @@ static int build_layer(const pf_model *m, int i, pf_layer *L) {
     return rc ? PINFER_E_FORMAT : PINFER_OK;
 }
 
+/* Copy the file image into an anonymous mapping advised for transparent huge pages. A file
+ * mapping only gets huge pages through khugepaged (slow, not guaranteed), an anonymous one
+ * gets them at fault time when THP is "always" or "madvise". Costs one extra copy of the
+ * model in RAM; returns NULL (keep the file mapping) if anything fails. */
+static void *anon_hugepage_copy(const void *src, size_t bytes) {
+    const size_t huge = 2u << 20;
+    size_t len = (bytes + huge - 1) / huge * huge;
+    void *p = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (p == MAP_FAILED) return NULL;
+#ifdef MADV_HUGEPAGE
+    if (madvise(p, len, MADV_HUGEPAGE) != 0) perror("madvise(MADV_HUGEPAGE)");
+#endif
+    memcpy(p, src, bytes);
+    mprotect(p, len, PROT_READ);
+    FILE *f = fopen("/proc/self/smaps_rollup", "r");  /* report how much actually went huge */
+    char line[128];
+    while (f && fgets(line, sizeof line, f))
+        if (!strncmp(line, "AnonHugePages:", 14)) fprintf(stderr, "pinfer: %s", line);
+    if (f) fclose(f);
+    return p;
+}
+
 int pf_model_load(pf_model *m, const char *path) {
     memset(m, 0, sizeof *m);
     int fd = open(path, O_RDONLY);
@@ -154,6 +176,10 @@ int pf_model_load(pf_model *m, const char *path) {
     if (map == MAP_FAILED) { perror("mmap"); return PINFER_E_IO; }
     m->map = map;
     m->map_bytes = (size_t)st.st_size;
+    if (getenv("PINFER_HUGEPAGES")) {  /* experiment: weights in 2 MB (THP) pages, fewer TLB misses */
+        void *copy = anon_hugepage_copy(map, m->map_bytes);
+        if (copy) { munmap(map, m->map_bytes); m->map = map = copy; }
+    }
     m->hdr = (const pq_header *)map;
 
     int rc = check_header(m->hdr);

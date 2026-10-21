@@ -119,7 +119,12 @@ Verdict: the kernel build (NO_HZ_FULL/context tracking compiled in) costs nothin
 isolation + tickless cores change decode by < 1% — the engine is DRAM-bound and there was
 little jitter to remove. 4-thread memband rises 4.07 → 4.60 GB/s under isolation (no
 housekeeping on cores 1–3), which the engine does not translate into tok/s because its decode
-already uses 1–3 threads for streaming. Still untested: huge pages for the weights
-(`madvise(MADV_HUGEPAGE)` on an anonymous copy; THP is `madvise` on this kernel).
+already uses 1–3 threads for streaming. Huge pages (K3, `PINFER_HUGEPAGES=1`: anonymous copy of the model with
+`madvise(MADV_HUGEPAGE)`, 428 of 437 MB landed in 2 MB pages per `AnonHugePages`): plain 7.27–7.34
+vs 7.24–7.28 without, spec 13.42 vs 13.52 — **no gain either** (`pinfer-k3{a,b,c}-*_20261022_0134*`).
+The A72's hardware prefetcher and page-walk caches already hide the 4 KB-page TLB cost of a
+sequential weight stream. Methodology note found on the way: the first `--bench` after a reboot
+reports prefill ~20 tok/s instead of ~27 because the mmap'd weights fault in from the SSD during
+that first prefill (cold page cache) — decode is unaffected; warm-up to be added to `--bench`.
 The Pi runs the stock kernel again (a plain reboot ends the tryboot); the custom kernel stays
 installed side by side (`docs/pi-state.md` #4).

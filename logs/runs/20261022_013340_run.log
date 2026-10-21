@@ -1,0 +1,7 @@
+# 2026-10-22T01:33:40 pi@10.42.0.2
+$ uname -r; cat /sys/kernel/mm/transparent_hugepage/enabled
+
+6.18.50-pinfer
+always [madvise] never
+
+[exit 0]
