@@ -190,8 +190,9 @@ from DRAM once per query head and once per token (26.5 ms per step at 2048 token
 *Tokens/s, wikitext prompt of N tokens; at 2048 and 4096 the speculative columns are the 64-token
 runs. Sources: `engine/CONTEXT.md` Summary.*
 
-- **The 4096-token target (within 15% of short-context speed) is met only with an fp16 cache** (84%);
-  fp32 reaches 81%. With fp32, streaming the cache itself puts the ceiling at ~84.5%.
+- **The 4096-token target (at least 85% of short-context speed) is narrowly missed:** fp32 reaches 81%
+  and fp16 84.4%. With fp32, streaming the cache alone caps it at ~84.5%, so only a smaller cache can
+  get there.
 - **KV cache precision is opt-in** (`kv_dtype="fp16"` / `"int8"`, `--kv-dtype`). fp16 matches fp32
   perplexity (13.983 vs 13.985 on 8 × 2048 tokens), halves the cache and is 5–8% faster from 4096
   tokens up. fp32 stays the default because fp16 changes greedy output at the first near-tie.

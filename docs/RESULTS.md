@@ -218,7 +218,8 @@ llama.cpp Q4_K_M at the same KV depth (`llama-bench -d`, f16 KV): 5.48 / 5.23 / 
 8192 exceeds the 20-minute lock.
 
 - Decode at 4096 is 81% of decode at 64 with fp32 KV, 84% with fp16. Streaming the fp32 cache alone puts
-  the fp32 ceiling at ~84.5%, so the 85% target (issue #1) is reachable only with the smaller cache.
+  the fp32 ceiling at ~84.5%, so the 85% target (issue #1) is out of reach with fp32; fp16 reaches 84.4%,
+  just short of it.
 - KV dtype quality (`pinfer_ppl --kv-dtype`, 8 chunks): perplexity at 512-token chunks 18.5041 / 18.5257 /
   18.5007 and at 2048-token chunks 13.9852 / 13.9828 / 13.9892 for fp32 / fp16 / int8 (`pinfer-ppl-c8-kv*`,
   `pinfer-ppl-c2048x8-kv*`), all within noise. Greedy output at 4096 tokens diverges from fp32 at token 11
