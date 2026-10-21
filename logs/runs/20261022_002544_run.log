@@ -1,0 +1,10 @@
+# 2026-10-22T00:25:44 pi@10.42.0.2
+$ pgrep -fa flock | cut -c1-110
+
+12904 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for S in '--spec 0' '--spec 3 --draft-
+12937 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer
+12960 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer
+13024 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c rm -f gmon.out; ./engine/pinfer_run_pg
+13109 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -fa flock | cut -c1-110
+
+[exit 0]

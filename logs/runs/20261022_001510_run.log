@@ -1,0 +1,11 @@
+# 2026-10-22T00:15:10 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; for S in "" "--spec-k 2" "--spec-k 3"; do $V/pinfer bench -m models/qwen35-0.8b-mix-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer --prompt-tokens 64 -n 64 --json $S 2>&1 | tail -1; done; echo "--- C CLI, same model, plain + k2 ---"; for S in "--spec 0" "--spec 2 --draft-vocab 32768"; do ./engine/pinfer_run_fast -m models/qwen35-0.8b-mix-headq4k.pq -t 4 -n 64 --ids-file data/prompt64.ids $S --bench | grep RESULT; done
+
+pinfer: error: unrecognized arguments: --tokenizer models/qwen35-0.8b-tokenizer
+pinfer: error: unrecognized arguments: --tokenizer models/qwen35-0.8b-tokenizer
+pinfer: error: unrecognized arguments: --tokenizer models/qwen35-0.8b-tokenizer
+--- C CLI, same model, plain + k2 ---
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-mix-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 16.6970, "decode_tps": 6.6563, "peak_rss_mb": 434.8, "spec_k": 0, "draft_vocab": 0, "rounds": 0, "drafted": 0, "accepted": 0, "mean_accepted": 0.0000, "accept_rate": 0.0000, "tokens_per_pass": 1.0000, "mtp_ms_per_pass": 0.00, "verify_ms_per_pass": 0.00, "commit_ms_per_pass": 0.00}
+RESULT {"engine": "pinfer-fast-spec", "model": "qwen35-0.8b-mix-headq4k.pq", "threads": 4, "n_prompt": 64, "n_gen": 64, "prefill_tps": 19.9005, "decode_tps": 10.7380, "peak_rss_mb": 452.1, "spec_k": 2, "draft_vocab": 32768, "rounds": 24, "drafted": 48, "accepted": 39, "mean_accepted": 1.6250, "accept_rate": 0.8125, "tokens_per_pass": 2.6250, "mtp_ms_per_pass": 19.98, "verify_ms_per_pass": 204.94, "commit_ms_per_pass": 19.53}
+
+[exit 0]
