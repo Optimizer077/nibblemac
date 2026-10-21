@@ -31,22 +31,29 @@ if TYPE_CHECKING:
 _DONE = object()
 
 
-def _spec_params(model: Model, k: int | None, draft_vocab: int | None) -> SpecParams:
+def _spec_params(model: Model, k: int | None, draft_vocab: int | None,
+                 adaptive: bool | None = None) -> SpecParams:
     lib = model._lib
-    sp = lib.pinfer_default_spec_params() if lib.pinfer_default_spec_params else SpecParams(3, 0)
+    sp = lib.pinfer_default_spec_params() if lib.pinfer_default_spec_params else SpecParams(3, 0, 0)
     if k is not None:
         sp.k = int(k)
     if draft_vocab is not None:
         sp.draft_vocab = int(draft_vocab)
+    if adaptive is not None:
+        sp.adaptive = int(bool(adaptive))
     return sp
 
 
 def iter_speculative(model: Model, ids: list[int], max_new_tokens: int, stop_ids: set[int],
                      state: dict[str, Any], k: int | None = None,
-                     draft_vocab: int | None = None) -> Iterator[int]:
+                     draft_vocab: int | None = None, adaptive: bool | None = None,
+                     reuse_prefix: bool = True) -> Iterator[int]:
     """Yield the tokens of one speculative greedy generation (see module docstring).
 
     ``state`` receives the same keys as :meth:`pinfer.Model.iter_tokens` plus ``spec_stats``.
+    With ``reuse_prefix`` and a library that has ``pinfer_generate_greedy_cont``, a prompt
+    that extends the tokens already in context is continued from them (only the new tokens
+    are prefilled, ``cached_tokens`` tells how many were reused).
     """
     lib = model._lib
     if (lib.pinfer_generate_greedy is None and lib.pinfer_generate_greedy_ex is None) \
@@ -60,26 +67,38 @@ def iter_speculative(model: Model, ids: list[int], max_new_tokens: int, stop_ids
                  finish_reason="length", spec_stats=None)
     if max_new_tokens <= 0:
         return
-    sp = _spec_params(model, k, draft_vocab)
-    prompt = (ctypes.c_int32 * len(ids))(*ids)
+    sp = _spec_params(model, k, draft_vocab, adaptive)
     stats = SpecStats()
-    model._forget_state()  # the C call resets the context itself
+    # Continue from the context when the prompt extends it (and at least one token is new).
+    have = model._tokens
+    cont = (lib.pinfer_generate_greedy_cont is not None and reuse_prefix
+            and 0 < len(have) < len(ids) and ids[:len(have)] == have)
+    new_ids = ids[len(have):] if cont else ids
+    prompt = (ctypes.c_int32 * len(new_ids))(*new_ids)
+    state["cached_tokens"] = len(have) if cont else 0
+    if not cont:
+        model._forget_state()  # the C call resets the context itself
+    model._logits_valid = False
     if lib.pinfer_generate_greedy_ex is not None:
-        yield from _iter_ex(model, prompt, ids, max_new_tokens, stop_ids, state, sp, stats)
+        fn = lib.pinfer_generate_greedy_cont if cont else lib.pinfer_generate_greedy_ex
+        yield from _iter_ex(model, fn, prompt, new_ids, len(ids), max_new_tokens, stop_ids,
+                            state, sp, stats)
     else:
         yield from _iter_blocking(model, prompt, ids, max_new_tokens, stop_ids, state, sp, stats)
     state["spec_stats"] = {"k": sp.k, "rounds": stats.rounds, "drafted": stats.drafted,
                            "accepted": stats.accepted}
 
 
-def _iter_ex(model: Model, prompt: Any, ids: list[int], max_new_tokens: int,
-             stop_ids: set[int], state: dict[str, Any], sp: SpecParams, stats: SpecStats
-             ) -> Iterator[int]:
-    """Streaming path: C call in a worker thread, tokens handed over through a queue."""
+def _iter_ex(model: Model, fn: Any, prompt: Any, ids: list[int], n_ctx: int,
+             max_new_tokens: int, stop_ids: set[int], state: dict[str, Any], sp: SpecParams,
+             stats: SpecStats) -> Iterator[int]:
+    """Streaming path: C call ``fn`` (reset + prefill, or continuation) in a worker thread,
+    tokens handed over through a queue. ``ids`` are the tokens fed by this call, ``n_ctx``
+    the context length after its prefill."""
     lib = model._lib
     stops = sorted(stop_ids - {model.eos_id})
     stop_arr = (ctypes.c_int32 * max(1, len(stops)))(*stops)
-    n_max = min(max_new_tokens, max(0, model.max_ctx - len(ids)))
+    n_max = min(max_new_tokens, max(0, model.max_ctx - n_ctx))
     out = (ctypes.c_int32 * max(1, n_max))()
     tokens: queue.Queue[Any] = queue.Queue()
     cancel = threading.Event()
@@ -99,7 +118,7 @@ def _iter_ex(model: Model, prompt: Any, ids: list[int], max_new_tokens: int,
 
     def run() -> None:
         try:
-            result["n"] = lib.pinfer_generate_greedy_ex(
+            result["n"] = fn(
                 model._handle(), prompt, len(ids), out, n_max, ctypes.byref(sp),
                 ctypes.byref(opts), ctypes.byref(stats), ctypes.byref(status))
         except BaseException as e:  # surfaced in the consumer thread
@@ -129,6 +148,8 @@ def _iter_ex(model: Model, prompt: Any, ids: list[int], max_new_tokens: int,
     n = result["n"]
     if n < 0:
         raise errors.from_code(n, "pinfer_generate_greedy_ex")
+    # The engine fed the prompt and every returned token but the last (emitted, not fed).
+    model._tokens = model._tokens + list(ids) + [int(t) for t in out[:max(0, n - 1)]]
     if status.value == errors.E_CTX_FULL or (n == n_max and n_max < max_new_tokens):
         state["finish_reason"] = "context"
     elif status.value != 0:

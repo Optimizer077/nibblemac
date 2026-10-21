@@ -13,7 +13,8 @@ from typing import Any
 import numpy as np
 
 from . import errors
-from ._lib import Lib, Params, load_library
+from . import state as _state
+from ._lib import Lib, Params, load_library, parse_kv_dtype
 from .chat import apply_chat_template
 from .errors import ContextOverflowError, ModelClosedError, ModelNotFoundError, PinferError
 from .sampling import Sampler, SamplingParams
@@ -37,13 +38,14 @@ class Model:
     """
 
     def __init__(self, lib: Lib, ctx: int, path: Path, tokenizer: Tokenizer | None,
-                 n_threads: int, max_ctx: int) -> None:
+                 n_threads: int, max_ctx: int, kv_dtype: str = "fp32") -> None:
         self._lib = lib
         self._ctx: int | None = ctx
         self.path = path
         self.tokenizer = tokenizer
         self.n_threads = n_threads
         self.max_ctx = max_ctx
+        self.kv_dtype = kv_dtype
         self.n_vocab = int(lib.pinfer_n_vocab(ctx))
         self.eos_id = int(lib.pinfer_eos_id(ctx))
         self._logits = np.zeros(self.n_vocab, dtype=np.float32)
@@ -55,7 +57,8 @@ class Model:
     @classmethod
     def load(cls, path: str | os.PathLike[str], tokenizer: str | os.PathLike[str] | Tokenizer
              | None | bool = None, n_threads: int = 4, max_ctx: int = 4096,
-             lib_path: str | os.PathLike[str] | None = None) -> Model:
+             lib_path: str | os.PathLike[str] | None = None, kv_dtype: str | int = "fp32"
+             ) -> Model:
         """Load a ``.pq`` model.
 
         Args:
@@ -66,6 +69,9 @@ class Model:
             n_threads: Worker threads for matrix ops (the Pi 4 has 4 cores).
             max_ctx: Maximum tokens kept in context (KV cache size).
             lib_path: Explicit ``libpinfer.so`` (default search: see :mod:`pinfer._lib`).
+            kv_dtype: KV-cache storage: ``"fp32"`` (exact, default), ``"fp16"`` or ``"int8"``
+                (smaller and faster at long context, slightly different numerics; see
+                ``engine/CONTEXT.md``). Needs a libpinfer with ``pinfer_params.kv_dtype``.
 
         Raises:
             ModelNotFoundError, ModelFormatError, ModelLoadError, LibraryNotFoundError,
@@ -73,17 +79,20 @@ class Model:
         """
         if int(n_threads) < 1 or int(max_ctx) < 1:
             raise ValueError(f"n_threads and max_ctx must be >= 1 (got {n_threads}, {max_ctx})")
+        kv_dtype, kv_code = parse_kv_dtype(kv_dtype)
         p = Path(path)
         if not p.is_file():
             raise ModelNotFoundError(f"model file not found: {p}", errors.E_IO)
         tok = cls._load_tokenizer(p, tokenizer)
         lib = load_library(lib_path)
-        params = Params(n_threads=int(n_threads), max_ctx=int(max_ctx))
+        if kv_code != 0 and not lib.has("pinfer_state_size"):
+            raise NotImplementedError("kv_dtype needs a libpinfer with the context-window API")
+        params = Params(n_threads=int(n_threads), max_ctx=int(max_ctx), kv_dtype=kv_code)
         err = ctypes.c_int(0)
         ctx = lib.pinfer_load(os.fsencode(p), ctypes.byref(params), ctypes.byref(err))
         if not ctx:
             raise errors.from_code(err.value or errors.E_IO, str(p))
-        model = cls(lib, ctx, p, tok, int(n_threads), int(max_ctx))
+        model = cls(lib, ctx, p, tok, int(n_threads), int(max_ctx), kv_dtype)
         if tok is not None and tok.vocab_size > model.n_vocab:
             model.close()
             raise PinferError(f"tokenizer vocabulary ({tok.vocab_size}) is larger than the "
@@ -145,6 +154,16 @@ class Model:
         """True if ``generate(speculative=True)`` works: library entry point + MTP head."""
         return self._lib.pinfer_generate_greedy is not None and self.has_mtp
 
+    @property
+    def supports_state(self) -> bool:
+        """True if the library has ``pinfer_state_save`` / ``load`` (save_state, load_state)."""
+        return self._lib.pinfer_state_save is not None
+
+    @property
+    def context_tokens(self) -> tuple[int, ...]:
+        """The token ids the engine's context currently holds (in order)."""
+        return tuple(self._tokens)
+
     def info(self) -> dict[str, Any]:
         """Library, build and model facts (for logs and bug reports)."""
         build: dict[str, Any] = {}
@@ -153,7 +172,7 @@ class Model:
             build = json.loads(bi.read_text(encoding="utf-8"))
         return {"model": str(self.path), "library": self._lib.path, "version": self.version,
                 "build": build, "n_vocab": self.n_vocab, "eos_id": self.eos_id,
-                "max_ctx": self.max_ctx, "n_threads": self.n_threads,
+                "max_ctx": self.max_ctx, "n_threads": self.n_threads, "kv_dtype": self.kv_dtype,
                 "tokenizer": str(self.tokenizer.source) if self.tokenizer else None,
                 "has_mtp": self.has_mtp, "speculative": self.supports_speculative}
 
@@ -199,6 +218,29 @@ class Model:
             raise ValueError("eval needs at least one token")
         self._eval_into(list(tokens))
         return self._logits.copy()
+
+    # ------------------------------------------------------------------ state
+    def save_state(self) -> bytes:
+        """Snapshot the context (recurrent + conv states, KV cache, MTP cache, the tokens in
+        context and the last logits) as bytes; :meth:`load_state` restores it bit-exactly.
+        Prefill a system prompt or a document once and reuse it for many conversations.
+        Size: ~20 MB + 24 KB per token in context (fp32 KV cache). Layout: :mod:`pinfer.state`.
+
+        Raises:
+            NotImplementedError: The library predates ``pinfer_state_save``.
+        """
+        return _state.save(self)
+
+    def load_state(self, data: bytes) -> None:
+        """Restore a snapshot made by :meth:`save_state` on a model loaded from the same
+        ``.pq`` file with the same ``kv_dtype`` (the context is unchanged on failure).
+
+        Raises:
+            ValueError: Not a pinfer state (or truncated).
+            ModelFormatError: The state belongs to another model or KV format.
+            ContextOverflowError: The state holds more tokens than ``max_ctx``.
+        """
+        _state.load(self, data)
 
     def _prefill(self, ids: list[int], reuse_prefix: bool) -> int:
         """Bring the context to exactly ``ids``; return how many tokens were reused."""
@@ -275,8 +317,8 @@ class Model:
                  seed: int | None = None, stop: str | Sequence[str] | None = None,
                  stop_token_ids: Iterable[int] | None = None, stream: bool = False,
                  reuse_prefix: bool = True, speculative: bool = False,
-                 spec_k: int | None = None, draft_vocab: int | None = None
-                 ) -> GenerationResult | TextStream:
+                 spec_k: int | None = None, draft_vocab: int | None = None,
+                 spec_adaptive: bool | None = None) -> GenerationResult | TextStream:
         """Generate a continuation of ``prompt`` (text or token ids).
 
         Args:
@@ -288,8 +330,9 @@ class Model:
                 ``<|endoftext|>`` always stop).
             stream: Return a :class:`TextStream` of text chunks instead of a result.
             reuse_prefix: Keep the engine state when the new prompt extends the tokens already
-                in context (saves the shared prefill; output may differ in the last float bits
-                from a fresh run because prefill chunking differs).
+                in context (saves the shared prefill; bit-exact with the current engine, whose
+                batched and token-by-token paths agree). Also used by speculative decoding
+                when the library has ``pinfer_generate_greedy_cont``.
             speculative: Greedy speculative decoding with the model's MTP head (same tokens
                 as plain greedy, faster). Needs greedy sampling and
                 :attr:`supports_speculative`. Streams token by token with a libpinfer that
@@ -298,6 +341,8 @@ class Model:
             spec_k: Draft tokens per verification pass (default: the library's).
             draft_vocab: Draft only over token ids below this (cheaper drafts; output
                 unchanged). Default: the library's.
+            spec_adaptive: Let the engine lower ``spec_k`` (down to plain steps) whenever
+                acceptance makes that faster; output unchanged. Default: the library's.
 
         Returns:
             A :class:`GenerationResult`, or a :class:`TextStream` when ``stream=True``.
@@ -318,7 +363,7 @@ class Model:
         result: list[GenerationResult] = []
         if speculative:
             tokens = iter_speculative(self, ids, max_new_tokens, extra | {self.eos_id}, state,
-                                      spec_k, draft_vocab)
+                                      spec_k, draft_vocab, spec_adaptive, reuse_prefix)
         else:
             tokens = self.iter_tokens(ids, max_new_tokens, sampling, extra, reuse_prefix, state)
         chunks = self._text_chunks(tokens, len(ids), stops, state, result)

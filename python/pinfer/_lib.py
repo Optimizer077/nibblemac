@@ -32,15 +32,34 @@ _cache: dict[str, Lib] = {}
 
 
 class Params(ctypes.Structure):
-    """Mirror of ``pinfer_params`` in pinfer.h."""
+    """Mirror of ``pinfer_params`` in pinfer.h (``kv_dtype`` added in 0.1: 0 fp32, 1 fp16,
+    2 int8; older libraries ignore the extra field, which is zero-initialised)."""
 
-    _fields_ = [("n_threads", ctypes.c_int), ("max_ctx", ctypes.c_int)]
+    _fields_ = [("n_threads", ctypes.c_int), ("max_ctx", ctypes.c_int),
+                ("kv_dtype", ctypes.c_int)]
 
 
 class SpecParams(ctypes.Structure):
-    """Mirror of ``pinfer_spec_params`` (speculative decoding, optional API)."""
+    """Mirror of ``pinfer_spec_params`` (speculative decoding, optional API; ``adaptive``
+    added in 0.1, zero-initialised = fixed k)."""
 
-    _fields_ = [("k", ctypes.c_int), ("draft_vocab", ctypes.c_int)]
+    _fields_ = [("k", ctypes.c_int), ("draft_vocab", ctypes.c_int), ("adaptive", ctypes.c_int)]
+
+
+KV_DTYPES = {"fp32": 0, "fp16": 1, "int8": 2}
+
+
+def parse_kv_dtype(kv_dtype: str | int) -> tuple[str, int]:
+    """``"fp16"`` or ``1`` -> ``("fp16", 1)``; ValueError for anything else."""
+    if isinstance(kv_dtype, str):
+        if kv_dtype not in KV_DTYPES:
+            raise ValueError(f"kv_dtype must be one of {sorted(KV_DTYPES)} (got {kv_dtype!r})")
+        return kv_dtype, KV_DTYPES[kv_dtype]
+    code = int(kv_dtype)
+    for name, c in KV_DTYPES.items():
+        if c == code:
+            return name, code
+    raise ValueError(f"kv_dtype must be 0, 1 or 2 (got {kv_dtype})")
 
 
 class SpecStats(ctypes.Structure):
@@ -121,11 +140,20 @@ class Lib:
             "pinfer_generate_greedy", ctypes.c_int,
             [ctypes.c_void_p, _c_int32_p, ctypes.c_int, _c_int32_p, ctypes.c_int,
              ctypes.POINTER(SpecParams), ctypes.POINTER(SpecStats)])
-        self.pinfer_generate_greedy_ex = self.optional(
-            "pinfer_generate_greedy_ex", ctypes.c_int,
-            [ctypes.c_void_p, _c_int32_p, ctypes.c_int, _c_int32_p, ctypes.c_int,
-             ctypes.POINTER(SpecParams), ctypes.POINTER(GenOpts), ctypes.POINTER(SpecStats),
-             _c_int_p])
+        gen_ex_args = [ctypes.c_void_p, _c_int32_p, ctypes.c_int, _c_int32_p, ctypes.c_int,
+                       ctypes.POINTER(SpecParams), ctypes.POINTER(GenOpts),
+                       ctypes.POINTER(SpecStats), _c_int_p]
+        self.pinfer_generate_greedy_ex = self.optional("pinfer_generate_greedy_ex",
+                                                       ctypes.c_int, gen_ex_args)
+        # Context state + continuation (engine/CONTEXT.md).
+        self.pinfer_generate_greedy_cont = self.optional("pinfer_generate_greedy_cont",
+                                                         ctypes.c_int, gen_ex_args)
+        self.pinfer_state_size = self.optional("pinfer_state_size", ctypes.c_size_t,
+                                               [ctypes.c_void_p])
+        self.pinfer_state_save = self.optional("pinfer_state_save", ctypes.c_int,
+                                               [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t])
+        self.pinfer_state_load = self.optional("pinfer_state_load", ctypes.c_int,
+                                               [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t])
 
     def has(self, name: str) -> bool:
         """Return True if the library exports ``name`` (feature detection for newer APIs)."""

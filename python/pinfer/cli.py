@@ -1,7 +1,7 @@
 """The ``pinfer`` command line: generate, chat, bench, convert, info.
 
     pinfer generate -m model.pq -p "The Raspberry Pi 4 is" -n 64
-    pinfer chat -m model.pq [--system "..."] [--think]
+    pinfer chat -m model.pq [--system "..."] [--think] [--reprefill]
     pinfer bench -m model.pq --prompt-tokens 64 -n 32 [--json]
     pinfer convert models/Qwen3.5-0.8B models/pq/qwen35-0.8b-bf16.pq [--no-mtp]
     pinfer info -m model.pq
@@ -34,6 +34,8 @@ def _add_model_args(p: argparse.ArgumentParser, tokenizer: bool = True) -> None:
                        "(default: <model>.tokenizer/ or $PINFER_TOKENIZER)")
     p.add_argument("-t", "--threads", type=int, default=4, help="worker threads (default 4)")
     p.add_argument("-c", "--ctx", type=int, default=4096, help="max context tokens")
+    p.add_argument("--kv-dtype", choices=("fp32", "fp16", "int8"), default="fp32",
+                   help="KV-cache storage (fp16 / int8: smaller, faster at long context)")
     p.add_argument("--lib", help="path to libpinfer.so (default: search, see docs)")
 
 
@@ -49,18 +51,20 @@ def _add_sampling_args(p: argparse.ArgumentParser, default_n: int) -> None:
                    help="MTP speculative greedy decoding (same output, blocking, faster)")
     p.add_argument("--spec-k", type=int, help="draft tokens per pass (default: library's)")
     p.add_argument("--draft-vocab", type=int, help="draft over token ids < N only")
+    p.add_argument("--adaptive", action="store_true",
+                   help="speculative: let the engine lower k when plain steps are faster")
 
 
 def _load(a: argparse.Namespace, tokenizer: bool = True) -> Model:
     tok = (a.tokenizer if a.tokenizer else None) if tokenizer else False
     return Model.load(a.model, tokenizer=tok, n_threads=a.threads, max_ctx=a.ctx,
-                      lib_path=a.lib)
+                      lib_path=a.lib, kv_dtype=a.kv_dtype)
 
 
 def _sampling_kwargs(a: argparse.Namespace) -> dict:
     return {"temperature": a.temperature, "top_p": a.top_p, "top_k": a.top_k, "seed": a.seed,
             "stop": a.stop or None, "speculative": a.speculative, "spec_k": a.spec_k,
-            "draft_vocab": a.draft_vocab}
+            "draft_vocab": a.draft_vocab, "spec_adaptive": a.adaptive or None}
 
 
 def _print_stats(r: GenerationResult | None) -> None:
@@ -94,7 +98,18 @@ def cmd_generate(a: argparse.Namespace) -> int:
     return 0
 
 
+def _turn_suffix(user: str, think: bool) -> str:
+    """What the Qwen chat template appends for one more user turn + the assistant header."""
+    header = "<think>\n" if think else "<think>\n\n</think>\n\n"
+    return f"<|im_start|>user\n{user.strip()}<|im_end|>\n<|im_start|>assistant\n{header}"
+
+
 def cmd_chat(a: argparse.Namespace) -> int:
+    """Multi-turn chat. By default the engine state is kept between turns: the next turn is
+    appended to the tokens already in context (the previous reply stays as generated, think
+    block included, closed by <|im_end|>), so only the new tokens are prefilled. --reprefill
+    re-renders the whole conversation each turn instead (the reference template drops old
+    think blocks, so the two prompts differ slightly)."""
     messages: list[dict[str, str]] = []
     if a.system:
         messages.append({"role": "system", "content": a.system})
@@ -103,6 +118,8 @@ def cmd_chat(a: argparse.Namespace) -> int:
         print("pinfer chat: empty line or /exit quits, /reset clears the history",
               file=sys.stderr)
     with _load(a) as m:
+        ctx_ids: list[int] = []     # tokens in context + the last reply (keep-state mode)
+        im_end = m.tokenize("<|im_end|>")
         while True:
             if interactive:
                 try:
@@ -115,20 +132,32 @@ def cmd_chat(a: argparse.Namespace) -> int:
                 break
             if line == "/reset":
                 messages = messages[:1] if a.system else []
+                ctx_ids = []
                 continue
             messages.append({"role": "user", "content": line})
-            stream = m.chat(messages, a.max_new_tokens, enable_thinking=a.think, stream=True,
-                            **_sampling_kwargs(a))
+            if a.reprefill or not ctx_ids:
+                prompt: str | list[int] = m.apply_chat_template(messages, True, a.think)
+                if not a.reprefill:
+                    ctx_ids = m.tokenize(prompt)
+                    prompt = ctx_ids
+            else:
+                ctx_ids = ctx_ids + m.tokenize("\n" + _turn_suffix(line, a.think))
+                prompt = ctx_ids
+            stream = m.generate(prompt, a.max_new_tokens, stream=True, **_sampling_kwargs(a))
             assert isinstance(stream, TextStream)
             for chunk in stream:
                 sys.stdout.write(chunk)
                 sys.stdout.flush()
             sys.stdout.write("\n")
             sys.stdout.flush()
-            reply =stream.result.text if stream.result else ""
+            r = stream.result
+            reply = r.text if r else ""
             messages.append({"role": "assistant", "content": reply})
+            if r and not a.reprefill:
+                gen = list(r.token_ids)
+                ctx_ids = ctx_ids + gen + (im_end if gen[-1:] != im_end else [])
             if a.stats:
-                _print_stats(stream.result)
+                _print_stats(r)
             if not interactive:
                 break
     return 0
@@ -209,6 +238,8 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("-p", "--prompt", help="ask one question and exit")
     c.add_argument("--system", help="system prompt")
     c.add_argument("--think", action="store_true", help="let the model write a <think> block")
+    c.add_argument("--reprefill", action="store_true",
+                   help="re-render and re-prefill the whole conversation every turn")
     _add_sampling_args(c, 512)
 
     b = sub.add_parser("bench", help="measure prefill and decode speed")
