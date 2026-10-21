@@ -10,7 +10,7 @@
 #define STR(x) STR2(x)
 
 pinfer_params pinfer_default_params(void) {
-    pinfer_params p = {4, 4096};
+    pinfer_params p = {4, 4096, PINFER_KV_F32};
     return p;
 }
 
@@ -30,12 +30,12 @@ static void free_layer_state(float **v, int n_layers) {
 }
 
 /* Per-layer state arrays: one calloc per used layer (zero = the reference's initial state). */
-static float **alloc_layer_state(pinfer_ctx *c, int want_full, size_t n_floats) {
+static float **alloc_layer_state(pinfer_ctx *c, int want_full, size_t bytes) {
     float **v = calloc((size_t)c->n_layers, sizeof(float *));
     if (!v) return NULL;
     for (int l = 0; l < c->n_layers; l++) {
         if (c->model.layers[l].is_full != want_full) continue;
-        v[l] = calloc(n_floats, sizeof(float));
+        v[l] = calloc(bytes, 1);
         if (!v[l]) { free_layer_state(v, c->n_layers); return NULL; }
     }
     return v;
@@ -63,10 +63,10 @@ static void set_dims(pinfer_ctx *c) {
 
 static int alloc_buffers(pinfer_ctx *c) {
     const size_t B = PF_MAX_BATCH, kvw = (size_t)c->n_kv * c->hd;
-    c->conv = alloc_layer_state(c, 0, (size_t)(c->conv_k - 1) * c->conv_dim + 1);
-    c->rec = alloc_layer_state(c, 0, (size_t)c->lv_heads * c->lk_dim * c->lv_dim);
-    c->kc = alloc_layer_state(c, 1, (size_t)c->max_ctx * kvw);
-    c->vc = alloc_layer_state(c, 1, (size_t)c->max_ctx * kvw);
+    c->conv = alloc_layer_state(c, 0, ((size_t)(c->conv_k - 1) * c->conv_dim + 1) * sizeof(float));
+    c->rec = alloc_layer_state(c, 0, (size_t)c->lv_heads * c->lk_dim * c->lv_dim * sizeof(float));
+    c->kc = alloc_layer_state(c, 1, pf_kv_bytes(c));
+    c->vc = alloc_layer_state(c, 1, pf_kv_bytes(c));
     if (!c->conv || !c->rec || !c->kc || !c->vc) return PINFER_E_NOMEM;
     c->x = malloc(B * c->H * sizeof(float));
     c->xn = malloc(B * c->H * sizeof(float));
@@ -79,7 +79,7 @@ static int alloc_buffers(pinfer_ctx *c) {
     c->aa = malloc(B * c->lv_heads * sizeof(float));
     c->rope_cos = malloc(B * (c->rot / 2 + 1) * sizeof(float));
     c->rope_sin = malloc(B * (c->rot / 2 + 1) * sizeof(float));
-    c->att = malloc((size_t)c->n_heads * c->max_ctx * sizeof(float));
+    c->att = malloc((size_t)PF_ATTN_TB * c->n_heads * c->max_ctx * sizeof(float));
     if (!c->x || !c->xn || !c->out || !c->ta || !c->tb || !c->tc || !c->to || !c->ba ||
         !c->aa || !c->rope_cos || !c->rope_sin || !c->att)
         return PINFER_E_NOMEM;
@@ -93,14 +93,21 @@ pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err)
     int rc = PINFER_E_NOMEM;
     pinfer_ctx *c = path ? calloc(1, sizeof *c) : NULL;
     if (!path) rc = PINFER_E_ARG;
-    if (c) {
+    if (c && (p.kv_dtype < PINFER_KV_F32 || p.kv_dtype > PINFER_KV_I8)) {
+        fprintf(stderr, "pinfer: unknown kv_dtype %d\n", p.kv_dtype);
+        rc = PINFER_E_ARG;
+    } else if (c) {
         rc = pf_model_load(&c->model, path);
         if (rc == PINFER_OK) {
             set_dims(c);
             c->max_ctx = p.max_ctx;
+            c->kv_dtype = p.kv_dtype;
             c->batch = PF_MAX_BATCH;
-            if (c->lv_dim > 512) {  /* forward_lin.c keeps a 512-float stack scratch */
-                fprintf(stderr, "pinfer: lin_v_dim %d > 512 not supported\n", c->lv_dim);
+            /* forward_lin.c keeps a 512-float stack scratch; forward_attn.c stack rows of
+             * PF_KV_MAX_HD floats; the int8 scales need 4-byte-aligned row data */
+            if (c->lv_dim > 512 || c->hd > PF_KV_MAX_HD || c->hd % 4) {
+                fprintf(stderr, "pinfer: lin_v_dim %d > 512 or head_dim %d not supported\n",
+                        c->lv_dim, c->hd);
                 rc = PINFER_E_FORMAT;
             } else {
                 rc = alloc_buffers(c);
@@ -143,6 +150,7 @@ void pinfer_reset(pinfer_ctx *c) {
         memset(c->rec[l], 0, (size_t)c->lv_heads * c->lk_dim * c->lv_dim * sizeof(float));
     }
     c->n_past = 0;
+    c->mtp_rows = 0;
 }
 
 int pinfer_eval(pinfer_ctx *c, const int32_t *tokens, int n, float *logits) {

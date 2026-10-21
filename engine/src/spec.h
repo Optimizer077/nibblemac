@@ -8,16 +8,37 @@
  *   2. verify [cur, d1..dk] in ONE batched main-model pass (positions P..P+k), with the
  *      linear-attention states run on scratch copies (pf_lin_log);
  *   3. accept the longest prefix d1..da that equals the main model's argmax, plus the
- *      main model's token after it (the bonus); commit a+1 tokens to the linear-attention
- *      states (pf_lin_commit) and set n_past = P+a+1 (stale KV rows are overwritten later);
- *   4. one batched MTP pass over the a+1 newly committed positions with the main model's
+ *      main model's token after it (the bonus); emit them until a stop condition, commit
+ *      the e emitted tokens (e = a+1 without a stop) to the linear-attention states
+ *      (pf_lin_commit) and set n_past = P+e (stale KV rows are overwritten later);
+ *   4. one batched MTP pass over the e newly committed positions with the main model's
  *      hidden states (this also replaces the MTP KV rows the chain wrote) -> next d1.
  * Every emitted token is a main-model argmax given the exact committed state, so the output
- * equals plain greedy decoding. */
+ * equals plain greedy decoding.
+ *
+ * Adaptive mode (pinfer_spec_params.adaptive, spec_adapt.c): k becomes an upper bound. The
+ * loop measures a plain step (one at the start, one every RECAL rounds), every pass of a
+ * round and the per-draft acceptance, and picks the k (0 = plain) with the lowest expected
+ * time per token; in plain mode it probes speculation again after a growing number of
+ * steps. Plain steps keep their final-normed hidden states and run the MTP head over them
+ * in one batch before the next speculative round, so the MTP cache stays complete. */
 #ifndef PF_SPEC_H
 #define PF_SPEC_H
 
 #include "forward.h"
+
+typedef struct {
+    double t_step, t_draft, t_commit;  /* EMA seconds: plain step, one MTP pass, commit */
+    double cv;           /* EMA of (t_verify / t_step - 1) / k: extra cost per verified token
+                            as a fraction of a plain step; < 0 = no observation yet */
+    double hits, trials; /* decayed counts of accepted / verified drafts (+ prior): p */
+    int rounds;          /* speculative rounds observed */
+    int k_cur;           /* k in use, 0 = plain mode */
+    int calib;           /* the next plain step only (re)measures t_step */
+    int since_cal;       /* speculative rounds since t_step was measured */
+    int plain_run;       /* plain-mode steps since the last speculative round */
+    int probe_after;     /* plain-mode steps before speculation is probed again */
+} pf_spec_adapt;
 
 typedef struct pf_spec_buf {
     int k_cap;            /* buffers sized for k <= k_cap */
@@ -28,16 +49,22 @@ typedef struct pf_spec_buf {
     float *dlogits;       /* [vocab]: MTP draft logits */
     int32_t cur, d1;      /* newest emitted token; first draft of the next round */
     const float *m;       /* MTP hidden of the row that produced d1 */
+    /* adaptive mode: plain steps whose MTP rows are still pending (hiddens in normed) */
+    int n_pend, pend_pos;
+    int32_t pend_tok[PF_MAX_BATCH];   /* token that followed each pending row */
+    pf_spec_adapt ad;
 } pf_spec_buf;
 
 typedef struct {
-    double mtp, verify, commit;   /* seconds spent in each part of pf_spec_decode */
+    double mtp, verify, commit, plain;   /* seconds spent in each part of pf_spec_decode */
+    int64_t plain_steps;                 /* plain steps taken (adaptive mode, or n_max) */
 } pf_spec_times;
 
-/* Reset ctx and prefill the prompt (main model, then the MTP head over every prompt row when
- * sp->k > 0). Returns the first generated token (>= 0) or a negative PINFER_E* code. */
+/* Prefill the prompt (main model, then the MTP head over every prompt row when sp->k > 0).
+ * append = 0 resets the context first; 1 appends to the tokens already in context.
+ * Returns the first generated token (>= 0) or a negative PINFER_E* code. */
 int pf_spec_prefill(pinfer_ctx *ctx, const int32_t *prompt, int n,
-                    const pinfer_spec_params *sp);
+                    const pinfer_spec_params *sp, int append);
 
 /* When to stop besides n_max. eos < 0 disables the EOS check (benchmarks). */
 typedef struct {
@@ -59,5 +86,14 @@ int pf_spec_decode(pinfer_ctx *ctx, int32_t *out, int n_max, const pinfer_spec_p
 
 /* Free MTP head, rollback log and spec buffers (pinfer_free calls this). */
 void pf_spec_free(pinfer_ctx *ctx);
+
+/* Adaptive policy (spec_adapt.c). next: k for the coming round (0 = plain step). plain /
+ * round: record a plain step's time, or a speculative round's drafts, accepted count and
+ * pass times (also decides the mode for the following rounds). */
+void pf_adapt_init(pf_spec_adapt *a, int k_max);
+int pf_adapt_next(pf_spec_adapt *a, int k_max);
+void pf_adapt_plain(pf_spec_adapt *a, double sec);
+void pf_adapt_round(pf_spec_adapt *a, int k_max, int k, int accepted, double t_mtp,
+                    double t_verify, double t_commit);
 
 #endif

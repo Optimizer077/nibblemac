@@ -4,7 +4,8 @@
  * Tokens are processed in chunks of ctx->batch: every weight matrix is applied to the whole
  * chunk with one pf_matmul (weights streamed once per chunk), while the inherently sequential
  * parts (conv state, recurrence, KV-cache attention) loop over the chunk's tokens in order.
- * All activations and states are fp32. The Gated DeltaNet mixer lives in forward_lin.c. */
+ * All activations and states are fp32. The Gated DeltaNet mixer lives in forward_lin.c, the
+ * gated full attention in forward_attn.c. */
 #include <math.h>
 #include <string.h>
 
@@ -26,77 +27,6 @@ void pf_rope_tables(pinfer_ctx *ctx, int pos0, int n) {
         }
     }
     pf_stats_add(PFS_ROPE, PFS_KIND(ctx, n), ts);
-}
-
-typedef struct {
-    pinfer_ctx *ctx;
-    const pf_layer *L;
-    const float *kc, *vc;
-    int n, pos0;
-} attn_job;
-
-/* Query heads [h0, h1) of thread tid for all n tokens: q norm + RoPE, causal softmax
- * attention over the cached rows of the head's KV group, output gate. Heads are independent
- * (own q, score and output rows), so the split over threads changes no arithmetic. */
-static void attn_task(void *arg, int tid, int nthr) {
-    const attn_job *j = arg;
-    pinfer_ctx *ctx = j->ctx;
-    const int hd = ctx->hd, nq = ctx->n_heads, grp = nq / ctx->n_kv, qw = nq * hd * 2;
-    const int h2 = ctx->rot / 2, h0 = nq * tid / nthr, h1 = nq * (tid + 1) / nthr;
-    const size_t rows = (size_t)ctx->max_ctx;
-    const float eps = ctx->model.hdr->rms_eps, scale = 1.0f / sqrtf((float)hd);
-    for (int t = 0; t < j->n; t++) {
-        const int pos = j->pos0 + t;
-        const float *cs = ctx->rope_cos + t * h2, *sn = ctx->rope_sin + t * h2;
-        float *qrow = ctx->ta + (size_t)t * qw, *o = ctx->to + (size_t)t * nq * hd;
-        for (int h = h0; h < h1; h++) {
-            float *q = qrow + h * 2 * hd;          /* normalised in place */
-            const float *gate = q + hd;
-            const int g = h / grp;                 /* GQA: 4 query heads share a KV head */
-            const float *kg = j->kc + (size_t)g * rows * hd, *vg = j->vc + (size_t)g * rows * hd;
-            float *att = ctx->att + (size_t)h * rows;
-            pf_rmsnorm(q, q, j->L->q_norm, hd, eps);
-            pf_rope(q, cs, sn, ctx->rot);
-
-            float mx = -INFINITY;
-            for (int p = 0; p <= pos; p++) {  /* one row at a time: a single sequential stream */
-                att[p] = pf_dot(q, kg + (size_t)p * hd, hd) * scale;
-                if (att[p] > mx) mx = att[p];
-            }
-            const float inv = 1.0f / pf_softmax_exp(att, pos + 1, mx);
-            for (int p = 0; p <= pos; p++) att[p] = att[p] * inv;
-            pf_attn_pv(o + h * hd, att, pos + 1, vg, hd, hd);
-            pf_mul_sigmoid(o + h * hd, gate, hd);  /* output gate */
-        }
-    }
-}
-
-/* Gated full attention for n tokens at positions pos0.. : ctx->xn -> ctx->out. kc / vc are
- * the layer's KV cache (the main model's or the MTP head's), laid out [n_kv][max_ctx][hd]. */
-void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0) {
-    const int hd = ctx->hd, kvw = ctx->n_kv * hd, h2 = ctx->rot / 2;
-    const size_t rows = (size_t)ctx->max_ctx;
-    const float eps = ctx->model.hdr->rms_eps;
-
-    pf_matmul(ctx->pool, &L->q, ctx->xn, ctx->ta, n);   /* per head: [query hd | gate hd] */
-    pf_matmul(ctx->pool, &L->k, ctx->xn, ctx->tb, n);
-    pf_matmul(ctx->pool, &L->v, ctx->xn, ctx->tc, n);
-
-    const double ts = pf_stats_now();
-    /* All n tokens' K/V go into the cache first (causal attention includes the token
-     * itself and, for later tokens of the chunk, the earlier ones). */
-    for (int t = 0; t < n; t++)
-        for (int g = 0; g < ctx->n_kv; g++) {
-            float *krow = kc + ((size_t)g * rows + (size_t)(pos0 + t)) * hd;
-            pf_rmsnorm(krow, ctx->tb + (size_t)t * kvw + g * hd, L->k_norm, hd, eps);
-            pf_rope(krow, ctx->rope_cos + t * h2, ctx->rope_sin + t * h2, ctx->rot);
-            memcpy(vc + ((size_t)g * rows + (size_t)(pos0 + t)) * hd,
-                   ctx->tc + (size_t)t * kvw + g * hd, (size_t)hd * sizeof(float));
-        }
-    attn_job job = {ctx, L, kc, vc, n, pos0};
-    pf_pool_run(ctx->pool, attn_task, &job, ctx->n_heads);
-    pf_stats_add(PFS_ATTN, PFS_KIND(ctx, n), ts);
-    pf_matmul(ctx->pool, &L->o, ctx->to, ctx->out, n);
 }
 
 typedef struct {

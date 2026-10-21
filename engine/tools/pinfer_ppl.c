@@ -2,7 +2,7 @@
  * (bench/quality/ppl.sh): chunks of `ctx` tokens, state reset per chunk, the first half of
  * each chunk is context only, logits at positions ctx/2 .. ctx-2 predict the next token.
  *
- *   pinfer_ppl -m model.pq -f tokens.bin [-c 512] [--chunks 64] [-t 4]
+ *   pinfer_ppl -m model.pq -f tokens.bin [-c 512] [--chunks 64] [-t 4] [--kv-dtype 0|1|2]
  * tokens.bin: raw little-endian int32 token ids (bench/quality/make_tokens.py).
  * Prints progress and one `RESULT {json}` line.
  */
@@ -47,14 +47,15 @@ static double nll(const float *l, int vocab, int target) {
 
 int main(int argc, char **argv) {
     const char *model = NULL, *tok_path = NULL;
-    int ctx_len = 512, chunks = 64, threads = 4;
+    int ctx_len = 512, chunks = 64, threads = 4, kv_dtype = 0;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-m") && i + 1 < argc) model = argv[++i];
         else if (!strcmp(argv[i], "-f") && i + 1 < argc) tok_path = argv[++i];
         else if (!strcmp(argv[i], "-c") && i + 1 < argc) ctx_len = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--chunks") && i + 1 < argc) chunks = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-t") && i + 1 < argc) threads = atoi(argv[++i]);
-        else { fprintf(stderr, "usage: %s -m model.pq -f tokens.bin [-c 512] [--chunks N] [-t T]\n", argv[0]); return 2; }
+        else if (!strcmp(argv[i], "--kv-dtype") && i + 1 < argc) kv_dtype = atoi(argv[++i]);
+        else { fprintf(stderr, "usage: %s -m model.pq -f tokens.bin [-c 512] [--chunks N] [-t T] [--kv-dtype D]\n", argv[0]); return 2; }
     }
     if (!model || !tok_path || ctx_len < 4) { fprintf(stderr, "need -m and -f\n"); return 2; }
 
@@ -66,6 +67,7 @@ int main(int argc, char **argv) {
     pinfer_params p = pinfer_default_params();
     p.n_threads = threads;
     p.max_ctx = ctx_len;
+    p.kv_dtype = kv_dtype;
     int err = 0;
     pinfer_ctx *ctx = pinfer_load(model, &p, &err);
     if (!ctx) { fprintf(stderr, "load failed: %d\n", err); return 1; }
@@ -106,8 +108,8 @@ int main(int argc, char **argv) {
     double secs = now_sec() - t0;
     printf("RESULT {\"engine\":\"pinfer\",\"tool\":\"pinfer_ppl\",\"kernels\":\"%s\",\"model_file\":\"%s\","
            "\"ctx\":%d,\"chunks\":%d,\"tokens_scored\":%ld,\"threads\":%d,\"ppl\":%.4f,"
-           "\"ppl_err\":%.5f,\"seconds\":%.1f}\n",
-           PF_MATVEC_NAME, model, ctx_len, chunks, scored, threads, ppl, ppl_err, secs);
+           "\"ppl_err\":%.5f,\"seconds\":%.1f,\"kv_dtype\":%d}\n",
+           PF_MATVEC_NAME, model, ctx_len, chunks, scored, threads, ppl, ppl_err, secs, kv_dtype);
     free(logits);
     free(tok);
     pinfer_free(ctx);

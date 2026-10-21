@@ -13,7 +13,8 @@
 
 static const char *const names[PFS_N] = {
     "embed", "norm+add", "lin_pre(conv,l2,gates)", "lin_rule", "lin_post(gated norm)",
-    "lin_log copies", "attention", "mlp_act(silu*up)", "argmax", "rope_tables",
+    "lin_log copies", "attention(kv+scores)", "mlp_act(silu*up)", "argmax", "rope_tables",
+    "attention(softmax+pv)",
 };
 static const char *const kinds[PFS_KINDS] = {"n=1", "batched", "verify"};
 

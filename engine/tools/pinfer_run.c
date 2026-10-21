@@ -4,7 +4,8 @@
  *   pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] [-b prefill_batch]
  *              (--ids 1,2,3 | --ids-file f) [--dump-logits out.bin] [--dump-hidden out.bin]
  *              [--bench] [--warmup | --no-warmup] [--spec k [--draft-vocab N]]
- *              [--dump-mtp out.bin]
+ *              [--dump-mtp out.bin] [--kv-dtype 0|1|2] [--adaptive]
+ *              [--save-state f] [--load-state f]
  *
  * Token ids only: tokenization lives in the Python package. --dump-* write raw little-endian
  * fp32 for the PROMPT tokens: logits [T][vocab], hidden [n_layers+1][T][hidden] (same layout
@@ -22,6 +23,14 @@
  * --dump-mtp f: MTP logits of every prompt row (row i uses token i+1; the last row uses the
  * first generated token), then 3 chained draft logits from the last row: fp32 [T+3][vocab],
  * the layout of ref/golden/qwen35-0.8b-mtp (mtp_logits.npy then chain_logits.npy).
+ * --kv-dtype: KV-cache storage, 0 fp32 (default), 1 fp16, 2 int8 (pinfer_params.kv_dtype).
+ * --adaptive: with --spec k, let the engine lower k (down to plain steps) when that is faster.
+ * --save-state f: write the context state right after the prefill (pinfer_state_save).
+ * --load-state f: restore a saved state first; the prompt is then appended to it (plain path:
+ * pinfer_eval semantics; --spec: pinfer_generate_greedy_cont semantics), so
+ *   run A: --ids-file full.ids      run B: --ids-file head.ids --save-state s -n 1
+ *   run C: --load-state s --ids-file tail.ids
+ * must generate the same tokens in A and C (the state round trip is exact).
  */
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
@@ -79,6 +88,49 @@ static int write_f32(const char *path, const float *v, size_t n) {
     return 0;
 }
 
+static int state_save(pinfer_ctx *ctx, const char *path, double *ms) {
+    const size_t n = pinfer_state_size(ctx);
+    void *buf = malloc(n);
+    double t0 = now_sec();
+    int rc = buf ? pinfer_state_save(ctx, buf, n) : PINFER_E_NOMEM;
+    *ms = (now_sec() - t0) * 1e3;
+    FILE *f = rc == PINFER_OK ? fopen(path, "wb") : NULL;
+    int err = rc != PINFER_OK || !f || fwrite(buf, 1, n, f) != n;
+    if (f && fclose(f)) err = 1;
+    free(buf);
+    if (err) fprintf(stderr, "save-state %s failed (%d)\n", path, rc);
+    else fprintf(stderr, "state saved: %zu bytes in %.1f ms\n", n, *ms);
+    return err;
+}
+
+static int state_load(pinfer_ctx *ctx, const char *path, double *ms) {
+    FILE *f = fopen(path, "rb");
+    if (!f) { perror(path); return 1; }
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    void *buf = sz > 0 ? malloc((size_t)sz) : NULL;
+    size_t got = buf ? fread(buf, 1, (size_t)sz, f) : 0;
+    fclose(f);
+    double t0 = now_sec();
+    int rc = got == (size_t)sz && sz > 0 ? pinfer_state_load(ctx, buf, got) : PINFER_E_IO;
+    *ms = (now_sec() - t0) * 1e3;
+    free(buf);
+    if (rc != PINFER_OK) fprintf(stderr, "load-state %s failed (%d)\n", path, rc);
+    else fprintf(stderr, "state loaded: %ld bytes in %.1f ms, n_past %d\n", sz, *ms,
+                 pinfer_n_past(ctx));
+    return rc != PINFER_OK;
+}
+
+/* n_past stored in a state file (header: magic[8], version, n_past), 0 if unreadable. */
+static int state_n_past(const char *path) {
+    FILE *f = fopen(path, "rb");
+    uint32_t hdr[4] = {0, 0, 0, 0};
+    if (f && fread(hdr, sizeof hdr, 1, f) != 1) hdr[3] = 0;
+    if (f) fclose(f);
+    return (int)hdr[3];
+}
+
 static const char *base_name(const char *p) {
     const char *s = strrchr(p, '/');
     return s ? s + 1 : p;
@@ -89,7 +141,8 @@ static void usage(void) {
                     "[-b batch] (--ids 1,2,3 | --ids-file f)\n"
                     "                  [--dump-logits f] [--dump-hidden f] [--bench]\n"
                     "                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n"
-                    "                  [--dump-mtp f]\n");
+                    "                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n"
+                    "                  [--save-state f] [--load-state f]\n");
 }
 
 /* --dump-mtp: see the header comment. normed = the prompt's final-normed hiddens [T][H]. */
@@ -129,8 +182,9 @@ static int dump_mtp(pinfer_ctx *ctx, const char *path, const int32_t *prompt, in
 int main(int argc, char **argv) {
     const char *model = NULL, *ids_arg = NULL, *ids_file = NULL;
     const char *dump_logits = NULL, *dump_hidden = NULL, *dump_mtp_f = NULL;
+    const char *save_state = NULL, *load_state = NULL;
     int threads = 4, n_gen = 32, max_ctx = 0, batch = PF_MAX_BATCH, bench = 0;
-    int spec_k = -1, draft_vocab = 0, warmup = -1;
+    int spec_k = -1, draft_vocab = 0, warmup = -1, kv_dtype = 0, adaptive = 0;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : NULL;
         int used = 1;
@@ -146,6 +200,10 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--spec") && v) spec_k = atoi(v);
         else if (!strcmp(a, "--draft-vocab") && v) draft_vocab = atoi(v);
         else if (!strcmp(a, "--dump-mtp") && v) dump_mtp_f = v;
+        else if (!strcmp(a, "--kv-dtype") && v) kv_dtype = atoi(v);
+        else if (!strcmp(a, "--save-state") && v) save_state = v;
+        else if (!strcmp(a, "--load-state") && v) load_state = v;
+        else if (!strcmp(a, "--adaptive")) { adaptive = 1; used = 0; }
         else if (!strcmp(a, "--bench")) { bench = 1; used = 0; }
         else if (!strcmp(a, "--warmup")) { warmup = 1; used = 0; }
         else if (!strcmp(a, "--no-warmup")) { warmup = 0; used = 0; }
@@ -153,7 +211,8 @@ int main(int argc, char **argv) {
         i += used;
     }
     if (!model || (!ids_arg == !ids_file) || n_gen < 0 || spec_k > PINFER_SPEC_MAX_K ||
-        (spec_k >= 0 && (n_gen < 1 || dump_logits || dump_hidden || dump_mtp_f))) {
+        (spec_k >= 0 && (n_gen < 1 || dump_logits || dump_hidden || dump_mtp_f)) ||
+        (load_state && (dump_logits || dump_hidden || dump_mtp_f))) {
         usage();
         return 2;
     }
@@ -168,8 +227,10 @@ int main(int argc, char **argv) {
 
     pinfer_params p = pinfer_default_params();
     p.n_threads = threads;
-    /* --dump-mtp chains 3 MTP rows past the prompt */
-    p.max_ctx = max_ctx > 0 ? max_ctx : n_prompt + n_gen + (dump_mtp_f ? 4 : 0);
+    /* --dump-mtp chains 3 MTP rows past the prompt; a loaded state adds its own tokens */
+    p.max_ctx = max_ctx > 0 ? max_ctx : n_prompt + n_gen + (dump_mtp_f ? 4 : 0) +
+                                            (load_state ? state_n_past(load_state) : 0);
+    p.kv_dtype = kv_dtype;
     int err = 0;
     double t0 = now_sec();
     pinfer_ctx *ctx = pinfer_load(model, &p, &err);
@@ -187,10 +248,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    pinfer_spec_params sp = {spec_k, draft_vocab};
+    pinfer_spec_params sp = {spec_k, draft_vocab, adaptive};
     pinfer_spec_stats st = {0, 0, 0};
-    pf_spec_times tm = {0, 0, 0};
-    double t_prefill, t_decode, t_warm = 0.0;
+    pf_spec_times tm = {0, 0, 0, 0, 0};
+    double t_prefill, t_decode, t_warm = 0.0, ms_save = 0.0, ms_load = 0.0;
     int rc;
     if (warmup < 0) warmup = bench;
     if (warmup) {  /* untimed prefill + up to 4 tokens, same mode, then forget everything */
@@ -199,7 +260,7 @@ int main(int argc, char **argv) {
         if (spec_k >= 0) {
             pf_stop no_stop = {-1, NULL, 0, NULL, NULL};
             int status;
-            rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp);
+            rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp, 0);
             if (rc >= 0 && w > 0)
                 rc = pf_spec_decode(ctx, gen, w, &sp, &no_stop, NULL, NULL, &status);
         } else {
@@ -213,11 +274,13 @@ int main(int argc, char **argv) {
         pinfer_reset(ctx);
         t_warm = now_sec() - t0;
     }
+    if (load_state && state_load(ctx, load_state, &ms_load)) return 1;
     if (spec_k >= 0) {  /* speculative path (k = 0: plain loop inside the same code) */
         t0 = now_sec();
-        rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp);
+        rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp, load_state != NULL);
         t_prefill = now_sec() - t0;
         if (rc < 0) { fprintf(stderr, "prefill failed: %d\n", rc); return 1; }
+        if (save_state && state_save(ctx, save_state, &ms_save)) return 1;
         t0 = now_sec();
         pf_stop no_stop = {-1, NULL, 0, NULL, NULL};  /* like the plain loop: ignore EOS */
         int status = PINFER_OK;
@@ -234,6 +297,7 @@ int main(int argc, char **argv) {
         rc = pf_forward_h(ctx, prompt, n_prompt, logits, all, hid, normed);
         t_prefill = now_sec() - t0;
         if (rc != PINFER_OK) { fprintf(stderr, "prefill failed: %d\n", rc); return 1; }
+        if (save_state && state_save(ctx, save_state, &ms_save)) return 1;
         if (all && write_f32(dump_logits, all, (size_t)n_prompt * V)) return 1;
         if (hid && write_f32(dump_hidden, hid, (size_t)(L + 1) * n_prompt * H)) return 1;
         if (normed && dump_mtp(ctx, dump_mtp_f, prompt, n_prompt, normed,
@@ -267,29 +331,38 @@ int main(int argc, char **argv) {
     double R = st.rounds > 0 ? (double)st.rounds : 1.0;
     double mean_acc = (double)st.accepted / R;
     if (spec_k >= 0)
-        printf("spec k=%d draft_vocab=%d | rounds %lld drafted %lld accepted %lld | mean "
-               "accepted %.3f, %.3f tok/pass | per pass: mtp %.1f ms verify %.1f ms commit "
-               "%.1f ms\n", spec_k, draft_vocab, (long long)st.rounds, (long long)st.drafted,
-               (long long)st.accepted, mean_acc, 1.0 + mean_acc, 1e3 * tm.mtp / R,
-               1e3 * tm.verify / R, 1e3 * tm.commit / R);
+        printf("spec k=%d draft_vocab=%d adaptive=%d | rounds %lld drafted %lld accepted %lld | "
+               "mean accepted %.3f, %.3f tok/pass | per pass: mtp %.1f ms verify %.1f ms commit "
+               "%.1f ms | plain steps %lld (%.1f ms each)\n", spec_k, draft_vocab, adaptive,
+               (long long)st.rounds, (long long)st.drafted, (long long)st.accepted, mean_acc,
+               1.0 + mean_acc, 1e3 * tm.mtp / R, 1e3 * tm.verify / R, 1e3 * tm.commit / R,
+               (long long)tm.plain_steps,
+               tm.plain_steps ? 1e3 * tm.plain / (double)tm.plain_steps : 0.0);
+    if (save_state || load_state)
+        printf("state: save %.1f ms load %.1f ms size %zu bytes\n", ms_save, ms_load,
+               pinfer_state_size(ctx));
     if (bench && spec_k < 0)
         printf("RESULT {\"engine\": \"pinfer-%s\", \"model\": \"%s\", \"threads\": %d, "
                "\"n_prompt\": %d, \"n_gen\": %d, \"prefill_tps\": %.4f, \"decode_tps\": %.4f, "
-               "\"peak_rss_mb\": %.1f}\n",
+               "\"peak_rss_mb\": %.1f, \"kv_dtype\": %d, \"state_save_ms\": %.1f, "
+               "\"state_load_ms\": %.1f}\n",
                PF_MATVEC_NAME, base_name(model), threads, n_prompt, n_gen, prefill_tps,
-               decode_tps, rss_mb);
+               decode_tps, rss_mb, kv_dtype, ms_save, ms_load);
     else if (bench)
         printf("RESULT {\"engine\": \"pinfer-%s-spec\", \"model\": \"%s\", \"threads\": %d, "
                "\"n_prompt\": %d, \"n_gen\": %d, \"prefill_tps\": %.4f, \"decode_tps\": %.4f, "
                "\"peak_rss_mb\": %.1f, \"spec_k\": %d, \"draft_vocab\": %d, \"rounds\": %lld, "
                "\"drafted\": %lld, \"accepted\": %lld, \"mean_accepted\": %.4f, "
                "\"accept_rate\": %.4f, \"tokens_per_pass\": %.4f, \"mtp_ms_per_pass\": %.2f, "
-               "\"verify_ms_per_pass\": %.2f, \"commit_ms_per_pass\": %.2f}\n",
+               "\"verify_ms_per_pass\": %.2f, \"commit_ms_per_pass\": %.2f, "
+               "\"adaptive\": %d, \"plain_steps\": %lld, \"kv_dtype\": %d, "
+               "\"state_save_ms\": %.1f, \"state_load_ms\": %.1f}\n",
                PF_MATVEC_NAME, base_name(model), threads, n_prompt, n_gen, prefill_tps,
                decode_tps, rss_mb, spec_k, draft_vocab, (long long)st.rounds,
                (long long)st.drafted, (long long)st.accepted, mean_acc,
                st.drafted ? (double)st.accepted / (double)st.drafted : 0.0, 1.0 + mean_acc,
-               1e3 * tm.mtp / R, 1e3 * tm.verify / R, 1e3 * tm.commit / R);
+               1e3 * tm.mtp / R, 1e3 * tm.verify / R, 1e3 * tm.commit / R, adaptive,
+               (long long)tm.plain_steps, kv_dtype, ms_save, ms_load);
 
     free(gen); free(hid); free(all); free(logits); free(prompt);
     pinfer_free(ctx);

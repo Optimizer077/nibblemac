@@ -13,6 +13,15 @@
  * stream over more tokens; 64 keeps the scratch buffers at ~4 MB. */
 #define PF_MAX_BATCH 64
 
+/* Tokens whose attention is computed per pass over the KV cache (forward_attn.c): the
+ * cache is streamed once per block instead of once per token. Sizes ctx->att. */
+#define PF_ATTN_TB 8
+
+/* KV-cache storage formats (pinfer_params.kv_dtype, forward_kv.c) and the largest head
+ * dimension the attention's stack row buffers accept. */
+enum { PF_KV_F32 = 0, PF_KV_F16 = 1, PF_KV_I8 = 2 };
+#define PF_KV_MAX_HD 512
+
 /* Rollback log for speculative verification (forward_lin.c). While ctx->lin_log_on is set,
  * pf_linear_attn runs the conv and recurrent states on scratch copies (the committed states
  * stay untouched) and records, per token, what pf_lin_commit needs to advance the committed
@@ -35,6 +44,9 @@ struct pinfer_ctx {
     int max_ctx;
     int n_past;
     int batch;          /* current prefill chunk size, 1..PF_MAX_BATCH (pf_set_batch) */
+    int kv_dtype;       /* PF_KV_* storage format of every KV cache (main and MTP) */
+    int mtp_rows;       /* MTP KV rows [0, mtp_rows) hold values the MTP head computed for
+                           the committed tokens (spec.c maintains it; state.c saves them) */
 
     /* derived dimensions */
     int H, ffn, n_layers, vocab;
@@ -44,16 +56,18 @@ struct pinfer_ctx {
     /* per-layer state; NULL where the layer type does not use it */
     float **conv;       /* [conv_k-1][conv_dim]: previous inputs, oldest first */
     float **rec;        /* [lv_heads][lk_dim][lv_dim]: Gated DeltaNet state S */
-    float **kc, **vc;   /* [n_kv][max_ctx][hd]: KV cache (post-norm, post-RoPE keys); one
-                           contiguous stream per KV group, so a head's pass over the cache
-                           is sequential for the prefetcher (forward.c pf_full_attn) */
+    float **kc, **vc;   /* [n_kv][max_ctx][hd] rows of kv_dtype (forward_kv.c): KV cache
+                           (post-norm, post-RoPE keys); one contiguous stream per KV group,
+                           so a pass over the cache is sequential for the prefetcher
+                           (forward_attn.c pf_full_attn). Typed float* for mtp.c, which
+                           allocates its cache at the fp32 size (the largest format) */
 
     /* scratch, PF_MAX_BATCH rows each */
     float *x, *xn, *out;        /* [B][H]: residual stream, normed input, sublayer output */
     float *ta, *tb, *tc, *to;   /* projections: qkv|q_proj|gate, z|k|up, v, mix output */
     float *ba, *aa;             /* [B][lv_heads]: in_proj_b / in_proj_a outputs */
     float *rope_cos, *rope_sin; /* [B][rot/2] */
-    float *att;                 /* [n_heads][max_ctx]: attention scores per head */
+    float *att;                 /* [PF_ATTN_TB][n_heads][max_ctx]: attention scores */
 
     /* speculative decoding (spec.c); all NULL / 0 until first used */
     pf_lin_log *lin_log;
@@ -94,14 +108,28 @@ void pf_lin_commit(pinfer_ctx *ctx, int keep);
 void pf_rope_tables(pinfer_ctx *ctx, int pos0, int n);        /* positions pos0.. */
 void pf_norm_rows(pinfer_ctx *ctx, float *dst, const float *w, int n);   /* dst = norm(x) */
 void pf_add_rows(pinfer_ctx *ctx, int n);                     /* x += out */
-void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0);
 void pf_mlp(pinfer_ctx *ctx, const pf_layer *L, int n);
+
+/* Gated full attention for n tokens at positions pos0.. (forward_attn.c): ctx->xn ->
+ * ctx->out. kc / vc: the layer's K and V caches (the main model's or the MTP head's). */
+void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0);
+
+/* KV-cache rows (forward_kv.c). pf_kv_bytes: size of one layer's K (or V) cache in bytes;
+ * store / load convert one row (g, p) of `cache` from / to fp32 (load returns the row
+ * itself for fp32, otherwise buf [hd] filled with the widened values). */
+size_t pf_kv_row_bytes(int dtype, int hd);
+size_t pf_kv_bytes(const pinfer_ctx *ctx);
+void pf_kv_store(const pinfer_ctx *ctx, void *cache, int g, int p, const float *row);
+const float *pf_kv_load(const pinfer_ctx *ctx, const void *cache, int g, int p, float *buf);
+void pf_kv_zero_rows(const pinfer_ctx *ctx, void *cache, int p0, int p1);
+const void *pf_kv_row(const pinfer_ctx *ctx, const void *cache, int g, int p);   /* raw row */
+void pf_dot4_f16(const float *const q[4], const uint16_t *k16, int n, float *out);
 
 /* Phase profile (forward_stats.c), active with PF_FWD_STATS=1: t = pf_stats_now() before a
  * section, pf_stats_add(phase, kind, t) after it. kind: PFS_K1 single-token call, PFS_KB
  * batched (prefill / MTP rows), PFS_KV logged verify pass (ctx->lin_log_on). */
 enum { PFS_EMBED, PFS_NORM, PFS_LIN_PRE, PFS_LIN_RULE, PFS_LIN_POST, PFS_LIN_LOG, PFS_ATTN,
-       PFS_MLP_ACT, PFS_ARGMAX, PFS_ROPE, PFS_N };
+       PFS_MLP_ACT, PFS_ARGMAX, PFS_ROPE, PFS_ATTN_PV, PFS_N };
 enum { PFS_K1, PFS_KB, PFS_KV, PFS_KINDS };
 #define PFS_KIND(ctx, n) ((ctx)->lin_log_on ? PFS_KV : (n) > 1 ? PFS_KB : PFS_K1)
 extern int pf_stats_on;
@@ -125,5 +153,11 @@ float pf_dot(const float *a, const float *b, int n);
 float pf_softmax_exp(float *a, int n, float mx);       /* a = exp(a - mx); returns sum */
 void pf_attn_pv(float *o, const float *p, int np, const float *v, int stride, int hd);
 int pf_argmax(const float *v, int n);
+/* forward_kv.c: four dots against one row (each in pf_dot's order); P.V over one block of
+ * np contiguous rows [np][hd] for one head (o1 == NULL) or two, accumulated into o in row
+ * order without zeroing (pf_attn_pv = zero + the blocks in order). */
+void pf_dot4(const float *const q[4], const float *k, int n, float *out);
+void pf_attn_pv_blk(float *o0, const float *p0, float *o1, const float *p1, int np,
+                    const float *v, int hd);
 
 #endif

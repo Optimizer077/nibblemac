@@ -10,7 +10,8 @@ Runs the host build of pinfer_run (through WSL when started from Windows) and ch
      row (so the chained drafts equal draft_ids.npy). Observed 2026-10-21 (matvec_ref):
      <= 4e-6; a wrong concat order, norm, position or hidden gives O(1) errors.
   2. Exactness: for every prompt (golden, the 6 other varied prompts of prompts.json, the
-     64-token bench prompt, a 74-token prompt = two prefill chunks), `--spec k` for k = 0..4 and k = 3 with --draft-vocab 32768 must generate
+     64-token bench prompt, a 74-token prompt = two prefill chunks), `--spec k` for k = 0..4,
+     k = 3 with --draft-vocab 32768 and k = 3 --adaptive (engine picks k per round) must generate
      exactly the tokens of the plain greedy loop (no --spec); on the golden prompt both must
      equal greedy_ids.npy. Any rollback error (conv state, recurrent state, KV position)
      changes the main model's logits and shows up here.
@@ -92,7 +93,7 @@ def check_mtp(binary: Path, model: Path) -> bool:
 def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--bin", type=Path,
-                   default=ROOT / "build" / "host" / "engine-spec" / "pinfer_run")
+                   default=ROOT / "build" / "host" / "engine" / "pinfer_run")
     p.add_argument("--model", type=Path, default=ROOT / "models" / "pq" / "qwen35-0.8b-bf16.pq")
     p.add_argument("--n-gen", type=int, default=40, help="tokens per run (golden: 32)")
     p.add_argument("--jobs", type=int, default=8)
@@ -111,7 +112,9 @@ def main() -> int:
     # > PF_MAX_BATCH (64) prompt ids: the MTP prefill runs over two chunks
     prompts.append(("long74", bench["ids"] + golden_ids, a.n_gen))
     configs = [("plain", [])] + [(f"k{k}", ["--spec", str(k)]) for k in KS] + \
-              [(f"k3v{DRAFT_VOCAB}", ["--spec", "3", "--draft-vocab", str(DRAFT_VOCAB)])]
+              [(f"k3v{DRAFT_VOCAB}", ["--spec", "3", "--draft-vocab", str(DRAFT_VOCAB)]),
+               ("k3adapt", ["--spec", "3", "--draft-vocab", str(DRAFT_VOCAB), "--adaptive"]),
+               ("k3b2", ["--spec", "3", "-b", "2"])]   # prefill chunk smaller than k+1
     jobs = [(name, ids, n, cname, extra) for name, ids, n in prompts for cname, extra in configs]
     print(f"\n2. exactness: {len(prompts)} prompts x {len(configs)} configs "
           f"({len(jobs)} runs, {a.jobs} in parallel)")
