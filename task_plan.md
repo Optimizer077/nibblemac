@@ -42,6 +42,25 @@ Toolchain, harness, flash, first boot, direct cable, EEPROM, logging system. See
 - [x] C API, libpinfer.a/.so, Python package, CLI, docs, 80 tests (9c58a81); fast wheel built
 - [ ] License (user); [ ] rebuild wheels after kernel follow-up; [ ] publish (user approval)
 
+## Phase 6 — context window (added 2026-10-22 02:00, user request)
+Facts: only the 6 full-attention layers have a KV cache (2 KV heads × 256 × K+V × fp32 =
+24 KB/token → 96 MB at 4096, 768 MB at 32K); the 18 linear-attention layers have fixed state
+(19 MB), so memory grows slowly but attention reads 24 KB × context per token (at 8K context
+that is 192 MB/token — comparable to the 437 MB of weights).
+- [ ] Measure decode/prefill tok/s vs context length (64 / 512 / 2048 / 4096 / 8192) — running
+- [ ] KV cache precision: fp16 (halves traffic; bit-exact?) and int8 (quarter); quality check
+      (PPL at 512 ctx + logit diff at long positions); make it the default if lossless enough
+- [ ] NEON attention for long contexts (dot products over the cache, softmax, GQA 4:1 sharing of
+      K/V reads across the 4 query heads of a KV head), batched for verify passes
+- [ ] Long-prompt prefill: chunked attention, confirm RoPE/positions correct at > 4096 vs reference
+- [ ] State save/restore API (`pinfer_state_size/save/load`): recurrent + conv + KV snapshot, so
+      multi-turn chat and a system prompt never re-prefill; Python `Model.save_state()`/`load_state()`
+- [ ] Prefix cache in the Python package (keep the last state; extend when the new prompt is a
+      superset — already partly there as `reuse_prefix`)
+- [ ] Bounded-context mode for endless chat (attention sinks + sliding window over the KV, state
+      kept) — optional, quality trade-off, measured
+- [ ] Compare with llama.cpp at 2048/4096 context (same prompt) for the scoreboard
+
 ## Decisions
 - 2026-10-21: Level 2 (split-core Linux), bare metal later (user).
 - 2026-10-21: C11 + NEON, Debian trixie, Python harness over SSH (call).
