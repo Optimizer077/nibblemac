@@ -1,0 +1,22 @@
+# 2026-10-21T21:08:47 pi@192.168.1.166
+$ date; echo "== boots"; journalctl --list-boots --no-pager 2>&1 | tail -5; echo "== throttled now"; vcgencmd get_throttled; echo "== last lines of previous boot"; journalctl -b -1 --no-pager -n 25 2>&1 | cut -c1-200; echo "== reset reason (this boot)"; journalctl -b 0 -k --no-pager 2>&1 | grep -iE "voltage|watchdog|reset|brown" | head; vcgencmd get_rsts 2>/dev/null; echo "== power supply"; vcgencmd pmic_read_adc 2>/dev/null | head -3; dmesg 2>/dev/null | grep -i -E "under-?voltage" | head -3
+
+Wed 21 Oct 21:08:48 KST 2026
+== boots
+IDX BOOT ID                          FIRST ENTRY                 LAST ENTRY
+  0 777d8b6cce5a4394a5ce59443dd34e1d Tue 2026-10-06 09:27:38 KST Wed 2026-10-21 21:08:48 KST
+== throttled now
+throttled=0x0
+== last lines of previous boot
+Specifying boot ID or boot offset has no effect, no persistent journal was found.
+== reset reason (this boot)
+Oct 06 09:27:38 raspberrypi kernel: bcm2835-wdt bcm2835-wdt: Broadcom BCM2835 watchdog timer
+Oct 06 09:27:38 raspberrypi systemd[1]: Using hardware watchdog 'Broadcom BCM2835 Watchdog timer', version 0, device /dev/watchdog0
+Oct 06 09:27:38 raspberrypi systemd[1]: Watchdog running with a hardware timeout of 1min.
+Oct 06 09:27:38 raspberrypi systemd[1]: Failed to populate /etc with preset unit settings, ignoring: Read-only file system
+get_rsts=1000
+== power supply
+vc_gencmd_read_response returned -1
+error=1 error_msg="Command not registered"
+
+[exit 0]

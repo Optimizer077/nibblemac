@@ -1,0 +1,17 @@
+# 2026-10-21T21:15:20 pi@192.168.1.166
+$ sudo nmcli connection modify netplan-eth0 ipv4.method manual ipv4.addresses 10.42.0.2/24 ipv4.gateway "" ipv4.never-default yes ipv6.method link-local && sudo nmcli connection up netplan-eth0 && echo "eth0 static applied"; sleep 2; ip -br addr show dev eth0; ip -br addr show dev wlan0; ip route; ls -la /etc/netplan/
+
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/5)
+eth0 static applied
+eth0             UP             10.42.0.2/24 fe80::dea6:32ff:fe25:a7d7/64 
+wlan0            UP             192.168.1.166/24 fe80::dea6:32ff:fe25:a7d8/64 
+default via 192.168.1.1 dev wlan0 proto dhcp src 192.168.1.166 metric 600 
+10.42.0.0/24 dev eth0 proto kernel scope link src 10.42.0.2 metric 100 
+192.168.1.0/24 dev wlan0 proto kernel scope link src 192.168.1.166 metric 600 
+total 16
+drwxr-xr-x  2 root root 4096 Oct  6 09:28 .
+drwxr-xr-x 93 root root 4096 Oct 21 21:04 ..
+-rw-------  1 root root  385 Oct 21 21:15 90-NM-75a1216a-9d1a-30cd-8aca-ace5526ec021.yaml
+-rw-------  1 root root  673 Oct 21 21:09 90-NM-bf199e0c-9ec5-345d-953c-8c08eddacf51.yaml
+
+[exit 0]

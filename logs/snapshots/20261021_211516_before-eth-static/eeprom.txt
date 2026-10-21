@@ -1,0 +1,22 @@
+*** UPDATE AVAILABLE ***
+
+Run "sudo rpi-eeprom-update -a" to install this update without a prompt.
+
+To configure the bootloader update policy run "sudo raspi-config"
+
+BOOTLOADER: update available
+   CURRENT: Sun 17 May 19:13:18 UTC 2026 (1779045198)
+    LATEST: Wed 23 Sep 12:02:14 UTC 2026 (1790164934)
+   RELEASE: default (/usr/lib/firmware/raspberrypi/bootloader-2711/default)
+            Use raspi-config to change the release.
+
+  VL805_FW: Dedicated VL805 EEPROM
+     VL805: up to date
+   CURRENT: 000138c0
+    LATEST: 000138c0
+2026/05/17 20:13:18
+version 224877da90f82a72dbcc9db10bcf059259f54680 (release)
+timestamp 1779045198
+update-time 1781743050
+capabilities 0x0000007f
+

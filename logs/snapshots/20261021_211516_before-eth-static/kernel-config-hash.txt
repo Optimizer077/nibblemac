@@ -1,0 +1,2 @@
+Linux pi4 6.18.50+rpt-rpi-v8 #1 SMP PREEMPT Debian 1:6.18.50-1+rpt1 (2026-09-11) aarch64 GNU/Linux
+545260efb824b8999548ce483bce856bb60e72718ced820fbd951c025689c746  /boot/config-6.18.50+rpt-rpi-v8

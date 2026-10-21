@@ -1,0 +1,36 @@
+# 2026-10-21T21:13:33 pi@192.168.1.166
+$ echo "== all BSSIDs for this SSID"; nmcli -f IN-USE,BSSID,SSID,CHAN,FREQ,SIGNAL,SECURITY dev wifi list --rescan no 2>/dev/null | grep -E "IN-USE|<wifi-ssid>"; echo "== reassociation events (whole boot)"; journalctl -b 0 --no-pager -o short-iso -u NetworkManager | grep -E "wlan0\): supplicant interface state: completed -> " | cut -c1-25,60-200; echo "== wpa_supplicant"; journalctl -b 0 --no-pager -o short-iso -u wpa_supplicant | grep -vE "^$" | tail -15 | cut -c1-220; echo "== kernel brcmfmac"; journalctl -b 0 -k --no-pager -o short-iso | grep -iE "brcmf|wlan0" | tail -8 | cut -c1-200
+
+== all BSSIDs for this SSID
+IN-USE  BSSID              SSID          CHAN  FREQ      SIGNAL  SECURITY 
+*       <router-mac>  <wifi-ssid>  36    5180 MHz  91      WPA2     
+== reassociation events (whole boot)
+2026-10-21T21:08:17+09:00 [1792584497.3275] device (wlan0): supplicant interface state: completed -> associating
+2026-10-21T21:11:10+09:00 [1792584670.0396] device (wlan0): supplicant interface state: completed -> associating
+2026-10-21T21:12:48+09:00 [1792584768.8330] device (wlan0): supplicant interface state: completed -> associating
+== wpa_supplicant
+2026-10-21T21:11:10+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-SUBNET-STATUS-UPDATE status=0
+2026-10-21T21:11:10+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-REGDOM-CHANGE init=COUNTRY_IE type=COUNTRY alpha2=KR
+2026-10-21T21:11:10+09:00 pi4 wpa_supplicant[1759]: wlan0: WPA: Key negotiation completed with <router-mac> [PTK=CCMP GTK=CCMP]
+2026-10-21T21:11:10+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-CONNECTED - Connection to <router-mac> completed [id=0 id_str=]
+2026-10-21T21:11:10+09:00 pi4 wpa_supplicant[1759]: bgscan simple: Failed to enable signal strength monitoring
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-DISCONNECTED bssid=<router-mac> reason=7
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: Trying to associate with <router-mac> (SSID='<wifi-ssid>' freq=5180 MHz)
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-REGDOM-CHANGE init=CORE type=WORLD
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-REGDOM-CHANGE init=USER type=COUNTRY alpha2=KR
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: Associated with <router-mac>
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-SUBNET-STATUS-UPDATE status=0
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-REGDOM-CHANGE init=COUNTRY_IE type=COUNTRY alpha2=KR
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: WPA: Key negotiation completed with <router-mac> [PTK=CCMP GTK=CCMP]
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: wlan0: CTRL-EVENT-CONNECTED - Connection to <router-mac> completed [id=0 id_str=]
+2026-10-21T21:12:48+09:00 pi4 wpa_supplicant[1759]: bgscan simple: Failed to enable signal strength monitoring
+== kernel brcmfmac
+2026-10-06T09:27:40+09:00 raspberrypi kernel: brcmfmac: F1 signature read @0x18000000=0x15264345
+2026-10-06T09:27:40+09:00 raspberrypi kernel: brcmfmac: brcmf_fw_alloc_request: using brcm/brcmfmac43455-sdio for chip BCM4345/6
+2026-10-06T09:27:40+09:00 raspberrypi kernel: usbcore: registered new interface driver brcmfmac
+2026-10-06T09:27:41+09:00 raspberrypi kernel: brcmfmac: brcmf_c_process_txcap_blob: no txcap_blob available (err=-2)
+2026-10-06T09:27:41+09:00 raspberrypi kernel: brcmfmac: brcmf_c_preinit_dcmds: Firmware: BCM4345/6 wl0: Aug 29 2023 01:47:08 version 7.45.265 (28bca26 CY) FWID 01-b677b91b
+2026-10-06T09:28:07+09:00 pi4 kernel: brcmfmac: brcmf_cfg80211_set_power_mgmt: power save enabled
+2026-10-21T21:09:17+09:00 pi4 kernel: Modules linked in: rfcomm cmac algif_hash aes_arm64 algif_skcipher af_alg bnep binfmt_misc brcmfmac_cyw hci_uart brcmfmac btbcm bluetooth brcmutil ecdh_generic bc
+
+[exit 0]

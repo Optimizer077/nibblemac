@@ -1,0 +1,13 @@
+# 2026-10-21T21:11:17 pi@192.168.1.166
+$ nmcli -f IN-USE,SSID,CHAN,FREQ,RATE,SIGNAL,SECURITY dev wifi list 2>/dev/null | grep -E "IN-USE|<wifi-ssid>"; journalctl -b 0 --no-pager -u NetworkManager -o short-iso --since "21:09" | grep -iE "wlan0" | grep -viE "^$" | tail -6
+
+IN-USE  SSID          CHAN  FREQ      RATE        SIGNAL  SECURITY 
+*       <wifi-ssid>  36    5180 MHz  270 Mbit/s  91      WPA2     
+2026-10-21T21:11:10+09:00 pi4 NetworkManager[1754]: <info>  [1792584670.0396] device (wlan0): supplicant interface state: completed -> associating
+2026-10-21T21:11:10+09:00 pi4 NetworkManager[1754]: <info>  [1792584670.0397] device (p2p-dev-wlan0): supplicant management interface state: completed -> associating
+2026-10-21T21:11:10+09:00 pi4 NetworkManager[1754]: <info>  [1792584670.1383] device (wlan0): supplicant interface state: associating -> completed
+2026-10-21T21:11:10+09:00 pi4 NetworkManager[1754]: <info>  [1792584670.1418] device (p2p-dev-wlan0): supplicant management interface state: associating -> completed
+2026-10-21T21:11:12+09:00 pi4 NetworkManager[1754]: <info>  [1792584672.0434] dhcp4 (wlan0): state changed new lease, address=192.168.1.166, acd pending
+2026-10-21T21:11:12+09:00 pi4 NetworkManager[1754]: <info>  [1792584672.0437] dhcp4 (wlan0): state changed new lease, address=192.168.1.166
+
+[exit 0]

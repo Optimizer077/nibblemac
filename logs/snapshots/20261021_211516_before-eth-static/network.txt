@@ -1,0 +1,6 @@
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             UP             fe80::dea6:32ff:fe25:a7d7/64 
+wlan0            UP             192.168.1.166/24 fe80::dea6:32ff:fe25:a7d8/64 
+netplan-wlan0-<wifi-ssid>:802-11-wireless:wlan0
+netplan-eth0:802-3-ethernet:eth0
+lo:loopback:lo

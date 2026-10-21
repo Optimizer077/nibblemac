@@ -1,0 +1,16 @@
+# 2026-10-21T21:09:48 pi@192.168.1.166
+$ ls -la /etc/netplan/; printf "# pinfer: disable Wi-Fi power save (latency spikes / DHCP blips), 2026-10-21\n[connection]\nwifi.powersave = 2\n" | sudo tee /etc/NetworkManager/conf.d/90-pinfer-wifi-powersave-off.conf >/dev/null && echo "wrote conf.d drop-in"; cat /etc/NetworkManager/conf.d/90-pinfer-wifi-powersave-off.conf; sudo nmcli general reload conf && echo "NM config reloaded"; nmcli -g 802-11-wireless.powersave con show netplan-wlan0-<wifi-ssid>
+
+total 16
+drwxr-xr-x  2 root root 4096 Oct  6 09:28 .
+drwxr-xr-x 93 root root 4096 Oct 21 21:04 ..
+-rw-------  1 root root  257 Oct  6 09:28 90-NM-75a1216a-9d1a-30cd-8aca-ace5526ec021.yaml
+-rw-------  1 root root  673 Oct 21 21:09 90-NM-bf199e0c-9ec5-345d-953c-8c08eddacf51.yaml
+wrote conf.d drop-in
+# pinfer: disable Wi-Fi power save (latency spikes / DHCP blips), 2026-10-21
+[connection]
+wifi.powersave = 2
+NM config reloaded
+disable
+
+[exit 0]

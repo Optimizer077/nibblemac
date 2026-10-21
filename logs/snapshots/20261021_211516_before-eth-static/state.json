@@ -1,0 +1,19 @@
+{
+  "model": "Raspberry Pi 4 Model B Rev 1.1",
+  "boot_time": "2026-10-21 21:03:53",
+  "boot_id": "777d8b6c-ce5a-4394-a5ce-59443dd34e1d",
+  "kernel": "6.18.50+rpt-rpi-v8",
+  "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=27b94958-02 rootfstype=ext4 fsck.repair=yes rootwait resize cfg80211.ieee80211_regdom=KR",
+  "page_size": "4096",
+  "cpu_features": "fp asimd evtstrm crc32 cpuid",
+  "governor": "ondemand",
+  "freq_khz": "1500000 1500000 1500000 1500000",
+  "isolated": "",
+  "nohz_full": "",
+  "temp": "37.4'C",
+  "throttled": "0x0",
+  "hugepages_total": "",
+  "thp": "",
+  "mem_avail_mb": "3596",
+  "python": "Python 3.13.5"
+}

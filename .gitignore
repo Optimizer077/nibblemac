@@ -1,0 +1,9 @@
+build/
+models/
+harness/pi.toml
+__pycache__/
+*.pq
+*.gguf
+*.safetensors
+images/
+*.secret

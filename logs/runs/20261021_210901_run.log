@@ -1,0 +1,18 @@
+# 2026-10-21T21:09:01 pi@192.168.1.166
+$ echo "booted at: $(uptime -s)"; cat /proc/sys/kernel/random/boot_id; journalctl -b 0 --no-pager -o short-iso 2>/dev/null | grep -m3 -E "^2026-10-21"; journalctl -b 0 --no-pager -u NetworkManager -o short-iso 2>/dev/null | grep -iE "wlan0.*(disconnect|state change|deauth|beacon)" | tail -8
+
+booted at: 2026-10-21 21:03:53
+777d8b6c-ce5a-4394-a5ce-59443dd34e1d
+2026-10-21T21:04:32+09:00 pi4 systemd-timesyncd[400]: Contacted time server 122.45.50.38:123 (2.debian.pool.ntp.org).
+2026-10-21T21:04:32+09:00 pi4 systemd-timesyncd[400]: Initial clock synchronization to Wed 2026-10-21 13:04:32.755182 BST.
+2026-10-21T21:04:32+09:00 pi4 systemd[1]: Starting dpkg-db-backup.service - Daily dpkg database backup service...
+2026-10-06T09:28:11+09:00 pi4 NetworkManager[1754]: <info>  [1791246491.2910] dhcp4 (wlan0): state changed new lease, address=192.168.1.166, acd pending
+2026-10-06T09:28:11+09:00 pi4 NetworkManager[1754]: <info>  [1791246491.4458] dhcp4 (wlan0): state changed new lease, address=192.168.1.166
+2026-10-06T09:28:11+09:00 pi4 NetworkManager[1754]: <info>  [1791246491.4780] device (wlan0): state change: ip-config -> ip-check (reason 'none', managed-type: 'full')
+2026-10-06T09:28:11+09:00 pi4 NetworkManager[1754]: <info>  [1791246491.5379] device (wlan0): state change: ip-check -> secondaries (reason 'none', managed-type: 'full')
+2026-10-06T09:28:11+09:00 pi4 NetworkManager[1754]: <info>  [1791246491.5383] device (wlan0): state change: secondaries -> activated (reason 'none', managed-type: 'full')
+2026-10-21T21:08:17+09:00 pi4 NetworkManager[1754]: <info>  [1792584497.3170] dhcp4 (wlan0): state changed no lease
+2026-10-21T21:08:19+09:00 pi4 NetworkManager[1754]: <info>  [1792584499.3324] dhcp4 (wlan0): state changed new lease, address=192.168.1.166, acd pending
+2026-10-21T21:08:19+09:00 pi4 NetworkManager[1754]: <info>  [1792584499.3331] dhcp4 (wlan0): state changed new lease, address=192.168.1.166
+
+[exit 0]

@@ -1,0 +1,9 @@
+# 2026-10-21T21:08:35 pi@192.168.1.166
+$ iw dev wlan0 get power_save; nmcli -f GENERAL.CONNECTION,802-11-wireless.powersave con show netplan-wlan0-<wifi-ssid> 2>/dev/null | tail -1; iw dev wlan0 link | grep -E "signal|freq|bitrate"; uptime
+
+bash: line 1: iw: command not found
+802-11-wireless.powersave:              0 (default)
+bash: line 1: iw: command not found
+ 21:08:36 up 4 min,  1 user,  load average: 0.20, 0.25, 0.12
+
+[exit 0]

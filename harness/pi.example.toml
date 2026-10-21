@@ -1,0 +1,7 @@
+# Copy to harness/pi.toml and edit. pi.toml is gitignored.
+[pi]
+host = "pi4.local"          # hostname set in Raspberry Pi Imager, or the Pi's IP address
+user = "pi"                 # username set in Raspberry Pi Imager
+port = 22
+remote_dir = "pinfer"       # relative to the user's home on the Pi
+identity_file = "~/.ssh/id_ed25519_desktop"

@@ -1,0 +1,8 @@
+NAME     SIZE FSTYPE MOUNTPOINT
+loop0      2G swap   
+sda    931.5G        
+├─sda1   512M vfat   /boot/firmware
+└─sda2   931G ext4   /
+zram0      2G swap   [SWAP]
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda2       917G  3.9G  876G   1% /

@@ -1,0 +1,13 @@
+# 2026-10-21T21:16:09 pi@10.42.0.2
+$ echo "== Pi internet via Wi-Fi"; ping -c2 -W2 1.1.1.1 | tail -1; ip route get 1.1.1.1 | head -1; echo "== cable link"; cat /sys/class/net/eth0/speed /sys/class/net/eth0/duplex; ping -c5 -i0.2 -W1 10.42.0.1 | tail -2
+
+== Pi internet via Wi-Fi
+rtt min/avg/max/mdev = 7.391/7.895/8.400/0.504 ms
+1.1.1.1 via 192.168.1.1 dev wlan0 src 192.168.1.166 uid 1000 
+== cable link
+1000
+full
+5 packets transmitted, 0 received, 100% packet loss, time 813ms
+
+
+[exit 0]

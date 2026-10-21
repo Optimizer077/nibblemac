@@ -1,0 +1,13 @@
+# 2026-10-21T21:09:36 pi@192.168.1.166
+$ sudo nmcli connection modify netplan-wlan0-<wifi-ssid> 802-11-wireless.powersave 2 && echo "set powersave=2 (disable)"; nmcli -g 802-11-wireless.powersave con show netplan-wlan0-<wifi-ssid>; ls /etc/NetworkManager/system-connections/ /run/NetworkManager/system-connections/ 2>&1
+
+set powersave=2 (disable)
+disable
+/etc/NetworkManager/system-connections/:
+
+/run/NetworkManager/system-connections/:
+lo.nmconnection
+netplan-eth0.nmconnection
+netplan-wlan0-<wifi-ssid>.nmconnection
+
+[exit 0]
