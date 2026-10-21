@@ -1,0 +1,42 @@
+# state_cmp (logs/verify/state_cmp.c) on the final host build, then the negative control
+# (same harness linked against a copy of the engine without the final pf_lin_flush), 2026-10-22 08:40:08 KST
+== golden prompt
+k=1 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=2 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=3 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=4 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=3 dv=0 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=3 dv=32768 adaptive=1: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=6 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+all identical
+== prompt64
+k=1 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 102, 22708224 B)
+k=2 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 102, 22708224 B)
+k=3 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 102, 22708224 B)
+k=4 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 102, 22708224 B)
+k=3 dv=0 adaptive=0: tokens same (24+12), state identical (n_past 102, 22708224 B)
+k=3 dv=32768 adaptive=1: tokens same (24+12), state identical (n_past 102, 22708224 B)
+k=6 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 102, 22708224 B)
+all identical
+== chat27
+k=1 dv=32768 adaptive=0: tokens same (24+3), state identical (n_past 56, 21577728 B)
+k=2 dv=32768 adaptive=0: tokens same (24+3), state identical (n_past 56, 21577728 B)
+k=3 dv=32768 adaptive=0: tokens same (24+3), state identical (n_past 56, 21577728 B)
+k=4 dv=32768 adaptive=0: tokens same (24+3), state identical (n_past 56, 21577728 B)
+k=3 dv=0 adaptive=0: tokens same (24+3), state identical (n_past 56, 21577728 B)
+k=3 dv=32768 adaptive=1: tokens same (24+3), state identical (n_past 56, 21577728 B)
+k=6 dv=32768 adaptive=0: tokens same (24+3), state identical (n_past 56, 21577728 B)
+all identical
+rc=000
+
+## negative control: no final pf_lin_flush (must FAIL)
+258:    // pf_lin_flush(ctx);   /* the last commit's deferred updates: states complete on return */
+k=1 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=2 dv=32768 adaptive=0: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=3 dv=32768 adaptive=0: tokens same (24+12), state DIFFERS (n_past 48, 21381120 B)
+k=4 dv=32768 adaptive=0: tokens same (24+12), state DIFFERS (n_past 48, 21381120 B)
+k=3 dv=0 adaptive=0: tokens same (24+12), state DIFFERS (n_past 48, 21381120 B)
+k=3 dv=32768 adaptive=1: tokens same (24+12), state identical (n_past 48, 21381120 B)
+k=6 dv=32768 adaptive=0: tokens same (24+12), state DIFFERS (n_past 48, 21381120 B)
+FAILED
+rc=1 (expected nonzero)

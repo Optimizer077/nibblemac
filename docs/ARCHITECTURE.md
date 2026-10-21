@@ -171,7 +171,7 @@ one implementation: `make -C engine MATVEC=ref|fast` links `matvec_ref.c`, or `m
 |---|---|
 | `pf_matvec(pool, W, x, y)` | `y = W x` for one vector |
 | `pf_matmul(pool, W, X, Y, n)` | n vectors at once; row v of the result must equal `pf_matvec` on vector v bit for bit (§7) |
-| `pf_lin_rule(pool, args)` | Gated DeltaNet recurrence of one layer over n tokens, exact per-element fp32 operations, no FMA; with `log != NULL` it leaves the state untouched and writes `k, delta, decay` per (token, head) |
+| `pf_lin_rule(pool, args)` | Gated DeltaNet recurrence of one layer over n tokens, exact per-element fp32 operations, no FMA; first applies `keep` deferred updates (`pend`); with `log != NULL` only token 0 updates the state, tokens 1.. run on a copy and write `k, delta, decay` per (token, head) |
 | `pf_lin_apply(pool, S, log, keep, ...)` | Commit replay of the first `keep` logged updates |
 | `pf_pool_run(pool, fn, arg, max)` | Generic parallel job; the split must not change any per-element arithmetic |
 | `pf_get_row`, `pf_dtype_supported` | Embedding lookup (dequantized row); dtype support of this build |
@@ -293,10 +293,10 @@ sequenceDiagram
         M-->>L: d(s+1) = argmax over ids below draft_vocab
     end
     L->>F: ONE batched pass over cur, d1 .. dk at positions P .. P+k
-    F->>S: run on scratch copies, log k, delta, decay per token and head
+    F->>S: apply the last round's deferred updates, advance by cur, run d1..dk on copies and log them
     F-->>L: logits and final-normed hiddens for all k+1 rows
     L->>L: a = longest prefix of drafts equal to the model's argmax, bonus = argmax of row a
-    L->>S: pf_lin_commit(e = a+1) replays the first e logged updates
+    L->>S: pf_lin_commit(e = a+1): conv state now, the e-1 logged updates deferred to the next pass
     Note over L,F: n_past = P + e. KV rows past n_past are stale and get overwritten before any read.
     L->>M: one batched MTP pass over the e committed rows with the main hiddens
     M-->>L: next d1, MTP KV rows replaced
@@ -310,17 +310,20 @@ sequenceDiagram
 3. The batched pass computes every row bit-identically to a single-token step (§7), so the logits, and
    therefore the argmax, are the same as in plain decoding, near-ties included.
 4. Rejected work leaves no trace. KV rows past `n_past` are rewritten before any query can read them,
-   because `pf_full_attn` stores a chunk's K/V before attending and attention is causal. The 18
-   recurrent states are never written during verification; `pf_lin_commit` replays only the accepted
-   rank-1 updates (`S = S·decay; S = S + k_i·delta_j`) with the same fp32 operations, so the state is
-   bit-identical to having run only those tokens. The conv state becomes the last 3 rows of
-   (old state, accepted raw inputs) (`engine/src/forward_lin.c`, `engine/SPEC.md` §2).
+   because `pf_full_attn` stores a chunk's K/V before attending and attention is causal. During
+   verification the 18 recurrent and conv states advance only by `cur`, which every round commits;
+   the drafts run on copies. Only the accepted rank-1 updates (`S = S·decay; S = S + k_i·delta_j`) are
+   replayed, with the same fp32 operations, so the state is bit-identical to having run only those
+   tokens. The conv state becomes the last 3 rows of (state after `cur`, accepted raw inputs)
+   (`engine/src/forward_lin.c`, `engine/VERIFY.md` §2).
 
-Rollback by replay needs no snapshot and no second copy of the 19 MB state: the verify pass works on a
-scratch copy of one layer's state at a time (1 MB in `kern_lin.c`, one 64 KB head in `matvec_ref.c`), and
-the commit reads and writes the state once (`engine/SPEC.md` §2). Measured per round at k = 3: the logged
-recurrence including its copies 22.8 ms (`engine/CORE.md` final profile), the commit 13.8 ms
-(`pinfer-final2-q4k_20261022_023950.json`).
+Rollback by replay needs no snapshot and no second copy of the 19 MB state. The drafts run on a 16 KB
+chunk copy on each thread's stack (`kern_lin.c`; one 64 KB head per context in `matvec_ref.c`). The
+replay is deferred to the layer's next pass, which folds it into its first sweep over each chunk; the
+speculative loop applies whatever is left before it returns (`pf_lin_flush`). A round therefore reads
+and writes each state once, like a plain step. Measured per round at k = 3 (`engine/VERIFY.md`): verify
+pass 152.9 ms (was 159.5), commit 1.9 ms (was 14.3), 18.42 tok/s (was 16.64)
+(`ver3-ab-p64_20261022_080513.json`, `ver-before-p64_20261022_070046.json`).
 
 **Draft vocabulary.** The tied head is 93% of a bf16 MTP step's bytes, so drafts take the argmax over
 token ids below `draft_vocab` only (default 32,768; `pinfer_default_spec_params` = k 2, draft_vocab

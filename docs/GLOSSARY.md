@@ -15,9 +15,10 @@ thread count. Required for speculative decoding to match plain decoding (ARCHITE
 **Bonus token.** In a speculative round, the main model's own token after the last accepted draft. Every
 round emits at least this one token.
 
-**Commit (rollback by replay).** After a verify pass, `pf_lin_commit` replays the logged rank-1 updates
-of the accepted tokens into the Gated DeltaNet states. Rejected tokens are simply never replayed; no
-state snapshot is taken (`engine/SPEC.md` §2).
+**Commit (rollback by replay).** After a verify pass, `pf_lin_commit` hands the logged rank-1 updates
+of the accepted tokens to the Gated DeltaNet states. The layer's next pass replays them, or
+`pf_lin_flush` does at the end of generation. Rejected tokens are simply never replayed; no state
+snapshot is taken (`engine/VERIFY.md` §2).
 
 **Decode.** Generating one token per step. Each step reads every weight once, so on the Pi it is limited
 by memory bandwidth: tok/s ≈ bandwidth ÷ bytes read per token (`docs/design.md` §3).

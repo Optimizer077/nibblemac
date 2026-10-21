@@ -5,6 +5,40 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Changed (verify pass, issues #5 and #11; details in `engine/VERIFY.md`)
+- Speculative rounds read and write the Gated DeltaNet states once instead of twice. Changes in
+  `kern_lin.c`, `forward_lin.c`, `spec.c` and the `ops.h` `pf_lin_rule` contract; the scalar twin in
+  `matvec_ref.c`:
+  - The first verify token (`cur`, always committed) now updates the states in place.
+  - The drafts run on a 16 KB per-thread stack copy of each state chunk.
+  - `pf_lin_commit` defers the accepted rank-1 updates to the layer's next pass, which folds them
+    into its first sweep. The log is double-buffered.
+  - `pf_lin_flush` runs at the end of `pf_spec_decode`.
+
+  Output is bit-identical.
+- Fixed (#11 High): the shared `static` scratch state in `kern_lin.c`, and the same `static
+  lin_scratch` in `matvec_ref.c` (the x86 wheel), are removed. Before the fix, two contexts
+  decoding speculatively on two threads produced different tokens (Pi: 7 of 8 runs; host: 4 of 6).
+  After it, 0 of 8 and 0 of 6 differ (`logs/runs/20261022_083027_run.log`,
+  `logs/verify/thread_cmp_host.txt`).
+- `engine/bench/lbench.c` checks the new contract (logged pass, replay, deferred commit in logged and
+  in-place passes) and times the verify kinds.
+
+### Measured (verify pass)
+- prompt64, k=3, draft vocab 32768: **16.64 → 18.42 tok/s** (+10.7%). The verify pass went from
+  159.5 to 152.9 ms and the commit from 14.3 to 1.9 ms. Verify / plain is 1.26 → 1.20, and
+  (verify + commit) / plain is 1.37 → 1.22. Plain decode is unchanged at 7.87 tok/s
+  (`ver-before-p64_20261022_070046.json`, `ver3-ab-p64_20261022_080513.json`).
+- ctx2048 with `--adaptive`: 9.15 → 10.71 tok/s (+17%). Fixed k=3: 8.90 → 9.55
+  (`ver-before-ctx2048_20261022_070717.json`, `ver3-ctx2048_20261022_082417.json`).
+- Gates:
+  - host golden / spec / state PASS, pytest 85/85;
+  - state after speculative decoding byte-identical to plain decoding (21/21);
+  - Pi lbench exact, spec_exact 20/20 (md5s = baseline), ctx_check 5/5
+    (`ver3-exact_20261022_075930.json`).
+- Tried and dropped, with numbers in VERIFY.md §6: fused token sweeps (slower at n = 4), software
+  prefetch of the next chunk (slower), deferring the conv-state commit (no gain).
+
 ### Merged (lead, 06:50)
 - Context-window work merged to `main` after the full gate (host golden / spec 81/81 / state /
   pytest 85/85; Pi build md5-identical to the gated `pinfer_run_ctx7`). The Pi's shared

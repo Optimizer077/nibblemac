@@ -179,3 +179,18 @@ installed side by side (`docs/pi-state.md` #4).
 
 Memory is not the issue (KV cache 24 KB/token: +116 MB at 4096); the attention path is. Speculation
 loses its gain on long wikitext (low acceptance + verify cost growing with context × batch) → adaptive k.
+
+## Verify pass (issue #5, 2026-10-22 06:43–08:30, `engine/VERIFY.md`)
+Q4K-headq4k, 4 threads, 64 generated, all runs valid. Once merged, the default row of the
+scoreboard changes from **16.49 to 18.42 tok/s** speculative (k=3, dv 32768); plain and prefill
+are unchanged.
+
+| | before (`pinfer_run_fast` `9d30bbda`) | after (`pinfer_run_ver3` `82c7f4d2`) | result files |
+|---|---|---|---|
+| prompt64 k=3 dv 32768 | 16.73 / 16.66 / 16.54 (16.64) | 18.36 / 18.49 / 18.39 (**18.42**) | `ver-before-p64_20261022_070046.json`, `ver3-ab-p64_20261022_080513.json` |
+| verify pass / commit per round | 159.5 / 14.3 ms | 152.9 / 1.9 ms | same |
+| verify / plain, (verify + commit) / plain | 1.26, 1.37 | 1.20, 1.22 | same |
+| plain decode | 7.87 tok/s | 7.87 tok/s | same |
+| ctx2048 `--adaptive` | 9.31 / 8.82 / 9.33 (9.15) | 10.31 / 11.04 / 10.79 (**10.71**) | `ver-before-ctx2048_20261022_070717.json`, `ver3-ctx2048_20261022_082417.json` |
+| ctx2048 fixed k=3 / plain | 8.90 / 6.89 | 9.55 / 7.06 | same |
+| chat27 k=2 / k=3 (v1 binary) | 9.88 / 9.45 | 11.00 / 10.52 | `ver1-ksweep_20261022_074459.json` |
