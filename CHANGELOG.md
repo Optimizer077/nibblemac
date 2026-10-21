@@ -5,6 +5,30 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Changed (figures agent, 08:55) — README figures sized for desktop and phones
+- Every figure is now rendered in 2 layouts × 2 themes (52 PNGs). Desktop `NAME.png` / `NAME-dark.png`
+  are exactly 1676 px wide (GitHub's 838 CSS px README column at 2×); phone `NAME-mobile.png` /
+  `NAME-mobile-dark.png` are 1080 px (a 360 CSS px column at 3×). Before, the 1120–1600 px PNGs were
+  scaled by 0.52–0.75 on desktop (text 10–13 CSS px) and to ~0.22–0.32 on phones (text 4–6 px).
+- Text at display size: desktop 13 CSS px (ticks, labels, legends, values), 14 subtitles, 18 titles;
+  phone 13 / 13 / 16. Each layout renders at DPI = 72 × scale, so 1 pt = 1 CSS px.
+- Phone layouts: small multiples stacked (`context_length`, `speculative_k`, `quantization`,
+  `mtp_acceptance`); category names above the bars (`decode_speed`, `prefill_speed`, `os_experiment`,
+  `step_breakdown`); legends under the title; titles and subtitles wrapped by measured width; the
+  speculative schematic stacked top to bottom; shortened tick labels (`progress`: "exact kernels",
+  "vectorized ops"; `context_length`: 2K / 4K / 8K with "K = 1024" in the axis label).
+- `tools/figstyle.py`: `Layout` dataclass next to `Theme`; `header()` (title, subtitle, legend),
+  `hbar_rows()`, `label_inside()`; `save()` writes a 256-colour palette PNG (no dither; dominant colours
+  unchanged) and fails on a wrong width or if the final layout moves axes after px-sized marks.
+  `docs/figures/`: 1,711,911 B in 26 files → 2,284,489 B in 52 files.
+- `README.md` (13 blocks) and `docs/RESULTS.md` (12 blocks): `<picture>` gains the two
+  `(max-width: 600px)` sources (light, dark); alt texts unchanged.
+- Desktop readability fixes: integer ticks; the dashed reference rule in `muted` (it was nearly
+  invisible in dark mode); value labels no longer cut the series lines (`progress`); legends that
+  covered data moved under the title (`step_breakdown`, `mtp_acceptance`); the DRAM ceiling in a
+  legend key (`kernel_bandwidth`).
+- No data value changed: every numeric constant in both scripts compared equal to the previous commit.
+
 ### Merged (lead, 06:50)
 - Context-window work merged to `main` after the full gate (host golden / spec 81/81 / state /
   pytest 85/85; Pi build md5-identical to the gated `pinfer_run_ctx7`). The Pi's shared
