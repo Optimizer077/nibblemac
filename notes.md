@@ -80,7 +80,7 @@ tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
 | pinfer | Q4_G32 + Q4 head | 437 MB | **6.88** | **12.56** (k=3, dv 32768) | 21.3 | **21.61** (as bad as Q4_0) |
 | pinfer | Q4K (v_proj, mtp.fc Q8) + Q4K head | 439 MB | **6.88** | 10.98 (k=3, dv 32768) | 16.3 | **18.50** |
 | pinfer | same + Q8 head | 567 MB | 5.72 | 9.77 (k=3) | 13.7 | 18.29 |
-| pinfer | Q8_G32 + Q8 head | 823 MB | 4.22 | 8.73 (k=4, dv 16384) | 12.2 | pending |
+| pinfer | Q8_G32 + Q8 head | 823 MB | 4.22 | 8.73 (k=4, dv 16384) | 12.2 | 17.96 (= Q8_0 17.97, bf16 17.93) |
 | pinfer | bf16 | 1.55 GB | 2.27 | 4.13 (k=2) | 11.0 | = reference |
 | MNN 3.6 | int4 HQQ block64 | ~450 MB | 6.67 (t=2) | — | **30.9** | — |
 | llama.cpp v0.7.0 | Q4_0 | 513 MB | 5.59 | — | 15.7 | 21.25 |
