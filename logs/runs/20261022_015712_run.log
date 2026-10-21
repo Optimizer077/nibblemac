@@ -1,0 +1,6 @@
+# 2026-10-22T01:57:12 pi@10.42.0.2
+$ ps -eo etime,pcpu,args --sort=-pcpu | head -2 | tail -1 | cut -c1-100
+
+      00:00  100 /usr/bin/dbus-daemon --session --address=systemd: --nofork --nopidfile --systemd-ac
+
+[exit 0]

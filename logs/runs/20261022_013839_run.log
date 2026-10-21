@@ -1,0 +1,34 @@
+# 2026-10-22T01:38:39 pi@10.42.0.2
+$ bash engine/core2_check.sh
+
+== 1. exptest (NEON path on the Pi)
+exp on [-87, 88], 1048576 points: ours max rel 7.802e-08 (0.95 ulp, worst x = -28.0628) | libm expf max rel 5.954e-08 (0.50 ulp) | scalar-vs-vector bit mismatches 0 | ours != libm bits: 103428 (9.9%)
+exp on [-20, 20], 1048576 points: ours max rel 8.071e-08 (0.97 ulp, worst x = -5.8823) | libm expf max rel 5.951e-08 (0.50 ulp) | scalar-vs-vector bit mismatches 0 | ours != libm bits: 103506 (9.9%)
+exp on [-1, 1], 1048576 points: ours max rel 6.814e-08 (0.82 ulp, worst x = 0.3498) | libm expf max rel 5.957e-08 (0.50 ulp) | scalar-vs-vector bit mismatches 0 | ours != libm bits: 98657 (9.4%)
+silu max rel 1.679e-07 (max abs 1.273e-06), sigmoid max rel 1.437e-07 on [-40, 40]
+== 2. golden greedy, bf16
+generated: 628,381,1429,364,264,6669,2020,314,8806,13,1049,369,264,5243,5576,364,45285,321,14939,25161,13,561,45980,20010,220,19,369,264,2526,6165,421,628
+load 0.008 s | warm-up 0.000 s | prefill 10 tok in 4.262 s = 2.347 tok/s | decode 31 tok in 12.810 s = 2.420 tok/s | peak RSS 1458.4 MB | matvec=fast threads=4
+golden greedy: 32/32 MATCH
+== 3. bit identity, qwen35-0.8b-q4k-headq4k, prompt64: b64 (NEON) / b1 (NEON) / b64 (no-NEON mirror)
+  b64: load 0.008 s | warm-up 0.000 s | prefill 64 tok in 3.471 s = 18.437 tok/s | decode 1 tok in 0.130 s = 7.663 tok/s | peak RSS 498.3 MB | matvec=fast threads=4
+  b1: load 0.003 s | warm-up 0.000 s | prefill 64 tok in 8.401 s = 7.618 tok/s | decode 1 tok in 0.130 s = 7.693 tok/s | peak RSS 494.5 MB | matvec=fast threads=4
+  noneon: load 0.005 s | warm-up 0.000 s | prefill 64 tok in 3.288 s = 19.466 tok/s | decode 1 tok in 0.144 s = 6.928 tok/s | peak RSS 498.1 MB | matvec=fast threads=4
+fe836cafa9e72d1628b5a4585a6b8416  tmp/core2/h_b1.bin
+fe836cafa9e72d1628b5a4585a6b8416  tmp/core2/h_b64.bin
+fe836cafa9e72d1628b5a4585a6b8416  tmp/core2/h_noneon.bin
+bb05dee85a5d58224fa906cc6dc0db90  tmp/core2/l_b1.bin
+bb05dee85a5d58224fa906cc6dc0db90  tmp/core2/l_b64.bin
+bb05dee85a5d58224fa906cc6dc0db90  tmp/core2/l_noneon.bin
+== 3. bit identity, qwen35-0.8b-bf16, prompt64: b64 (NEON) / b1 (NEON) / b64 (no-NEON mirror)
+  b64: load 0.003 s | warm-up 0.000 s | prefill 64 tok in 7.159 s = 8.940 tok/s | decode 1 tok in 0.413 s = 2.419 tok/s | peak RSS 1529.0 MB | matvec=fast threads=4
+  b1: load 0.005 s | warm-up 0.000 s | prefill 64 tok in 26.611 s = 2.405 tok/s | decode 1 tok in 0.413 s = 2.420 tok/s | peak RSS 1525.5 MB | matvec=fast threads=4
+  noneon: load 0.004 s | warm-up 0.000 s | prefill 64 tok in 8.206 s = 7.799 tok/s | decode 1 tok in 0.426 s = 2.348 tok/s | peak RSS 1529.1 MB | matvec=fast threads=4
+b1aaa5059f1cca83cc52c5c1c0d40a15  tmp/core2/h_b1.bin
+b1aaa5059f1cca83cc52c5c1c0d40a15  tmp/core2/h_b64.bin
+b1aaa5059f1cca83cc52c5c1c0d40a15  tmp/core2/h_noneon.bin
+2f26639bca07c57cb1e98d2448e6c1c7  tmp/core2/l_b1.bin
+2f26639bca07c57cb1e98d2448e6c1c7  tmp/core2/l_b64.bin
+2f26639bca07c57cb1e98d2448e6c1c7  tmp/core2/l_noneon.bin
+
+[exit 0]

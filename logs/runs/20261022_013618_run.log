@@ -1,0 +1,6 @@
+# 2026-10-22T01:36:18 pi@10.42.0.2
+$ ps -eo etime,pcpu,args --sort=-pcpu | head -2 | tail -1 | cut -c1-100
+
+      00:00  200 ps -eo etime,pcpu,args --sort=-pcpu
+
+[exit 0]

@@ -1,0 +1,49 @@
+# 2026-10-22T01:57:37 pi@10.42.0.2
+$ ls ~/pinfer; echo "== venvs"; ls ~/pinfer/venvs 2>/dev/null; echo "== models"; ls ~/pinfer/models; echo "== sizes"; du -sh ~/pinfer/* 2>/dev/null | sort -h | tail -8
+
+baselines
+data
+engine
+examples
+gmon.out
+golden
+kbench
+kernel
+llama
+llama_bench.sh
+memband
+models
+tests
+tmp
+venvs
+wheels
+== venvs
+litert
+ort
+pinfer
+pinfer.freeze.txt
+torch
+== models
+qwen35-0.8b-bf16.pq
+qwen35-0.8b-mix-headq4k.pq
+qwen35-0.8b-mix-headq8.pq
+Qwen3.5-0.8B-Q4_0.gguf
+qwen35-0.8b-q4-headq4k.pq
+qwen35-0.8b-q4-headq4.pq
+qwen35-0.8b-q4k-headq4k.pq
+Qwen3.5-0.8B-Q4_K_M.gguf
+Qwen3.5-0.8B-Q8_0.gguf
+qwen35-0.8b-q8-headq8.pq
+Qwen3.5-0.8B.SHA256SUMS
+qwen35-0.8b-tokenizer
+== sizes
+6.3M	/home/pi/pinfer/kbench
+17M	/home/pi/pinfer/engine
+49M	/home/pi/pinfer/llama
+94M	/home/pi/pinfer/kernel
+324M	/home/pi/pinfer/wheels
+1.5G	/home/pi/pinfer/venvs
+4.0G	/home/pi/pinfer/baselines
+6.2G	/home/pi/pinfer/models
+
+[exit 0]

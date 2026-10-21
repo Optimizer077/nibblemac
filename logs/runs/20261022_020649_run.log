@@ -1,0 +1,11 @@
+# 2026-10-22T02:06:49 pi@10.42.0.2
+$ ./engine/abench 100; ./engine/abench 64; ./engine/abench 128
+
+warm np=100: QK 17.9 us, softmax 1.3 us, PV block8x16 20.9 us, PV rows 17.1 us, PV block4x32 21.2 us (bit-identical: 1 1)
+cold np=100: QK 24.0 us, softmax 2.3 us, PV block8x16 42.4 us, PV rows 23.8 us, PV block4x32 32.3 us (bit-identical: 1 1)
+warm np=64: QK 10.4 us, softmax 0.9 us, PV block8x16 12.9 us, PV rows 10.1 us, PV block4x32 12.8 us (bit-identical: 1 1)
+cold np=64: QK 16.6 us, softmax 1.7 us, PV block8x16 27.3 us, PV rows 16.1 us, PV block4x32 22.0 us (bit-identical: 1 1)
+warm np=128: QK 21.3 us, softmax 1.6 us, PV block8x16 25.1 us, PV rows 19.7 us, PV block4x32 25.6 us (bit-identical: 1 1)
+cold np=128: QK 30.6 us, softmax 2.9 us, PV block8x16 52.9 us, PV rows 30.9 us, PV block4x32 42.0 us (bit-identical: 1 1)
+
+[exit 0]

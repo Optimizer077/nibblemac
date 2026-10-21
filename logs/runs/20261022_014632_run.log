@@ -1,0 +1,120 @@
+# 2026-10-22T01:46:32 pi@10.42.0.2
+$ for S in "--spec 0" "--spec 3 --draft-vocab 32768"; do echo "=== $S"; PF_FWD_STATS=1 PF_KERN_STATS=1 ./engine/pinfer_run_core2 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 64 --ids-file data/prompt64.ids $S --bench 2>&1 | grep -E "^load|^spec|^FSTATS|^KSTATS"; done
+
+=== --spec 0
+KSTATS     rows   cols dtype   n    calls   ms_total   us/call     GB/s
+KSTATS     6144   1024     4  64       36      621.2   17255.9     0.21
+KSTATS     2048   1024     4  64       36      212.8    5911.4     0.20
+KSTATS     1024   2048     4  64       48      305.7    6369.5     0.19
+KSTATS     3584   1024     4  64       96      981.9   10227.7     0.20
+KSTATS     1024   3584     4  64       48      566.1   11794.5     0.18
+KSTATS     4096   1024     4  64       12      138.7   11557.1     0.20
+KSTATS      512   1024     4  64       24       36.7    1530.6     0.19
+KSTATS       16   1024     4  64       72       13.5     187.4     0.05
+KSTATS   248320   1024     4   1       68     2521.5   37081.0     3.86
+KSTATS     6144   1024     4   1     1188     1098.1     924.3     3.83
+KSTATS     2048   1024     4   1     1188      372.0     313.1     3.77
+KSTATS     1024   2048     4   1     1584      913.0     576.4     2.05
+KSTATS     3584   1024     4   1     3168     1717.8     542.2     3.81
+KSTATS     1024   3584     4   1     1584      863.8     545.3     3.79
+KSTATS     4096   1024     4   1      396      245.9     621.0     3.80
+KSTATS      512   1024     4   1      792       62.5      78.9     3.74
+KSTATS       16   1024     4   1     2376       16.5       7.0     1.32
+KSTATS total calls=12716 ms=10687.9
+FSTATS phase                        kind   ms_total   us/call
+FSTATS embed                         n=1        0.5       6.8
+FSTATS norm+add                      n=1       21.3       3.3
+FSTATS lin_pre(conv,l2,gates)        n=1      145.1     122.1
+FSTATS lin_rule                      n=1      449.5     378.3
+FSTATS lin_post(gated norm)          n=1       40.4      34.0
+FSTATS attention                     n=1      251.1     634.2
+FSTATS mlp_act(silu*up)              n=1       76.5      48.3
+FSTATS argmax                        n=1       16.3     239.5
+FSTATS rope_tables                   n=1        0.3       4.7
+FSTATS total                         n=1     1001.0
+FSTATS embed                     batched        0.7     332.6
+FSTATS norm+add                  batched       25.9     133.6
+FSTATS lin_pre(conv,l2,gates)    batched      265.6    7377.2
+FSTATS lin_rule                  batched      282.8    7855.7
+FSTATS lin_post(gated norm)      batched       68.4    1900.9
+FSTATS attention                 batched      144.4   12033.5
+FSTATS mlp_act(silu*up)          batched      141.9    2956.4
+FSTATS rope_tables               batched        0.1      46.4
+FSTATS total                     batched      929.8
+load 0.006 s | warm-up 2.370 s | prefill 64 tok in 1.939 s = 33.005 tok/s | decode 63 tok in 8.352 s = 7.543 tok/s | peak RSS 433.0 MB | matvec=fast threads=4
+spec k=0 draft_vocab=0 | rounds 0 drafted 0 accepted 0 | mean accepted 0.000, 1.000 tok/pass | per pass: mtp 0.0 ms verify 0.0 ms commit 0.0 ms
+=== --spec 3 --draft-vocab 32768
+KSTATS     rows   cols dtype   n    calls   ms_total   us/call     GB/s
+KSTATS     6144   1024     4   4      342      350.3    1024.2     3.46
+KSTATS     2048   1024     4   4      342      123.3     360.5     3.27
+KSTATS     1024   2048     4   4      480      237.7     495.2     2.38
+KSTATS     3584   1024     4   4      936      572.6     611.7     3.37
+KSTATS     1024   3584     4   4      468      301.1     643.3     3.21
+KSTATS     4096   1024     4   4      126       88.6     703.1     3.36
+KSTATS      512   1024     4   4      252       23.5      93.4     3.16
+KSTATS   248320   1024     4   4       19      789.4   41547.3     3.44
+KSTATS       16   1024     4   4      684       13.5      19.7     0.47
+KSTATS     6144   1024     4   3       18       17.8     988.3     3.58
+KSTATS     2048   1024     4   3       18        6.1     339.3     3.48
+KSTATS     1024   2048     4   3       26       12.3     473.9     2.49
+KSTATS     3584   1024     4   3       50       29.1     583.0     3.54
+KSTATS     1024   3584     4   3       25       14.8     592.5     3.48
+KSTATS     4096   1024     4   3        7        4.6     663.0     3.56
+KSTATS      512   1024     4   3       14        1.2      87.6     3.36
+KSTATS   248320   1024     4   3        1       40.2   40182.0     3.56
+KSTATS       16   1024     4   3       36        0.6      15.3     0.60
+KSTATS     6144   1024     4  64       36      647.4   17982.2     0.20
+KSTATS     2048   1024     4  64       36      217.7    6046.5     0.20
+KSTATS     1024   2048     4  64       52      341.4    6565.1     0.18
+KSTATS     3584   1024     4  64      100     1051.6   10516.3     0.20
+KSTATS     1024   3584     4  64       50      591.2   11824.8     0.17
+KSTATS     4096   1024     4  64       14      170.5   12175.7     0.19
+KSTATS      512   1024     4  64       28       45.7    1630.8     0.18
+KSTATS     6144   1024     4   2       18       17.1     952.1     3.72
+KSTATS     2048   1024     4   2       18        6.1     338.4     3.49
+KSTATS     1024   2048     4   2       30       13.9     463.6     2.54
+KSTATS     3584   1024     4   2       54       30.8     571.1     3.61
+KSTATS     1024   3584     4   2       27       15.7     582.7     3.54
+KSTATS     4096   1024     4   2        9        5.9     658.1     3.59
+KSTATS      512   1024     4   2       18        1.5      82.0     3.60
+KSTATS   248320   1024     4   2        1       38.2   38201.3     3.74
+KSTATS       16   1024     4  64       72       13.4     186.6     0.05
+KSTATS       16   1024     4   2       36        0.4      12.1     0.76
+KSTATS   248320   1024     4   1        2       79.5   39742.6     3.60
+KSTATS    32768   1024     4   1       60      293.5    4891.8     3.86
+KSTATS     1024   2048     4   1       84       27.9     331.8     3.56
+KSTATS     4096   1024     4   1       42       25.8     614.7     3.84
+KSTATS      512   1024     4   1       84        6.7      79.9     3.69
+KSTATS     3584   1024     4   1       84       45.5     541.8     3.81
+KSTATS     1024   3584     4   1       42       23.0     548.7     3.76
+KSTATS total calls=4841 ms=6337.2
+FSTATS phase                        kind   ms_total   us/call
+FSTATS norm+add                      n=1        0.7       3.5
+FSTATS attention                     n=1       26.3     625.9
+FSTATS mlp_act(silu*up)              n=1        2.0      47.8
+FSTATS argmax                        n=1       18.3     143.3
+FSTATS rope_tables                   n=1        0.2       4.3
+FSTATS total                         n=1       47.5
+FSTATS embed                     batched        0.7     335.5
+FSTATS norm+add                  batched       28.3      99.7
+FSTATS lin_pre(conv,l2,gates)    batched      260.0    7223.0
+FSTATS lin_rule                  batched      283.5    7875.6
+FSTATS lin_post(gated norm)      batched       68.6    1905.3
+FSTATS attention                 batched      193.4    6445.2
+FSTATS mlp_act(silu*up)          batched      147.2    2230.2
+FSTATS rope_tables               batched        0.3      15.5
+FSTATS total                     batched      982.0
+FSTATS embed                      verify        0.4      17.4
+FSTATS norm+add                   verify       16.1       7.9
+FSTATS lin_pre(conv,l2,gates)     verify      164.2     434.4
+FSTATS lin_rule                   verify      484.6    1282.1
+FSTATS lin_post(gated norm)       verify       45.4     120.1
+FSTATS lin_log copies             verify       26.6      70.3
+FSTATS attention                  verify      246.6    1957.0
+FSTATS mlp_act(silu*up)           verify       89.7     177.9
+FSTATS rope_tables                verify        0.1       6.3
+FSTATS total                      verify     1073.6
+load 0.004 s | warm-up 2.459 s | prefill 64 tok in 2.056 s = 31.121 tok/s | decode 63 tok in 4.256 s = 14.804 tok/s | peak RSS 451.7 MB | matvec=fast threads=4
+spec k=3 draft_vocab=32768 | rounds 19 drafted 57 accepted 44 | mean accepted 2.316, 3.316 tok/pass | per pass: mtp 27.5 ms verify 181.8 ms commit 14.7 ms
+
+[exit 0]

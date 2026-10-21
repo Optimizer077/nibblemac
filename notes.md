@@ -90,6 +90,8 @@ tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
 | llama.cpp v0.7.0 | Q8_0 | 834 MB | 4.12 (t=2) | — | 17.1 | 17.97 |
 | llama.cpp v0.7.0 | bf16 | 1.56 GB | — | — | — | 17.93 |
 | ONNX Runtime GenAI 0.18 | int4 rtn acc4 | — | 3.10 | — | 9.9 | — |
+| LiteRT-LM 0.15–0.18.1 (prebuilt) | int8 `.litertlm` | 965 MB | **does not run on Pi 4**: binary needs aes/dotprod/fp16/lse (ARMv8.2) | — | — | — |
+| PyTorch 2.14.1+cpu + transformers 5.20.2 | fp32 | 3 GB | not timed: 4.8 GB peak RSS > 3.5 GB free (runs on the A72, no SIGILL) | — | — | 64/64 greedy match on PC |
 
 **Quality verdict:** pure Q4_G32 loses as much as llama.cpp Q4_0 (21.6 vs 21.3); the mixed
 Q4K file (v_proj + mtp.fc at Q8, Q4K head) matches Q4_K_M quality (18.50 vs 18.59) at 2.0×
@@ -98,6 +100,10 @@ Isolation (00:20–00:30): Q4K everywhere scores 18.48 — the Q8 overrides buy 
 Q4 layers + Q4K head scores 21.58, so the symmetric Q4_G32 *layers* are what loses quality
 (like llama.cpp's Q4_0); Q4K_G32's asymmetric 32-column groups fix it at the same 4.5 bits.
 **Recommended default: `q4k-headq4k` (11.57 tok/s with speculation, PPL 18.48 ≈ Q4_K_M).**
+
+Baselines notebook: `bench/BASELINES.md` (MNN first token differs from the fp32 reference at a
+near-tie, like ORT int4 — quantization flip, not a bug). PC-side 64-chunk perplexity (16,320
+tokens): bf16 17.94, Q8_0 17.97, Q4_K_M 18.64, Q4_0 22.05 — same ordering as the 8-chunk slice.
 
 Speculative decoding is exact: identical tokens to plain greedy (`tests/test_spec.py` on the host;
 on the Pi `engine/bench/spec_exact.sh` 20/20 for both models × 2 prompts × k=0..4 with the final

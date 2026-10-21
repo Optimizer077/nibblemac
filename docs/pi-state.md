@@ -46,6 +46,14 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | `~/pinfer/tests/python/` | Python test suite (copy of `tests/python/`) |
 | `~/pinfer/examples/pinfer_example` | C API example, static aarch64 (`make -C engine examples`) |
 
+## Baseline runtimes placed by the baselines agent (2026-10-21/22, user-level only, no apt)
+Full table with versions and per-item undo: `bench/BASELINES.md` → "Pi changes made by this agent".
+| Path | What | Undo |
+|---|---|---|
+| `~/pinfer/wheels/{ort,litert,torch}/` | offline aarch64 wheels (~250 MB) | `rm -rf ~/pinfer/wheels/{ort,litert,torch}` |
+| `~/pinfer/venvs/{ort,litert,torch}` | onnxruntime-genai 0.18.0 / litert-lm 0.18.1 (unusable on A72) / torch 2.14.1+cpu + transformers 5.20.2 | `rm -rf ~/pinfer/venvs/{ort,litert,torch}` |
+| `~/pinfer/baselines/` (4.0 GB) | MNN 3.6.1 static binaries + model, ORT GenAI int4/int8 exports, LiteRT `.litertlm`, wrappers, prompt | `rm -rf ~/pinfer/baselines` |
+
 ## Snapshots
 | Snapshot | Taken before/after |
 |---|---|

@@ -1,0 +1,11 @@
+# 2026-10-22T02:06:05 pi@10.42.0.2
+$ ./engine/abench 100; ./engine/abench 64; ./engine/abench 128
+
+warm np=100: QK 16.3 us, softmax 1.4 us, PV 19.6 us per head (sink 23.9193)
+cold np=100: QK 23.8 us, softmax 1.7 us, PV 42.3 us per head (sink 47.8389)
+warm np=64: QK 10.5 us, softmax 0.9 us, PV 12.8 us per head (sink 23.938)
+cold np=64: QK 15.5 us, softmax 1.2 us, PV 26.8 us per head (sink 47.8759)
+warm np=128: QK 20.9 us, softmax 1.6 us, PV 25.1 us per head (sink 23.8125)
+cold np=128: QK 30.3 us, softmax 2.3 us, PV 53.0 us per head (sink 47.6253)
+
+[exit 0]

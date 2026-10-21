@@ -1,0 +1,25 @@
+0.01.581.592 W model has unused tensor blk.24.attn_norm.weight (size = 4096 bytes) -- ignoring
+0.01.581.599 W model has unused tensor blk.24.post_attention_norm.weight (size = 4096 bytes) -- ignoring
+0.01.581.603 W model has unused tensor blk.24.attn_q.weight (size = 8388608 bytes) -- ignoring
+0.01.581.604 W model has unused tensor blk.24.attn_k.weight (size = 1048576 bytes) -- ignoring
+0.01.581.605 W model has unused tensor blk.24.attn_v.weight (size = 1048576 bytes) -- ignoring
+0.01.581.610 W model has unused tensor blk.24.attn_output.weight (size = 4194304 bytes) -- ignoring
+0.01.581.611 W model has unused tensor blk.24.attn_q_norm.weight (size = 1024 bytes) -- ignoring
+0.01.581.613 W model has unused tensor blk.24.attn_k_norm.weight (size = 1024 bytes) -- ignoring
+0.01.581.614 W model has unused tensor blk.24.ffn_gate.weight (size = 7340032 bytes) -- ignoring
+0.01.581.616 W model has unused tensor blk.24.ffn_down.weight (size = 7340032 bytes) -- ignoring
+0.01.581.618 W model has unused tensor blk.24.ffn_up.weight (size = 7340032 bytes) -- ignoring
+0.01.581.621 W model has unused tensor blk.24.nextn.eh_proj.weight (size = 4194304 bytes) -- ignoring
+0.01.581.622 W model has unused tensor blk.24.nextn.enorm.weight (size = 4096 bytes) -- ignoring
+0.01.581.624 W model has unused tensor blk.24.nextn.hnorm.weight (size = 4096 bytes) -- ignoring
+0.01.581.627 W model has unused tensor blk.24.nextn.shared_head_norm.weight (size = 4096 bytes) -- ignoring
+0.20.617.308 I cmn          init: llama threadpool init, n_threads = 16
+0.20.658.541 I 
+0.20.658.604 I system_info: n_threads = 16 (n_threads_batch = 16) / 20 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX_VNNI = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.20.658.608 I perplexity: tokenizing the input ..
+0.21.104.226 I perplexity: tokenization took 445.612 ms
+0.21.104.814 I perplexity: calculating perplexity over 64 chunks, n_ctx=512, batch_size=512, n_seq=1
+0.22.566.512 I perplexity: 1.46 seconds per pass - ETA 1.55 minutes
+[1]9.7874,[2]15.1695,[3]15.5067,[4]15.7447,[5]15.4321,[6]16.2444,[7]16.5915,[8]17.9282,[9]19.2448,[10]20.0069,[11]20.3079,[12]20.4554,[13]21.1824,[14]20.2461,[15]19.8674,[16]20.2690,[17]18.8005,[18]19.1670,[19]18.9980,[20]18.8583,[21]18.3895,[22]18.2714,[23]17.5483,[24]16.5444,[25]16.2856,[26]15.8671,[27]15.5286,[28]15.3710,[29]15.2852,[30]15.3389,[31]15.2043,[32]15.3484,[33]15.2816,[34]15.5071,[35]15.7171,[36]16.1335,[37]16.3996,[38]16.3508,[39]16.3546,[40]16.5156,[41]16.5688,[42]16.7158,[43]16.7217,[44]16.6631,[45]16.8949,[46]16.6779,[47]16.9362,[48]17.0140,[49]16.8448,[50]16.9053,[51]16.8762,[52]17.0289,[53]17.0778,[54]17.1935,[55]17.2072,[56]17.3288,[57]17.4083,[58]17.4923,[59]17.4524,[60]17.5007,[61]17.5331,[62]17.6785,[63]17.7386,[64]17.9445,
+2.26.558.651 I Final estimate: PPL = 17.9445 +/- 0.42693
+

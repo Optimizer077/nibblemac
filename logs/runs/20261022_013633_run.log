@@ -1,0 +1,10 @@
+# 2026-10-22T01:36:33 pi@10.42.0.2
+$ md5sum engine/spec_exact.sh; uname -r; uptime; pgrep -fa "pinfer_run|llama" | grep -v pgrep; free -m | head -2
+
+fb1e433576125bc19a25799e8e6e376f  engine/spec_exact.sh
+6.18.50+rpt-rpi-v8
+ 01:36:34 up 1 min,  1 user,  load average: 0.68, 0.40, 0.16
+               total        used        free      shared  buff/cache   available
+Mem:            3794         184        3414           8         262        3609
+
+[exit 0]
