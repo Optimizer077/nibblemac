@@ -115,17 +115,17 @@ every time: decode speed ≈ bandwidth ÷ bytes of weights per token, at most 9.
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/roofline-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="docs/figures/roofline-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/roofline-dark.png">
-  <img alt="Roofline on log-log axes: a plain decode step does 3.5 operations per byte of weights and reaches 11.9 GOP/s, under the 4.20 GB/s DRAM roof; a verify pass over 4 positions does 14.2 operations per byte and reaches 39.3 GOP/s, near the Q4K kernel's measured 47.5 GOP/s compute roof; prefill in groups of 16 reaches 37.2 GOP/s at 50.5 operations per byte. The A72's int8 instruction peak is 96 GOP/s." src="docs/figures/roofline.png">
+  <img alt="Roofline on log-log axes: a plain decode step does 3.5 operations per byte of weights and reaches 11.9 GOP/s, under the 4.20 GB/s DRAM roof; a verify pass over 4 positions does 14.2 operations per byte and reaches 39.3 GOP/s, and prefill in groups of up to 7 positions reaches 43.2 GOP/s at 21.7 operations per byte, both under the Q4K kernel's measured 54.6 GOP/s compute roof. The A72's int8 instruction peak is 96 GOP/s." src="docs/figures/roofline.png">
 </picture>
 
 Arithmetic intensity is the number of operations done per byte read from DRAM; in this roofline plot a
 pass can go no higher than DRAM bandwidth × intensity (the DRAM roof) or the cores' arithmetic speed (the
 compute roof). A decode step does two operations (multiply, add) per weight and a 4.5-bit weight is 0.56
 bytes, so it manages only about 3.5 operations per byte: 11.9 billion per second (GOP/s), 80% of its DRAM
-roof (4.20 GB/s × 3.54 = 14.9). The cores could do 4× that (the 4-bit kernel computes 47.5 GOP/s when
-each weight serves 16 token positions), so scoring 4 positions per weight read costs only 1.20× scoring
-one, which is why speculative decoding pays; prefill reuses each weight for 16 positions and is limited by
-compute instead (37.2 GOP/s).
+roof (4.20 GB/s × 3.54 = 14.9). The cores could do 4–5× that (the 4-bit kernel computes 54.6 GOP/s when
+each weight serves many token positions), so scoring 4 positions per weight read costs only about 1.2×
+scoring one, which is why speculative decoding pays; prefill reuses each weight for up to 7 positions and
+is limited by compute instead (43.2 GOP/s).
 
 <picture>
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/arm_isa-mobile-dark.png">
@@ -206,8 +206,8 @@ here (instruction figure in §1).
 ### 2.2 Kernels that run at the memory wall
 Per-dtype thread policy (Q8 on one thread already saturates DRAM; Q4K needs three to keep up with
 the dequantization), a pinned thread pool with ~0.3 µs dispatch, and a batched path that reads the
-weights once per group of up to 16 vectors (larger batches run as groups of 16 so their int8 activations
-stay in L1). Things measured and rejected: software prefetch (22% *slower* on
+weights once for up to 7 vectors in one register pass (larger batches run as equal groups of at most 7,
+so their int8 activations stay in L1 even for the 3584-wide MLP input). Things measured and rejected: software prefetch (22% *slower* on
 one thread — the hardware prefetcher already keeps up), 8-wide passes (register spills), two
 accumulators per row (no gain). Lab notebook: `engine/bench/KERNELS.md`.
 
@@ -219,8 +219,9 @@ accumulators per row (no gain). Lab notebook: `engine/bench/KERNELS.md`.
   <img alt="In one speculative round the MTP head drafts 3 tokens, the full model checks all 4 positions in a single weight pass, and the matching prefix plus one of its own tokens is kept: 3.3 tokens per round on average, identical to plain greedy output." src="docs/figures/speculative_schematic.png">
 </picture>
 
-Because the Pi is bandwidth-bound, scoring four positions in one pass costs 1.20× scoring one
-(153 ms vs 128 ms). Qwen3.5's MTP head drafts 3 tokens for 25–27 ms; the full model verifies all of them
+Because the Pi is bandwidth-bound, scoring four positions in one pass costs about 1.2× scoring one
+(152–156 ms vs 128 ms) and five positions 1.4× (176 ms). Qwen3.5's MTP head drafts a token in about
+8 ms, and by default the engine drafts up to 4 per round, as many as its confidence warrants; the full model verifies all of them
 in one batched pass and keeps the longest correct prefix plus one token of its own. Every kept token is
 the full model's own greedy choice, so the output is token-for-token identical to plain decoding.
 
@@ -284,20 +285,21 @@ step is 119 ms of weight streaming plus 10 ms of everything else — about 12% f
 
 **Speculation depends on the text.** The 20.2 tok/s above is a prose continuation, where the MTP head
 is right 3.3 times per pass. On chat answers it is right less often (1.8–2.6 tokens per pass), so the gain
-is 1.25–1.7× and **k=2 beats k=3 on every chat prompt**. The library default is now adaptive k ≤ 4 with
-prompt-lookup drafts, within 2% of the best fixed k on every prompt below (`engine/DRAFT.md`):
+is 1.4–1.9× (11.0–14.8 tok/s), and **k=2 beats k=3 on every chat prompt**. The default (adaptive k with
+prompt-lookup drafts) stays within 2% of the best fixed k on each:
 
-| chat answer | plain | speculative k=2 | k=3 |
-|---|---|---|---|
-| explain (chat27) | 8.0 | **9.9** | 9.2 |
-| Python code | 7.9 | **11.7** | 11.2 |
-| C code | 7.9 | **12.2** | 12.0 |
-| list of 10 items | 7.7 | **11.2** | 10.4 |
-| step-by-step math | 7.9 | **13.5** | 13.2 |
-| short story | 7.7 | **10.0** | 9.2 |
+| chat answer | plain | speculative k=2 | k=3 | default (adaptive + n-gram) |
+|---|---|---|---|---|
+| explain (chat27) | 7.9 | 11.0 | 10.2 | **11.0** |
+| Python code | 7.9 | 13.1 | 12.5 | **13.0** |
+| C code | 7.9 | 13.7 | 13.5 | **14.3** |
+| list of 10 items | 7.9 | 12.6 | 11.6 | **12.4** |
+| step-by-step math | 7.9 | 15.0 | 14.8 | **14.8** |
+| short story | 7.9 | 11.2 | 10.3 | **11.1** |
 
-*Tokens/s, 96 generated tokens, measured before the cheaper verify pass (`notes.md` "Speculative decoding
-on chat prompts"); a full-vocabulary draft gains only 0–9% acceptance and is 30% slower overall.*
+*Tokens/s, 96 generated tokens, medians of 2 runs after the cheaper verify pass (`ng1-chat-r{1,2}_*.json`,
+`engine/DRAFT.md`; the adaptive cap was 3 there, cap 4 is within ±1% on chat in `kcap-merge6_*.json`);
+a full-vocabulary draft gains only 0–9% acceptance and is 30% slower overall.*
 
 **Standard runtimes on the same board** (`bench/BASELINES.md`): MNN 3.6.1 is the strongest, 6.67 tok/s
 decode and 30.9 prefill; llama.cpp v0.7.0 reaches 5.4–5.6 decode; ONNX Runtime GenAI 0.18 int4 3.1;

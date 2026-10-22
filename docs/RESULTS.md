@@ -29,7 +29,7 @@ Contents: [scoreboard](#1-scoreboard) · [formats](#2-pinfer-by-weight-format) �
 
 | Engine | Format | File size | Decode, plain | Decode, speculative | Prefill | PPL (8×512) | Result files |
 |---|---|---|---|---|---|---|---|
-| **pinfer** | Q4K_G32, Q4K head | 437 MB | **7.89** | **18.43** (k=3) | **37.1** | 18.50 | `speed-ab-merge4_20261022_103609` (3 rounds, medians; merged build `23a76242`), `pinfer-ppl-c8-final2-q4k_20261022_024414` |
+| **pinfer** | Q4K_G32, Q4K head | 437 MB | **7.89** | **20.22** (default: adaptive k ≤ 4 + n-gram 7) | **43.1** | 18.50 | `kcap-merge6_20261022_145226`, `mm2-e2e-prefill_20261022_140719`, `speed-ab-merge4_20261022_103609` (plain), `pinfer-ppl-c8-final2-q4k_20261022_024414` |
 | MNN 3.6.1 | int4 HQQ, block 64 | ~450 MB | 6.67 (2 threads) | — | 30.9 | — | `mnn-qwen35-0.8b-int4_20261021_221038` |
 | llama.cpp v0.7.0 | Q4_0 | 513 MB | 5.59 | — | 15.7 | 21.25 | `llamacpp-qwen35-0.8b-Q4_0_20261021_213343` |
 | llama.cpp v0.7.0 | Q4_K_M | 542 MB | 5.41 | — | 14.8 | 18.59 | `llamacpp-qwen35-0.8b-Q4_K_M_20261021_213929` |
@@ -297,7 +297,7 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/progress-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="figures/progress-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/progress-dark.png">
-  <img alt="Decode speed after each verified optimization step, from 1.55 tokens/s in scalar C to 7.89 plain and 18.43 speculative." src="figures/progress.png">
+  <img alt="Decode speed after each verified optimization step, from 1.55 tokens/s in scalar C to 7.88 plain and 20.22 speculative with the default settings." src="figures/progress.png">
 </picture>
 
 | Step | Plain | Speculative | File |
@@ -308,6 +308,7 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
 | Bit-exact kernels + NEON recurrence (`af06041`) | 7.26 | 13.35 (k=3) | `pinfer-final-q4k_20261022_011230` |
 | Vectorized per-token ops (`fba8a1a`) | 7.88 | 16.49 (k=3) | `pinfer-final2-q4k_20261022_023950` |
 | Cheaper verify pass (`181d195`, merged with attention round 3 as `e1a8d2c`) | 7.89 | 18.43 (k=3) | `speed-ab-merge4_20261022_103609` |
+| Adaptive k + prompt-lookup drafts, batched kernels (0.2.0) | 7.88 | 20.22 (default: adaptive k ≤ 4 + n-gram 7) | `kcap-merge6_20261022_145226` |
 
 ## 8. Kernels and memory bandwidth
 
@@ -320,9 +321,9 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
 
 `memband` (256 MB streaming read): 4.20 / 4.08 / 4.07 GB/s with 1 / 2 / 4 threads
 (`memband_20261021_210615`). One core saturates DRAM. Against that roof, a plain decode step achieves
-11.9 GOP/s at 3.54 operations per weight byte, a 4-position verify pass 39.3 GOP/s and prefill 37.2 GOP/s;
-the Q4K kernel computes 47.5 GOP/s on qkv at a batch of 16 (39.4–49.6 over the four layer shapes at
-batches of 4–64; `kbench-v13-group_20261022_005221`) and the A72's int8 instructions top out at 96.
+11.9 GOP/s at 3.54 operations per weight byte, a 4-position verify pass 39.3 GOP/s and prefill (groups of
+up to 7) 43.2 GOP/s at 21.7; the Q4K kernel computes 54.6 GOP/s on qkv at 64 rows (49.1–56.0 over the layer
+shapes; `mm2-kbench-final_20261022_141346`) and the A72's int8 instructions top out at 96.
 Derivation and Arm sources: [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware).
 
 Best matvec kernel per dtype (n = 1, cold weights, real Qwen3.5 shapes; `kbench-v9-final_20261021_232530`,

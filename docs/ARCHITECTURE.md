@@ -245,7 +245,7 @@ per cycle with `SMULL`/`SMLAL` but 4 fp32 MACs with `FMLA` (`engine/bench/KERNEL
 | Dispatch cost | Empty job: 11 / 238 / 369 / 478 ns for 1 / 2 / 3 / 4 threads | `engine/bench/KERNELS.md` v9 |
 | Matmul split | One contiguous slab of 4-row tiles per thread: one sequential DRAM stream each | `run_job()` |
 | Threads per matmul | n = 1: at most F32 2, BF16 2, Q8 1, Q4 3, Q4K 3; batched calls use all threads; at least 32 KB of weights per thread | `threads_for()`, KERNELS.md v9-auto / v10 |
-| Prefill batches | n > 16 runs in groups of 16 vectors; each group re-streams the weights so its int8 activations stay in L1 (−9% on the big prefill matmuls) | `pf_matmul`, KERNELS.md v13 |
+| Prefill batches | Batches run as equal groups of at most 7 vectors, one register pass each (n = 5 for a k = 4 verify is one pass, not 4 + 1); each group re-streams the weights so its int8 activations stay in L1, also for the 3584-wide MLP input (prefill +19%, `engine/bench/KERNELS.md` Part 3) |
 | Other parallel work | `pf_pool_run`: attention (KV group × row half, then KV group × head half), conv channel ranges in multiples of 128, gated-norm heads, MLP activation slices; recurrence over the 16 heads | `forward_*.c`, `kern_lin.c`, `engine/CORE.md` round 2 |
 | Ref build | Stub pool: everything runs on the calling thread | `matvec_ref.c` |
 
@@ -408,16 +408,15 @@ What pinfer moves per generated token (Q4K default, plain decode): all 424.9 MB 
 405× the 1 MiB L2 (tensor directory of the `.pq` file, §5); the 18.9 MB recurrent state, read and
 written; and 24 KiB of fp32 KV cache per token of context (96 MiB at 4096 tokens). What stays in L1: a
 16 KB chunk of the recurrent state while all positions of a pass use it (`engine/VERIFY.md` §2), and the
-int8 activations, one byte per input: 16 KB for a prefill group of 16 positions on a 1024-input matrix
-(`engine/bench/KERNELS.md` v13). For the 3584-input MLP down projection a group of 16 is 56 KB, more than
-the 32 KB L1D, and that matrix measured faster with groups of 8 (11.0 against 11.9 ms at n = 64,
-KERNELS.md v13).
+int8 activations, one byte per input: 7 KB for a prefill group of 7 positions on a 1024-input matrix and
+25 KB on the 3584-input MLP down projection, inside the 32 KB L1D. Groups of 16 (56 KB there) did not fit;
+the switch to groups of 7 made prefill 19% faster (`engine/bench/KERNELS.md` Part 3).
 
 <picture>
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/roofline-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="figures/roofline-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/roofline-dark.png">
-  <img alt="Roofline on log-log axes: a plain decode step does 3.5 operations per byte of weights and reaches 11.9 GOP/s, under the 4.20 GB/s DRAM roof; a verify pass over 4 positions does 14.2 operations per byte and reaches 39.3 GOP/s, near the Q4K kernel's measured 47.5 GOP/s compute roof; prefill in groups of 16 reaches 37.2 GOP/s at 50.5 operations per byte. The A72's int8 instruction peak is 96 GOP/s." src="figures/roofline.png">
+  <img alt="Roofline on log-log axes: a plain decode step does 3.5 operations per byte of weights and reaches 11.9 GOP/s, under the 4.20 GB/s DRAM roof; a verify pass over 4 positions does 14.2 operations per byte and reaches 39.3 GOP/s, and prefill in groups of up to 7 positions reaches 43.2 GOP/s at 21.7 operations per byte, both under the Q4K kernel's measured 54.6 GOP/s compute roof. The A72's int8 instruction peak is 96 GOP/s." src="figures/roofline.png">
 </picture>
 
 **Roofline.** The x axis is arithmetic intensity: operations per byte of weights read from DRAM. The y
@@ -429,12 +428,12 @@ axis is achieved GOP/s. The roofs:
   issues alongside. One `SMULL`/`SMLAL` multiplies 8 int8 pairs (8 multiply-accumulates, 16 operations):
   8 × 2 × 4 cores × 1.5 GHz = 96 GOP/s. `ubench` confirms 1.00 cycle per `SMULL`/`SMLAL` but finds that
   `SADDLP` does not overlap with them (`engine/bench/KERNELS.md` "Machine facts"), so no kernel gets there.
-- **Q4K kernel, measured: 47.5 GOP/s.** `kbench`, cold weights, 4 threads, the largest layer matrix (qkv,
-  6144 × 1024) at a batch of 16 in 4238.94 µs (`bench/results/kbench-v13-group_20261022_005221.json`,
-  variant `v13-group16`). It is a representative value, not a maximum: the same file gives 39.4–49.6 GOP/s
-  over the four layer shapes (qkv, gate, down, out) at batches of 4, 16 and 64. At 47.5 the kernel roof
-  meets the DRAM roof at 11.3 operations per byte, between 3 and 4 positions per weight read; the
-  instruction peak meets it at 22.8.
+- **Q4K kernel, measured: 54.6 GOP/s.** `kbench`, cold weights, 4 threads, the largest layer matrix (qkv,
+  6144 × 1024) at a 64-row batch (groups of 7) in 14744.1 µs (`bench/results/mm2-kbench-final_20261022_141346.json`,
+  variant `kbench_mm2`). It is a representative value, not a maximum: the same file gives 49.1–56.0 GOP/s
+  over the layer shapes at n = 64 and up to 57.7 at n = 7 (before the batched-kernels round: 47.5 on qkv at
+  a batch of 16, `kbench-v13-group_20261022_005221`). At 54.6 the kernel roof meets the DRAM roof at
+  13.0 operations per byte, between 3 and 4 positions per weight read; the instruction peak meets it at 22.8.
 
 The points: operations = 2 × the multiply-accumulates of the weight matrices (a plain step multiplies
 751,894,528 Q4K weights, 254,279,680 of them in the tied head; counted from the `.pq` directory); bytes =
@@ -446,7 +445,7 @@ roofs drawn).
 |---|---|---|---|---|---|---|---|
 | Plain decode | 1 | 1.504 G | 424.9 MB | 3.54 | 126.7 ms (7.89 tok/s) | 11.9 | `speed-ab-merge4_20261022_103609` |
 | Verify pass, k = 3 | 4 | 6.015 G | 424.9 MB | 14.2 | 152.9 ms | 39.3 | `engine/VERIFY.md` (`ver3-ab-p64_20261022_080513`) |
-| Prefill, 64 tokens | 16 (4 groups; head once) | 64.20 G | 1270.6 MB | 50.5 | 1.725 s (37.1 tok/s) | 37.2 | `speed-ab-merge4_20261022_103609` |
+| Prefill, 64 tokens | ≤ 7 (10 groups; head once) | 64.20 G | 2962.0 MB | 21.7 | 1.485 s (43.1 tok/s) | 43.2 | `mm2-e2e-prefill_20261022_140719` |
 
 So decode leaves three quarters of the kernel's arithmetic unused, and a verify pass over 4 positions
 costs 1.20× a plain step instead of 4× (152.9 against 127.1 ms in the same `engine/VERIFY.md` run). Past

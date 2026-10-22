@@ -77,8 +77,10 @@ STATE_CHUNK = 128 * 32 * 4  # the recurrence's L1-resident chunk, 16 KB (engine/
 # ---------------------------------------------------------------- measured passes (Q4K, 4 threads)
 PLAIN_TPS = 7.89  # plain decode, speed-ab-merge4_20261022_103609 (merged build, median of 3)
 VERIFY_MS = 152.9  # k=3 verify pass over 4 positions, engine/VERIFY.md "Result" (ver3-ab-p64_20261022_080513)
-PREFILL_TPS = 37.1  # 64-token prompt, speed-ab-merge4_20261022_103609
-PREFILL_N, GROUP = 64, 16  # one 64-row chunk; pf_matmul streams the weights once per 16 rows (KERNELS.md v13)
+PREFILL_TPS = 43.1  # 64-token prompt, mm2-e2e-prefill_20261022_140719 (batched-kernels round, median of 3)
+# one 64-row chunk; since the batched-kernels round pf_matmul splits it into equal groups of at most 7 rows
+# (KERNELS.md Part 3), so the layer weights stream ceil(64 / 7) = 10 times
+PREFILL_N, GROUP = 64, 7
 
 # ---------------------------------------------------------------- compute roofs
 # Theoretical int8 peak of the instructions pinfer's kernels use. Cortex-A72 Software Optimization Guide
@@ -90,11 +92,11 @@ PREFILL_N, GROUP = 64, 16  # one 64-row chunk; pf_matmul streams the weights onc
 # (KERNELS.md "Machine facts"), so the kernels cannot reach it.
 MACS_PER_CYCLE = 8
 PEAK_INT8 = MACS_PER_CYCLE * 2 * CORES * CLOCK_HZ / 1e9
-# Practical roof: the Q4K kernel itself, cold weights, 4 threads, at a batch of 16 (a prefill group),
-# on the largest layer matrix: qkv 6144 x 1024 in 4238.94 us (bench/results/kbench-v13-group_20261022_
-# 005221.json, variant v13-group16). Not a maximum: the same file gives 39.4-49.6 GOP/s over the four
-# layer shapes (qkv, gate, down, out) at batches of 4, 16 and 64 (qkv 49.3 at 4, 47.2 at 64).
-KERNEL_PEAK = 2 * 6144 * 1024 * 16 / 4238.94e-6 / 1e9
+# Practical roof: the Q4K kernel itself, cold weights, 4 threads, after the batched-kernels round, on the
+# largest layer matrix at a 64-row batch (groups of 7): qkv 6144 x 1024 in 14744.1 us, median
+# (bench/results/mm2-kbench-final_20261022_141346.json, variant kbench_mm2). Not a maximum: the same file
+# gives 49.1-56.0 GOP/s over the layer shapes at n = 64 and up to 57.7 at n = 7.
+KERNEL_PEAK = 2 * 6144 * 1024 * 64 / 14744.1e-6 / 1e9
 
 # ---------------------------------------------------------------- the instruction set
 # Multiply-accumulates per 128-bit NEON instruction, from the Arm A64 ISA (DDI 0602, 2024-12):
@@ -164,14 +166,14 @@ def roof_points() -> list[tuple[str, str, float, float]]:
     """
     plain_ops = 2 * WEIGHTS_PLAIN
     layer_w, layer_b = WEIGHTS_PLAIN - WEIGHTS_HEAD, BYTES_PLAIN - BYTES_HEAD
-    # Prefill: the layers stream once per group of 16 rows; only the last row needs logits (one head pass).
+    # Prefill: the layers stream once per group of rows; only the last row needs logits (one head pass).
     prefill_ops = 2 * (PREFILL_N * layer_w + WEIGHTS_HEAD)
-    prefill_bytes = PREFILL_N // GROUP * layer_b + BYTES_HEAD
+    prefill_bytes = -(-PREFILL_N // GROUP) * layer_b + BYTES_HEAD
     return [("plain decode, 1 position", "plain decode, n = 1", plain_ops / BYTES_PLAIN,
              plain_ops * PLAIN_TPS / 1e9),
             ("verify pass, 4 positions", "verify, n = 4", 4 * plain_ops / BYTES_PLAIN,
              4 * plain_ops / (VERIFY_MS / 1e3) / 1e9),
-            ("prefill, 16 positions per read", "prefill, n = 16", prefill_ops / prefill_bytes,
+            ("prefill, up to 7 positions per read", "prefill, n ≤ 7", prefill_ops / prefill_bytes,
              prefill_ops / (PREFILL_N / PREFILL_TPS) / 1e9)]
 
 
@@ -185,7 +187,7 @@ def _hw_text() -> tuple[list[tuple[str, str | None, str, list[str]]], list[str |
          "each with a 128-bit NEON (SIMD) unit and L1 caches",
          "Kept in L1, next to the arithmetic",
          [f"a {STATE_CHUNK // 1024} KB chunk of the recurrent state, reused by every position of a pass",
-          "int8 activations, 1 byte per input: 16 KB for a prefill group of 16 positions × 1024 inputs"]),
+          "int8 activations, 1 byte per input: 7 KB for a prefill group of 7 positions × 1024 inputs (25 KB at 3584)"]),
         (f"L2 cache: {L2_BYTES >> 20} MB, shared", None,
          "Too small for anything model-sized",
          [(f"one token reads {mb:.1f} MB of weights, {BYTES_PLAIN / L2_BYTES:.0f}× the L2: each byte "
@@ -342,19 +344,19 @@ def fig_roofline(t: Theme, L: Layout) -> None:
                     va="bottom", color=t.ink)
     pts = roof_points()
     ax.plot([p[2] for p in pts], [p[3] for p in pts], "o", color=t.aqua, markersize=MARKER, zorder=4, **ring(t))
-    # Labels in the free space under the roofs: n = 1 to its right; desktop: the other two under their
-    # points; phone (narrower decades): verify under its point, prefill further down so the two clear.
+    # Labels in the free space under the roofs: n = 1 to its right; prefill to its right; verify, whose
+    # point sits close to prefill's and just under the DRAM roof, well below its point with a leader.
     if L.mobile:
-        offsets = [((8, -4), "left", "top"), ((10, -12), "center", "top"), ((4, -58), "center", "top")]
+        offsets = [((8, -4), "left", "top"), ((6, -56), "left", "top"), ((8, -6), "left", "top")]
     else:
-        offsets = [((10, 0), "left", "center"), ((0, -12), "center", "top"), ((0, -12), "center", "top")]
+        offsets = [((10, 0), "left", "center"), ((6, -44), "left", "top"), ((10, 0), "left", "center")]
     for (name, short, x, y), (off, ha, va) in zip(pts, offsets):
         leader = {"arrowstyle": "-", "color": t.muted, "linewidth": 1.0, "shrinkA": 3, "shrinkB": 7}
         ax.annotate(f"{short if L.mobile else name}\n{y:.1f} GOP/s", (x, y), xytext=off, textcoords="offset points",
                     ha=ha, va=va, color=t.ink2, linespacing=1.3, zorder=5,
                     arrowprops=leader if abs(off[1]) > 20 else None)  # a label set far off gets a leader
     keys = [Line2D([], [], color=t.blue, linewidth=LINE, label=f"DRAM roof: {bw:.2f} GB/s × intensity (measured)"),
-            Line2D([], [], color=t.orange, linewidth=LINE, label="Q4K kernel, measured (qkv matrix, batch of 16)"),
+            Line2D([], [], color=t.orange, linewidth=LINE, label="Q4K kernel, measured (qkv, 64 rows)"),
             Line2D([], [], color=t.orange, linewidth=LINE, linestyle=DASH,
                    label="int8 NEON peak: 8 MACs/cycle × 4 cores × 1.5 GHz"),
             Line2D([], [], color=t.aqua, marker="o", linestyle="none", markersize=MARKER - 2,
