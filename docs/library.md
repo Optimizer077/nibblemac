@@ -10,7 +10,7 @@ pinfer runs **Qwen3.5-0.8B** on a Raspberry Pi 4. It ships as
 > contains the NEON kernels (`MATVEC=fast`); the x86-64 wheel contains the scalar reference kernels.
 > Recommended model file: `qwen35-0.8b-q4k-headq4k.pq` (`pinfer convert ... --quant q4k`, 437 MB):
 > 7.9 tok/s plain greedy, 16.5 tok/s with `--speculative --spec-k 3`, 37 tok/s prefill, perplexity 18.48 (bf16: 17.93). See §7.
-> Not published anywhere yet; no license chosen.
+> Source on GitHub under Apache-2.0 (`LICENSE`); not on PyPI yet.
 
 ---
 

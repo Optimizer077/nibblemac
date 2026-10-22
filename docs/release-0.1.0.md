@@ -43,7 +43,7 @@ The aarch64 wheel is built with the NEON kernels (`MATVEC=fast`): with the recom
 - No sdist.
 
 ## Before publishing (decisions for the user)
-1. **License** for pinfer itself. None is chosen yet; the wheel metadata has no license field. The Qwen3.5 weights are Apache-2.0 and are not bundled.
+1. **License** for pinfer itself. None was chosen for 0.1.0 (decided 2026-10-22: Apache-2.0, `LICENSE`). The Qwen3.5 weights are Apache-2.0 and are not bundled.
 2. Where to publish: PyPI, GitHub Releases or a private index. Also the package name: check that `pinfer` is free on PyPI.
 3. Whether 0.1.0 ships with the `ref` kernels or waits for `MATVEC=fast`. The fast build's Pi `.so` needs `GLIBC_2.34` (pthread), so its wheel tag would be `manylinux_2_34_aarch64`.
 4. Authors / maintainers / project URLs for the metadata.

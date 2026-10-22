@@ -6,7 +6,8 @@ model with its own 4-bit weight format and *exact* self-speculative decoding, an
 on the real board against llama.cpp, MNN and ONNX Runtime, with every run's temperature and
 throttle state recorded.
 
-Repository: private, `github.com/Optimizer077/piquant` · engine and package: `pinfer`.
+Repository: [github.com/Optimizer077/piquant](https://github.com/Optimizer077/piquant) · license: [Apache-2.0](LICENSE) ·
+engine and package: `pinfer`.
 
 | | pinfer (Q4K) | llama.cpp Q4_K_M | MNN int4 |
 |---|---|---|---|
@@ -338,7 +339,8 @@ The server keeps each reply as the exact tokens it generated, so the next turn o
 reads the new message: turn 4 of a chat starts after **0.95 s instead of 6.9 s** when the history is
 re-read, and a memory-bounded cache of saved states keeps alternating conversations fast (1.0 vs 3.5 s).
 
-Full guide: [docs/library.md](docs/library.md) (§10: server). Not published yet; no license chosen.
+Full guide: [docs/library.md](docs/library.md) (§10: server). License: [Apache-2.0](LICENSE); the Qwen3.5
+weights (also Apache-2.0) are not included and are downloaded from Hugging Face. Not on PyPI yet.
 
 ## 7. Methodology and records
 
@@ -385,5 +387,5 @@ docs/                     design, library guide, journal, pi-state, figures
 - Next: n-gram / prompt-lookup drafting next to the MTP head for chat and code (#6); adaptive k that is
   never below the best fixed k on chat (#2); Qwen3.5-2B (#7); a bounded-context mode for unbounded chats
   (`engine/CONTEXT.md` §7).
-- Open decisions: license (#8); public release and release assets (#9); overclocking (#10).
+- Open decisions: release assets / PyPI (#9); overclocking (#10).
 - Reproducing everything from a blank SD card / SSD: [docs/REPRODUCE.md](docs/REPRODUCE.md).
