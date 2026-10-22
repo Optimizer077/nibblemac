@@ -41,6 +41,19 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   "LPDDR4-2400" × an assumed 32-bit bus; Raspberry Pi does not publish the width).
 - Existing figures unchanged: `make_figures.py` and `make_figures2.py` re-render byte-identically.
 
+### GGUF import, untied head, selected logits (Cerno agent, 13:45–14:45; branch `worktree-agent-a5c9f7577a224b708`)
+- Added: `tools/gguf_to_pq.py` — lossless llama.cpp GGUF (arch `qwen35`, F32 / Q4_0 / Q8_0) →
+  `.pq`: Q4_0 = Q4_G32 and Q8_0 = Q8_G32 bit for bit, llama.cpp's tiled V-head order undone,
+  `--verify` checks every scale, code and F32 value (`engine/FORMAT.md`, "Importing a llama.cpp
+  GGUF"). First use: a Q4_0 Qwen3.5-4B fine-tune (3.37 GB), 427 tensors / 4.84 B weights verified.
+- Engine: untied output head (`tied_embeddings` 0 + `lm_head.weight`), `linear_attn.A` as an
+  alternative to `A_log`, Qwen3.5-4B dimensions (32 layers, 32 V heads over 16 K heads) — loads
+  and runs unchanged otherwise. Existing models take the same code paths (bit-identical).
+- API: `pinfer_eval_select` / `Model.eval_select` — the last token's logits for chosen vocabulary
+  ids only, bit-identical to `pinfer_eval`, reading only the head tiles that hold them.
+- Checked (host): golden / spec / state PASS, pytest 126 + `tests/python/test_select.py` 3/3,
+  malformed 43/43 under ASan/UBSan. Pi gates (spec_exact, ctx_check) not run yet (open).
+
 ### Published (lead, 13:30)
 - The repository is public at `github.com/Optimizer077/piquant` under **Apache-2.0** (`LICENSE`).
   The history was rewritten before publishing: the Wi-Fi network name and the router and Pi MAC
