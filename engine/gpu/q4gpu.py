@@ -33,6 +33,7 @@ EITHER = ("add", "mul")
 NPROD = 2
 MUL_ADDS = [1, 1, 1, 1]
 ACC_ALUS = ("add", "mul")
+REQUEST_AFTER_WORD = 4   # TMU request for block b+2 after word 4 of b+1 was consumed
 PARAMS = ["codes", "scales", "y", "act", "nt", "nb", "tsc", "tss", "tsy", "r4", "mask", "k65536",
           "k512", "k64"]
 
@@ -72,6 +73,10 @@ def block_ops(n: int, g: Regs) -> list[Q.Op]:
                 ops += [A("shr", r4, g.w[k], g.sh[m]), A("band", p, r4, g.mask)]
             if m == 3:
                 ops.append(S("ldtmu", g.w[k]))  # next block's word k
+                if k == REQUEST_AFTER_WORD:
+                    # request block b+2 once k+1 of the 9 words of b+1 left the TMU output
+                    # FIFO (16 words on V3D 4.x): (8 - k) + 9 <= 16 outstanding
+                    ops += tmu_request_ops(g)
             # accumulate adds: add ALU, except MUL_ADDS[m] of them (the last ones) on the mul ALU
             nmul = MUL_ADDS[m] if (m or k % 2) else 0
             for v in range(n):
@@ -98,7 +103,6 @@ def block_ops(n: int, g: Regs) -> list[Q.Op]:
                 # start value of the next block (a dummy after the tile's last block)
                 S("ldunif", tag=("negc_next", v)), A("mov", g.acc[v], r5, alus=EITHER)]
     ops.append(S("ldtmu", g.sc))  # next block's scales
-    ops += tmu_request_ops(g)     # block b+2 (FIFO order: words 0-3, 4-7, scale)
     ops.append(A("sub", g.bcnt, g.bcnt, 1, alus=("add",), cond="pushz"))
     return ops
 

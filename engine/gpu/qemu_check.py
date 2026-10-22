@@ -95,6 +95,9 @@ class Emu:
                 cnt = 4 if self.tmuc == 0xFFFFFFFC else 1
                 for k in range(cnt):
                     self.fifo.append(self.mem[(v + 4 * k) // 4].copy())
+                # the TMU output FIFO holds 16 words per QPU thread on V3D 4.x
+                assert len(self.fifo) <= 16, f"TMU output FIFO overflow: {len(self.fifo)}"
+                self.max_fifo = max(getattr(self, "max_fifo", 0), len(self.fifo))
             self.tmuc = None
         else:
             self.reg[nm] = v
