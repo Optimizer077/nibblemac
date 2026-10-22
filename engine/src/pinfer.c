@@ -71,7 +71,11 @@ static int alloc_buffers(pinfer_ctx *c) {
     c->x = malloc(B * c->H * sizeof(float));
     c->xn = malloc(B * c->H * sizeof(float));
     c->out = malloc(B * c->H * sizeof(float));
-    c->ta = malloc(B * max3(c->conv_dim, (size_t)c->n_heads * c->hd * 2, c->ffn) * sizeof(float));
+    /* ta rows also hold the MTP head's fc input [embedding | hidden], 2H floats (mtp.c); every
+     * Qwen3.5 size has ffn >= 3H, but the header allows other relations (tests/test_dims.py) */
+    const size_t ta_row = max3(max3(c->conv_dim, (size_t)c->n_heads * c->hd * 2, c->ffn),
+                               2 * (size_t)c->H, 1);
+    c->ta = malloc(B * ta_row * sizeof(float));
     c->tb = malloc(B * max3(c->vd, kvw, c->ffn) * sizeof(float));
     c->tc = malloc(B * kvw * sizeof(float));
     c->to = malloc(B * max3(c->vd, (size_t)c->n_heads * c->hd, 1) * sizeof(float));
