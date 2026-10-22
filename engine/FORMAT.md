@@ -158,3 +158,5 @@ conversion transforms:
 `--verify` re-reads both files and checks every tensor: fp16 scales and codes equal (after the
 permutation), dequantized weights equal bit for bit, F32 tensors equal bit for bit, and
 `tools/quant.py`'s reference packers rebuild the same bytes. MTP (`nextn`) blocks are refused.
+`tests/test_gguf.py` checks the converter on synthetic GGUFs written the way llama.cpp writes them,
+including an end-to-end comparison with a `.pq` built from the HF layout.

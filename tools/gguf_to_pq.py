@@ -150,7 +150,8 @@ class Gguf:
     def f32(self, name: str) -> np.ndarray:
         t = self.tensors[name]
         if t.ggml_type != GGML_F32:
-            raise ValueError(f"{name}: expected F32, found {GGML_NAMES.get(t.ggml_type, t.ggml_type)}")
+            found = GGML_NAMES.get(t.ggml_type, t.ggml_type)
+            raise ValueError(f"{name}: expected F32, found {found}")
         return self.raw(name).view("<f4")
 
     def blocks(self, name: str) -> np.ndarray:
@@ -308,15 +309,23 @@ def to_tiles(blocks: np.ndarray, dtype: int) -> bytes:
     return np.concatenate([scale, codes], axis=2).tobytes()
 
 
+def f32_converted(g: Gguf, d: Dims, gname: str, transform: str) -> np.ndarray:
+    """An F32 tensor in .pq order, as [rows, cols] (vectors: [n, 1])."""
+    shape = g.tensors[gname].shape
+    x = g.f32(gname).reshape(shape if len(shape) > 1 else (shape[0], 1))
+    p = row_perm(d, transform, x.shape[0])
+    if p is not None:
+        x = x[p]
+    if transform == "cols_v":            # an F32 out_proj: whole V heads of columns
+        x = x[:, head_rows(grouped_from_tiled(d), d.lv_dim)]
+    return np.ascontiguousarray(x)
+
+
 def convert_tensor(g: Gguf, d: Dims, gname: str, transform: str) -> tuple[int, list[int], bytes]:
     t = g.tensors[gname]
     shape = t.shape
     if t.ggml_type == GGML_F32:
-        x = g.f32(gname).reshape(shape if len(shape) > 1 else (shape[0], 1))
-        p = row_perm(d, transform, x.shape[0])
-        if transform == "cols_v":
-            raise ValueError(f"{gname}: column permutation of an F32 tensor")
-        return F32, shape, np.ascontiguousarray(x if p is None else x[p]).tobytes()
+        return F32, shape, f32_converted(g, d, gname, transform).tobytes()
     if t.ggml_type not in PQ_OF_GGML:
         raise ValueError(f"{gname}: ggml type {GGML_NAMES.get(t.ggml_type, t.ggml_type)} has no "
                          "lossless pinfer dtype")
@@ -329,7 +338,8 @@ def convert_tensor(g: Gguf, d: Dims, gname: str, transform: str) -> tuple[int, l
     c = col_block_perm(d, transform, blocks.shape[1])
     if c is not None:
         blocks = blocks[:, c]
-    return PQ_OF_GGML[t.ggml_type], shape, to_tiles(np.ascontiguousarray(blocks), PQ_OF_GGML[t.ggml_type])
+    dtype = PQ_OF_GGML[t.ggml_type]
+    return dtype, shape, to_tiles(np.ascontiguousarray(blocks), dtype)
 
 
 def header_bytes(d: Dims, n_tensors: int, dir_off: int, data_off: int, tied: bool) -> bytes:
@@ -422,7 +432,7 @@ def unpack_ggml(blocks: np.ndarray, gtype: int) -> tuple[np.ndarray, np.ndarray]
     q = blocks[..., 2:]
     if gtype == GGML_Q8_0:
         return d, q.copy().view(np.int8).reshape(rows, nb * 32)
-    u = np.concatenate([q & 15, q >> 4], axis=2)          # ggml block_q4_0: qs[j] = x[j] | x[j+16] << 4
+    u = np.concatenate([q & 15, q >> 4], axis=2)   # block_q4_0: qs[j] = x[j] | x[j+16] << 4
     return d, u.reshape(rows, nb * 32)
 
 
@@ -454,6 +464,10 @@ def verify(gguf_path: Path, pq_path: Path, rows_per_chunk: int = 4096) -> dict:
             assert dtype == F32
             src = g.f32(gname).reshape(shape[0], -1)
             src = src if perm is None else src[perm]
+            cperm = (col_block_perm(d, transform, src.shape[1] // 32) if transform == "cols_v"
+                     else None)
+            if cperm is not None:            # whole 32-column blocks, as for quantized tensors
+                src = src.reshape(src.shape[0], -1, 32)[:, cperm].reshape(src.shape)
             got = mm[off:off + nbytes].view("<f4").reshape(src.shape)
             assert np.array_equal(src.view(np.uint32), got.view(np.uint32)), name
             stats["f32_tensors"] += 1

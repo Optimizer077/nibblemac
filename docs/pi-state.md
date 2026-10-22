@@ -59,6 +59,8 @@ Full table with versions and per-item undo: `bench/BASELINES.md` → "Pi changes
 | `~/pinfer/baselines/` (4.0 GB) | MNN 3.6.1 static binaries + model, ORT GenAI int4/int8 exports, LiteRT `.litertlm`, wrappers, prompt | `rm -rf ~/pinfer/baselines` |
 | `~/pinfer/models/cerno-4b-q4_0.pq` + `cerno-4b-q4_0.tokenizer/` (3.36 GB, 2026-10-22) | GGUF import of a Qwen3.5-4B fine-tune (`tools/gguf_to_pq.py`, md5 `7d0c7ca6…`), local testing only, see `cerno-pi` | `rm -rf ~/pinfer/models/cerno-4b-q4_0.pq ~/pinfer/models/cerno-4b-q4_0.tokenizer` |
 | `~/pinfer/engine/pinfer_run_cerno1`, `~/pinfer/tmp/cerno/` (2026-10-22) | engine build with the untied head / `eval_select` (md5 `34f2946a…`), its `libpinfer.so`, Python sources, request files | `rm -rf ~/pinfer/engine/pinfer_run_cerno1 ~/pinfer/tmp/cerno` |
+| `~/pinfer/engine/pinfer_run_cerno2` (2026-10-22, 15:07) | the same changes rebased on 0.2.0 (md5 `537fb9a3…`); its `libpinfer.so` (`bc3004da…`) and `llama-server` (llama.cpp v0.7.0 @ 620d222, sha256 `fc8074d2…`) are in `~/pinfer/tmp/cerno/` | `rm -f ~/pinfer/engine/pinfer_run_cerno2` |
+| `~/pinfer/models/cerno-4b-v1.1-q4_0.gguf` (3.37 GB, 2026-10-22, 15:42) | the original GGUF of the 4B fine-tune (md5 `03896410…`), for the llama.cpp comparison | `rm -f ~/pinfer/models/cerno-4b-v1.1-q4_0.gguf` |
 
 ## Snapshots
 | Snapshot | Taken before/after |
