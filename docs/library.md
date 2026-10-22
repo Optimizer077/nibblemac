@@ -281,10 +281,16 @@ costs is the attention's pass over the cache. Pi 4, Q4K model, 4 threads, 32 gen
   bit-exact. A 2048-token state is 70.5 MB and restores in 0.1 s (prefilling it takes 63 s).
   `pinfer chat` keeps the state between turns and only prefills the new turn (second turn of a
   short chat: 0.7 s instead of 2.1 s before the first token).
-- **Adaptive speculation** (`spec_adaptive=True`, `--adaptive`): the engine measures its pass
-  costs and the draft acceptance and picks k (down to plain steps) per round; same output.
-  It beats fixed k=3 where acceptance is low (long wikitext context: 9.6 vs 9.1 tok/s at 2048)
-  and stays within ~2–5% of it where drafts are almost always accepted.
+- **Adaptive speculation** (`spec_adaptive=True`, `--adaptive`): `spec_k` becomes an upper
+  bound; the MTP head keeps drafting while its newest draft is confident (top-1 probability
+  ≥ 0.6), and the engine falls back to plain steps when its measured rate is below plain
+  decoding's; same output. Within 0.984–1.056× of the best fixed k on the chat prompts,
+  prompt64 and a 2048-token context (`engine/DRAFT.md`).
+- **Prompt-lookup drafts** (`spec_ngram=N`, `pinfer_run --ngram N`): where the answer repeats
+  the context (an edited function, a quoted passage, repetitive text), up to N tokens that
+  followed the earlier occurrence are verified in one pass; same output. Code-edit chat answer
+  22.2 vs 19.4 tok/s (adaptive, N = 7), 2048-token wikitext context 13.0 vs 11.1; ordinary chat
+  unchanged.
 
 ## 10. Server (`pinfer serve`, OpenAI-compatible HTTP)
 `pinfer serve` puts one model behind the OpenAI HTTP API, so the `openai` SDK, curl, Open WebUI or an

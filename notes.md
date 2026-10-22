@@ -222,6 +222,36 @@ Files: `chat-spec-adaptive_20261022_075629.json` (plain/k3/adaptive, 2 reps), `c
   few % to gain. Low chat acceptance is the MTP head's, not the vocabulary cut.
 - Adaptive k ≤ 3 is below fixed k=2 on chat (story: 1.43 tokens/pass — it falls back to plain
   too often); it stays opt-in. To fix in `spec_adapt.c`: never worse than the best fixed k.
+  *Fixed by the drafting work below (issue #2).*
+
+## Drafting: prompt lookup and adaptive k (issues #6, #2; 2026-10-22 10:55–13:30, drafting agent; `engine/DRAFT.md`)
+Q4K, 4 threads, `engine/bench/chat_spec.sh`, all valid; before = `pinfer_run_fast` `23a76242`,
+after = `pinfer_run_ng1` `7d701ad6`. tok/s, mean of 2 runs (prompt64 3).
+
+| prompt | best fixed k (after) | adaptive k≤3 before → after | after / best fixed | adaptive + `--ngram 7` |
+|---|---|---|---|---|
+| chat27 | k=2 11.01 | 10.49 → 11.02 | 1.00 | 11.03 |
+| code, Python | k=2 13.13 | 11.89 → 12.95 | 0.986 | 12.95 |
+| code, C | k=2 13.66 | 13.14 → 14.26 | 1.044 | 14.26 |
+| list | k=2 12.55 | 11.95 → 12.40 | 0.988 | 12.41 |
+| math | k=2 15.04 | 14.54 → 14.80 | 0.984 | 14.77 |
+| story | k=2 11.19 | 11.29 → 11.17 | 0.998 | 11.06 |
+| prompt64 | k=3 18.47 | 18.69 → 18.20 | 0.985 | 19.98 (k=3 + ngram 20.47) |
+| ctx2048 | k=2 10.55 | 10.96 → 11.14 | 1.056 | 12.96 |
+| copy: edit code | k=3 19.12 | 18.90 → 19.40 | 1.015 | 22.21 (k=2 + ngram 22.75) |
+| copy: fix typos | k=3 19.27 | 19.43 → 19.40 | 1.007 | 18.94 |
+
+Files: `ng-base-chat-r{1,2}_*`, `ng-base-p64_20261022_111810.json`, `ng-base-copy_20261022_121404.json`,
+`ng-base-ctx2048-r{1,2}_*`; `ng1-chat-r{1,2}_*`, `ng1-p64_20261022_120929.json`,
+`ng1-copy_20261022_124147.json`, `ng1-ctx2048-r{1,2}_*`.
+- Adaptive now chains MTP drafts while the newest draft's top-1 probability is ≥ 0.6 and has
+  no calibration steps; ≥ 0.984× the best fixed k on all eight prompts (old: 0.90–1.04).
+- The oracle k per round is 13–18% above the best fixed k, but confidence predicts only ~1%
+  of it; the remaining gain is luck (DRAFT.md §2c).
+- Prompt lookup pays on copied code (+15–19%) and long repetitive context (+16%), not on chat;
+  unconditional lookup loses up to 26% (math), hence the gate on match length / MTP agreement.
+- Verify pass per width n = 2..9: 136 / 143 / 152 / 200 / 258 / 266 / 285 / 360 ms
+  (`ng-base-p64_20261022_111810.json`): wide passes limit both long chains and long n-grams.
 
 ## Verify pass (issue #5, 2026-10-22 06:43–08:30, `engine/VERIFY.md`)
 Q4K-headq4k, 4 threads, 64 generated, all runs valid. Once merged, the default row of the

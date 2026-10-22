@@ -45,6 +45,7 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | `~/pinfer/golden/qwen35-0.8b/meta.json` | golden prompt / ids for the Python tests (copy of `ref/golden/qwen35-0.8b/meta.json`) |
 | `~/pinfer/tests/python/` | Python test suite (copy of `tests/python/`) |
 | `~/pinfer/examples/pinfer_example` | C API example, static aarch64 (`make -C engine examples`) |
+| `~/pinfer/engine/ng/pinfer_run_ng1`, `~/pinfer/data/chat_fix.ids`, `chat_edit.ids` | drafting work 2026-10-22 (`engine/DRAFT.md`): final binary (md5 `7d701ad6`) and the two copy prompts that `engine/bench/{chat_spec,spec_exact}.sh` read. Undo: `rm -r ~/pinfer/engine/ng ~/pinfer/data/chat_fix.ids ~/pinfer/data/chat_edit.ids` |
 
 ## Baseline runtimes placed by the baselines agent (2026-10-21/22, user-level only, no apt)
 Full table with versions and per-item undo: `bench/BASELINES.md` → "Pi changes made by this agent".

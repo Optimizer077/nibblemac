@@ -18,6 +18,40 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   addresses are placeholders (`<wifi-ssid>`, `<router-mac>`, `<pi-mac>`), and commits use the
   GitHub no-reply address. The previous private repository is `piquant-archive`.
 - Issues #1–#11 recreated in the public repository; #8 (license) closed.
+### Prompt-lookup drafts and adaptive k (issues #6, #2; drafting agent, 10:55–13:30; branch `worktree-agent-ab157f97c4ad73f36`; notebook `engine/DRAFT.md`)
+- Added: prompt-lookup (n-gram) drafting, `pinfer_spec_params.ngram` (0..8, 0 = off),
+  `pinfer_run --ngram N`, Python `generate(..., spec_ngram=N)`. `engine/src/ngram.c` indexes the
+  token history (2–4-grams → most recent end position, verified hits); a draft is taken when
+  the match extends over ≥ 16 tokens, or over 4–15 tokens and its first token equals the MTP
+  head's free first draft (then ≤ 3 tokens). Its MTP rows are deferred like plain steps, so
+  n-gram rounds cost no MTP pass. k = 0 with ngram > 0 works without an MTP head.
+  `pinfer_spec_stats` gained `ngram_rounds` / `ngram_drafted` / `ngram_accepted` (ABI 0.2.0).
+- Changed: the adaptive policy (`spec_adapt.c`, `pinfer_spec_params.adaptive`) chains MTP
+  drafts while the newest draft's top-1 probability is ≥ 0.6 (up to k) and drops the
+  calibration steps; a plain-mode guard compares measured rates (2-round probes). Output never
+  changes (exact by construction; gates below).
+- Added: `engine/bench/draft_trace.c` (per-position MTP drafts), `engine/bench/draft_sim.py`
+  (offline replay of policies; exact against the engine), copy and held-out prompts
+  (`bench/common/make_copy_prompts.py`), n-gram configs in `chat_spec.sh` / `spec_exact.sh`,
+  `logs/draft/state_cmp.c`.
+- Measured (Pi, Q4K, 4 threads, tok/s, before → after): adaptive k ≤ 3 on chat 10.49 → 11.02,
+  11.89 → 12.95, 13.14 → 14.26, 11.95 → 12.40, 14.54 → 14.80, 11.29 → 11.17 (story); prompt64
+  18.69 → 18.20; ctx2048 10.96 → 11.14. After / best fixed k: 0.984–1.056 on all eight prompts
+  (before 0.90–1.04). With `--ngram 7`: code-edit chat answer 22.21 (adaptive, +14.5%) / 22.75
+  (k=2, +19% vs k=3 19.12); prompt64 k=3 20.47 (+11%); ctx2048 adaptive 12.96 (+16%); chat
+  within −1.0…+3.1%; typo fixing −2.4%. Files `bench/results/ng-*`, `ng1-*`.
+- Measured: verify pass per width n = 2..9: 136 / 143 / 152 / 200 / 258 / 266 / 285 / 360 ms
+  (`ng-base-p64_20261022_111810.json`); oracle per-round k is 13–18% above the best fixed k,
+  of which confidence thresholds recover ~1% (DRAFT.md §2c).
+- Gates: host golden / spec (130 speculative runs incl. n-gram and a copy prompt) / state
+  PASS, pytest 127 passed, state identity 48/48 (`logs/draft/`); Pi spec_exact 58/58 incl.
+  the original 20 rows with the baseline md5s (`spec-exact-ng1_20261022_115556.json`), state
+  identity 48/48 (`state-cmp-ng1_20261022_120036.json`).
+- Decided (recommendation for the lead, not applied): `pinfer_default_spec_params()` =
+  adaptive k ≤ 3 with ngram 7 for `generate(speculative=True)` and `pinfer serve`
+  (DRAFT.md §7).
+- Pi: `~/pinfer/engine/ng/pinfer_run_ng1` (md5 `7d701ad6`) and `~/pinfer/data/chat_{fix,edit}.ids`
+  kept; all other scratch removed; `pinfer_run_fast` untouched (`23a76242`).
 
 ### OpenAI-compatible server (server agent, 08:55–10:05; branch `worktree-agent-a344482719d7c5ce0`)
 - Added: `pinfer serve` (`python/pinfer/server/`, standard library only): `GET /health`,
