@@ -1,0 +1,250 @@
+{
+  "name": "att3-spec-exact-att2",
+  "command": "bash tmp/att3/att3_spec_exact.sh ./engine/pinfer_run_att2",
+  "timestamp": "2026-10-22T08:54:35",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 0",
+      "md5": "703b5ff0",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 2 --draft-vocab 32768",
+      "md5": "703b5ff0",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 3 --draft-vocab 32768",
+      "md5": "703b5ff0",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 4 --draft-vocab 32768",
+      "md5": "703b5ff0",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 1",
+      "md5": "703b5ff0",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 0",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 2 --draft-vocab 32768",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 3 --draft-vocab 32768",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 4 --draft-vocab 32768",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-mix-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 1",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 0",
+      "md5": "08c27da6",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 2 --draft-vocab 32768",
+      "md5": "08c27da6",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 3 --draft-vocab 32768",
+      "md5": "08c27da6",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 4 --draft-vocab 32768",
+      "md5": "08c27da6",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "chat27",
+      "n": 40,
+      "spec": "--spec 1",
+      "md5": "08c27da6",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 0",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 2 --draft-vocab 32768",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 3 --draft-vocab 32768",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 4 --draft-vocab 32768",
+      "md5": "3f9a4f66",
+      "match": true
+    },
+    {
+      "bench": "spec_exact",
+      "bin": "./engine/pinfer_run_att2",
+      "model": "qwen35-0.8b-q4k-headq4k",
+      "prompt": "prompt64",
+      "n": 40,
+      "spec": "--spec 1",
+      "md5": "3f9a4f66",
+      "match": true
+    }
+  ],
+  "unparsed": [],
+  "stdout": "RESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 0\",\"md5\":\"703b5ff0\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 2 --draft-vocab 32768\",\"md5\":\"703b5ff0\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 3 --draft-vocab 32768\",\"md5\":\"703b5ff0\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 4 --draft-vocab 32768\",\"md5\":\"703b5ff0\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 1\",\"md5\":\"703b5ff0\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 0\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 2 --draft-vocab 32768\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 3 --draft-vocab 32768\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 4 --draft-vocab 32768\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-mix-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 1\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 0\",\"md5\":\"08c27da6\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 2 --draft-vocab 32768\",\"md5\":\"08c27da6\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 3 --draft-vocab 32768\",\"md5\":\"08c27da6\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 4 --draft-vocab 32768\",\"md5\":\"08c27da6\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"chat27\",\"n\":40,\"spec\":\"--spec 1\",\"md5\":\"08c27da6\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 0\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 2 --draft-vocab 32768\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 3 --draft-vocab 32768\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 4 --draft-vocab 32768\",\"md5\":\"3f9a4f66\",\"match\":true}\nRESULT {\"bench\":\"spec_exact\",\"bin\":\"./engine/pinfer_run_att2\",\"model\":\"qwen35-0.8b-q4k-headq4k\",\"prompt\":\"prompt64\",\"n\":40,\"spec\":\"--spec 1\",\"md5\":\"3f9a4f66\",\"match\":true}\n",
+  "stderr": "",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "39.4'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3545",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "49.1'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3517",
+    "python": "Python 3.13.5"
+  }
+}

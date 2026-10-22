@@ -1,0 +1,16 @@
+# 2026-10-22T08:56:15 pi@10.42.0.2
+$ ps aux --sort=-%cpu | head -6 | cut -c1-200; ls -la tmp/att3/*.bin
+
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+pi         29841  398  9.2 580648 359148 ?       Rl   08:54   6:39 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c 8256 --ids-file data/ctx8192.ids --spec 0 --kv-dtype 1 --n
+pi         29917  100  0.0   9112  3840 ?        R    08:56   0:00 ps aux --sort=-%cpu
+root       29906 14.8  0.2  21456 10632 ?        Ss   08:56   0:00 sshd-session: pi [priv]
+root       29232  0.3  0.0      0     0 ?        I    08:49   0:01 [kworker/2:0-events]
+root          91  0.1  0.0      0     0 ?        S    01:35   0:51 [irq/40-mmc0]
+-rw-rw-r-- 1 pi pi  70533192 Oct 22 06:53 tmp/att3/s2048_kv0.bin
+-rw-rw-r-- 1 pi pi  45367368 Oct 22 06:54 tmp/att3/s2048_kv1.bin
+-rw-rw-r-- 1 pi pi 120864840 Oct 22 06:57 tmp/att3/s4096_kv0.bin
+-rw-rw-r-- 1 pi pi  70533192 Oct 22 06:59 tmp/att3/s4096_kv1.bin
+-rw-rw-r-- 1 pi pi 221528136 Oct 22 08:48 tmp/att3/s8192_kv0.bin
+
+[exit 0]

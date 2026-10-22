@@ -1,0 +1,31 @@
+# 2026-10-22T09:28:46 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/python PINFER_LIB=$PWD/tmp/serve/lib/libpinfer.so PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=golden/qwen35-0.8b/meta.json $V/python -m pytest -q -p no:cacheprovider --durations=10 tmp/serve/tests/python 2>&1 | tail -25; md5sum tmp/serve/lib/libpinfer.so
+
+
+    def find_converter() -> Path:
+        """Path of convert.py (bundled copy first, then the source tree)."""
+        bundled = _PKG_DIR / "_tools" / "convert.py"
+        for cand in (bundled, _PKG_DIR.parent.parent / "tools" / "convert.py"):
+            if cand.is_file():
+                return cand
+>       raise FileNotFoundError("convert.py not found (neither bundled nor in a source checkout)")
+E       FileNotFoundError: convert.py not found (neither bundled nor in a source checkout)
+
+tmp/serve/python/pinfer/convert.py:30: FileNotFoundError
+============================= slowest 10 durations =============================
+14.95s call     tmp/serve/tests/python/test_api.py::test_speculative_matches_greedy
+13.81s call     tmp/serve/tests/python/test_golden.py::test_greedy_text_prompt
+8.64s call     tmp/serve/tests/python/test_server.py::test_alternating_conversations_use_snapshots
+7.99s call     tmp/serve/tests/python/test_state.py::test_speculative_continues_from_context
+7.14s call     tmp/serve/tests/python/test_cli.py::test_chat_keeps_state_between_turns
+6.81s call     tmp/serve/tests/python/test_streaming.py::test_stop_string
+6.15s call     tmp/serve/tests/python/test_server.py::test_second_turn_reuses_prefix
+5.98s call     tmp/serve/tests/python/test_streaming.py::test_stream_equals_blocking
+5.95s call     tmp/serve/tests/python/test_state.py::test_save_load_roundtrip_is_exact
+4.92s call     tmp/serve/tests/python/test_affinity.py::test_load_and_eval_keep_caller_affinity
+=========================== short test summary info ============================
+FAILED tmp/serve/tests/python/test_cli.py::test_converter_is_available - File...
+1 failed, 124 passed, 1 skipped in 153.77s (0:02:33)
+976b73ebcf972934c064e52fdcb9818e  tmp/serve/lib/libpinfer.so
+
+[exit 0]

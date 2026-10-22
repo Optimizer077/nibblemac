@@ -1,0 +1,26 @@
+# 2026-10-22T08:52:29 pi@10.42.0.2
+$ cd engine && ls -la pinfer_run_ver* lbench_ver* thread_cmp_* && rm -f pinfer_run_ver1 pinfer_run_ver2 lbench_ver1 lbench_ver2k lbench_ver3p2 lbench_ver3p3 lbench_ver3f lbench_ver3 thread_cmp_old thread_cmp_new && echo after: && ls -la pinfer_run_ver* lbench_ver* thread_cmp_* 2>&1; md5sum pinfer_run_ver3 pinfer_run_fast; ls ../tmp 2>/dev/null
+
+-rwxr-xr-x 1 pi pi  859888 Oct 22 07:08 lbench_ver1
+-rwxr-xr-x 1 pi pi  859896 Oct 22 07:08 lbench_ver2k
+-rwxr-xr-x 1 pi pi  859888 Oct 22 07:49 lbench_ver3
+-rwxr-xr-x 1 pi pi  859896 Oct 22 07:46 lbench_ver3f
+-rwxr-xr-x 1 pi pi  859896 Oct 22 07:20 lbench_ver3p2
+-rwxr-xr-x 1 pi pi  859896 Oct 22 07:20 lbench_ver3p3
+-rwxr-xr-x 1 pi pi  933752 Oct 22 07:08 pinfer_run_ver1
+-rwxr-xr-x 1 pi pi  933728 Oct 22 07:24 pinfer_run_ver2
+-rwxr-xr-x 1 pi pi  933704 Oct 22 07:49 pinfer_run_ver3
+-rwxr-xr-x 1 pi pi 1002936 Oct 22 08:25 thread_cmp_new
+-rwxr-xr-x 1 pi pi 1003000 Oct 22 08:25 thread_cmp_old
+after:
+ls: cannot access 'lbench_ver*': No such file or directory
+ls: cannot access 'thread_cmp_*': No such file or directory
+-rwxr-xr-x 1 pi pi 933704 Oct 22 07:49 pinfer_run_ver3
+82c7f4d22745bfde737c01598350acaa  pinfer_run_ver3
+9d30bbda58ddf2ffff07ca7f86328408  pinfer_run_fast
+ab
+att3
+pyctx
+tools
+
+[exit 0]

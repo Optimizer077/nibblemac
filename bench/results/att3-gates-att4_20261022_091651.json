@@ -1,0 +1,111 @@
+{
+  "name": "att3-gates-att4",
+  "command": "md5sum engine/pinfer_run_att4 engine/pinfer_run_fast; bash tmp/att3/att3_ctx_check.sh ./engine/pinfer_run_att4 ./engine/pinfer_run_fast; bash tmp/att3/att3_f16_check.sh ./engine/pinfer_run_att4 ./engine/pinfer_run_fast 1; bash tmp/att3/att3_f16_check.sh ./engine/pinfer_run_att4 ./engine/pinfer_run_fast 2",
+  "timestamp": "2026-10-22T09:16:51",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "bench": "ctx_check",
+      "dump": "h64",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "l64",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "h1",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "l1",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "l512",
+      "identical": true
+    },
+    {
+      "bench": "f16_check",
+      "kv_dtype": 1,
+      "what": "h",
+      "identical": true
+    },
+    {
+      "bench": "f16_check",
+      "kv_dtype": 1,
+      "what": "l",
+      "identical": true
+    },
+    {
+      "bench": "f16_check",
+      "kv_dtype": 1,
+      "what": "g",
+      "identical": true
+    },
+    {
+      "bench": "f16_check",
+      "kv_dtype": 2,
+      "what": "h",
+      "identical": true
+    },
+    {
+      "bench": "f16_check",
+      "kv_dtype": 2,
+      "what": "l",
+      "identical": true
+    },
+    {
+      "bench": "f16_check",
+      "kv_dtype": 2,
+      "what": "g",
+      "identical": true
+    }
+  ],
+  "unparsed": [],
+  "stdout": "58acc558990e1d2d88dad98aa564c3b5  engine/pinfer_run_att4\n9d30bbda58ddf2ffff07ca7f86328408  engine/pinfer_run_fast\n  p64 b64 new: load 0.004 s | warm-up 0.000 s | prefill 64 tok in 3.045 s = 21.017 tok/s | decode 1 tok in 0.126 s = 7.906 tok/s | peak RSS 498.6 MB | matvec=fast threads=4\n  p64 b1 new: load 0.004 s | warm-up 0.000 s | prefill 64 tok in 8.218 s = 7.787 tok/s | decode 1 tok in 0.128 s = 7.836 tok/s | peak RSS 494.7 MB | matvec=fast threads=4\n  ctx512 new: load 0.003 s | warm-up 0.000 s | prefill 512 tok in 20.600 s = 24.855 tok/s | decode 1 tok in 0.168 s = 5.941 tok/s | peak RSS 927.3 MB | matvec=fast threads=4\n  p64 b64 old: load 0.005 s | warm-up 0.000 s | prefill 64 tok in 2.430 s = 26.333 tok/s | decode 1 tok in 0.155 s = 6.464 tok/s | peak RSS 498.6 MB | matvec=fast threads=4\n  p64 b1 old: load 0.005 s | warm-up 0.000 s | prefill 64 tok in 8.237 s = 7.770 tok/s | decode 1 tok in 0.152 s = 6.559 tok/s | peak RSS 494.6 MB | matvec=fast threads=4\n  ctx512 old: load 0.004 s | warm-up 0.000 s | prefill 512 tok in 19.509 s = 26.244 tok/s | decode 1 tok in 0.167 s = 5.977 tok/s | peak RSS 927.0 MB | matvec=fast threads=4\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h1_new.bin\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h1_old.bin\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h64_new.bin\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h64_old.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l1_new.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l1_old.bin\n2cdfaf44449a5e447d6b520df3c0b945  tmp/ctx/l512_new.bin\n2cdfaf44449a5e447d6b520df3c0b945  tmp/ctx/l512_old.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l64_new.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l64_old.bin\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"h64\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"l64\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"h1\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"l1\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"l512\",\"identical\":true}\n0c1728fa4ed6dfd16099e27e00513a09  tmp/f16/g_b1.txt\n0c1728fa4ed6dfd16099e27e00513a09  tmp/f16/g_b64.txt\n0c1728fa4ed6dfd16099e27e00513a09  tmp/f16/g_ref.txt\ne92a6e74160356d793c0d98d51dd9a4a  tmp/f16/h_b1.bin\ne92a6e74160356d793c0d98d51dd9a4a  tmp/f16/h_b64.bin\ne92a6e74160356d793c0d98d51dd9a4a  tmp/f16/h_ref.bin\n1d2d35d70a8d6a7c7482ee19313fe9a4  tmp/f16/l_b1.bin\n1d2d35d70a8d6a7c7482ee19313fe9a4  tmp/f16/l_b64.bin\n1d2d35d70a8d6a7c7482ee19313fe9a4  tmp/f16/l_ref.bin\nRESULT {\"bench\":\"f16_check\",\"kv_dtype\":1,\"what\":\"h\",\"identical\":true}\nRESULT {\"bench\":\"f16_check\",\"kv_dtype\":1,\"what\":\"l\",\"identical\":true}\nRESULT {\"bench\":\"f16_check\",\"kv_dtype\":1,\"what\":\"g\",\"identical\":true}\n0c1728fa4ed6dfd16099e27e00513a09  tmp/f16/g_b1.txt\n0c1728fa4ed6dfd16099e27e00513a09  tmp/f16/g_b64.txt\n0c1728fa4ed6dfd16099e27e00513a09  tmp/f16/g_ref.txt\n4ea9c5b73170433020cf85d1e12d6f34  tmp/f16/h_b1.bin\n4ea9c5b73170433020cf85d1e12d6f34  tmp/f16/h_b64.bin\n4ea9c5b73170433020cf85d1e12d6f34  tmp/f16/h_ref.bin\na7ef972f6d0f1011db60df2cb873413c  tmp/f16/l_b1.bin\na7ef972f6d0f1011db60df2cb873413c  tmp/f16/l_b64.bin\na7ef972f6d0f1011db60df2cb873413c  tmp/f16/l_ref.bin\nRESULT {\"bench\":\"f16_check\",\"kv_dtype\":2,\"what\":\"h\",\"identical\":true}\nRESULT {\"bench\":\"f16_check\",\"kv_dtype\":2,\"what\":\"l\",\"identical\":true}\nRESULT {\"bench\":\"f16_check\",\"kv_dtype\":2,\"what\":\"g\",\"identical\":true}\n",
+  "stderr": "",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "53.0'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3449",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "51.1'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3455",
+    "python": "Python 3.13.5"
+  }
+}

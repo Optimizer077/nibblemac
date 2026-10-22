@@ -1,0 +1,18 @@
+# 2026-10-22T08:33:05 pi@10.42.0.2
+$ cd ~/pinfer && du -sh tmp/hard; find /tmp/pytest-of-pi -name same-layout.pq -print -delete 2>/dev/null; rm -f engine/pinfer_run_hard1 engine/pinfer_ppl_hard1; rm -rf tmp/hard; ls tmp; ls -la engine/pinfer_run_hard* engine/pinfer_ppl_hard*; md5sum engine/pinfer_run_hard2 engine/pinfer_ppl_hard2 engine/pinfer_run_fast; df -h /tmp | tail -1
+
+1.4M	tmp/hard
+/tmp/pytest-of-pi/pytest-4/state0/same-layout.pq
+/tmp/pytest-of-pi/pytest-3/state0/same-layout.pq
+ab
+att3
+pyctx
+tools
+-rwxr-xr-x 1 pi pi 935824 Oct 22 07:52 engine/pinfer_ppl_hard2
+-rwxr-xr-x 1 pi pi 934144 Oct 22 07:52 engine/pinfer_run_hard2
+307e66b14d92f29fc0059d70df17d2d7  engine/pinfer_run_hard2
+5b76656c12d2c91bfc95ff8d70f46be5  engine/pinfer_ppl_hard2
+9d30bbda58ddf2ffff07ca7f86328408  engine/pinfer_run_fast
+tmpfs           1.9G   74M  1.8G   4% /tmp
+
+[exit 0]

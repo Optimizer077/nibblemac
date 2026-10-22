@@ -1,0 +1,33 @@
+# 2026-10-22T09:26:52 pi@10.42.0.2
+$ ls -la models/qwen35-0.8b-q4k-headq4k.pq models/qwen35-0.8b-tokenizer; ls tmp 2>/dev/null; ~/pinfer/venvs/pinfer/bin/python -c "import numpy, tokenizers, jinja2, pinfer; print(numpy.__version__, tokenizers.__version__, jinja2.__version__, pinfer.__version__, pinfer.__file__)"; (ss -ltn 2>/dev/null || netstat -ltn) | head; pgrep -af "pinfer" | head; df -h ~ /tmp | tail -2; which curl
+
+-rwxr-xr-x 1 pi pi 436507904 Oct 22 00:08 models/qwen35-0.8b-q4k-headq4k.pq
+
+models/qwen35-0.8b-tokenizer:
+total 12544
+drwxrwxr-x 2 pi pi     4096 Oct 21 22:15 .
+drwxrwxr-x 3 pi pi     4096 Oct 22 00:10 ..
+-rwxr-xr-x 1 pi pi     7755 Oct 21 21:19 chat_template.jinja
+-rwxr-xr-x 1 pi pi    16709 Oct 21 21:19 tokenizer_config.json
+-rwxr-xr-x 1 pi pi 12807982 Oct 21 21:19 tokenizer.json
+ab
+att3
+pyctx
+tools
+2.5.4 0.23.3 3.1.6 0.1.0 /home/pi/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/__init__.py
+State  Recv-Q Send-Q Local Address:Port Peer Address:Port
+LISTEN 0      128          0.0.0.0:22        0.0.0.0:*   
+LISTEN 0      128             [::]:22           [::]:*   
+31166 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/att3/att3_spec_exact.sh ./engine/pinfer_run_att4
+31638 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_att3 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c $((2048+64)) --ids-file data/ctx2048.ids --spec 0 --kv-dtype 0 --no-warmup --save-state tmp/att3/b2048_kv0.bin --bench | grep -E 'RESULT|state:|load '; md5sum tmp/att3/b2048_kv0.bin; ./engine/pinfer_run_att3 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c $((2048+64)) --ids-file data/ctx2048.ids --spec 0 --kv-dtype 1 --no-warmup --save-state tmp/att3/b2048_kv1.bin --bench | grep -E 'RESULT|state:|load '; md5sum tmp/att3/b2048_kv1.bin; ./engine/pinfer_run_att3 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c $((4096+64)) --ids-file data/ctx4096.ids --spec 0 --kv-dtype 0 --no-warmup --save-state tmp/att3/b4096_kv0.bin --bench | grep -E 'RESULT|state:|load '; md5sum tmp/att3/b4096_kv0.bin; ./engine/pinfer_run_att3 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c $((4096+64)) --ids-file data/ctx4096.ids --spec 0 --kv-dtype 1 --no-warmup --save-state tmp/att3/b4096_kv1.bin --bench | grep -E 'RESULT|state:|load '; md5sum tmp/att3/b4096_kv1.bin
+31646 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ctx_check.sh ./engine/pinfer_run_merge3 ./engine/pinfer_run_fast
+31671 timeout --kill-after=30 1200 bash -c bash tmp/att3/att3_spec_exact.sh ./engine/pinfer_run_att4
+31672 bash tmp/att3/att3_spec_exact.sh ./engine/pinfer_run_att4
+31889 bash tmp/att3/att3_spec_exact.sh ./engine/pinfer_run_att4
+31890 ./engine/pinfer_run_att4 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 40 --ids-file data/prompt64.ids --spec 0
+31906 bash -c mkdir -p pinfer && cd pinfer || exit 1; ls -la models/qwen35-0.8b-q4k-headq4k.pq models/qwen35-0.8b-tokenizer; ls tmp 2>/dev/null; ~/pinfer/venvs/pinfer/bin/python -c "import numpy, tokenizers, jinja2, pinfer; print(numpy.__version__, tokenizers.__version__, jinja2.__version__, pinfer.__version__, pinfer.__file__)"; (ss -ltn 2>/dev/null || netstat -ltn) | head; pgrep -af "pinfer" | head; df -h ~ /tmp | tail -2; which curl
+/dev/sda2       917G   18G  863G   2% /
+tmpfs           1.9G   74M  1.8G   4% /tmp
+/usr/bin/curl
+
+[exit 0]

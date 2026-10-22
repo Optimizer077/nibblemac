@@ -1,0 +1,8 @@
+# 2026-10-22T08:18:14 pi@10.42.0.2
+$ cd ~/pinfer && python3 tmp/hard/tests/test_malformed.py --tmp tmp/hard/mal --bin ./engine/pinfer_run_hard2 --ppl ./engine/pinfer_ppl_hard2 --model models/qwen35-0.8b-bf16.pq --qmodel models/qwen35-0.8b-q4k-headq4k.pq 2>&1 | tail -3
+
+
+43/43 passed
+OVERALL: PASS
+
+[exit 0]

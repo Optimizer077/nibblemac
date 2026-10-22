@@ -1,0 +1,8 @@
+# 2026-10-22T09:48:54 pi@10.42.0.2
+$ md5sum engine/pinfer_run_merge3; bash engine/spec_exact.sh ./engine/does_not_exist; echo "exit=$?"
+
+9479dfba627a82db764c69aa437924c3  engine/pinfer_run_merge3
+RESULT {"bench":"spec_exact","bin":"./engine/does_not_exist","match":false,"error":"binary not found"}
+exit=1
+
+[exit 0]

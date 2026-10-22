@@ -1,0 +1,8 @@
+# 2026-10-22T08:27:14 pi@10.42.0.2
+$ cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/hard/python PINFER_LIB=$PWD/tmp/hard/build/aarch64/engine/lib/libpinfer.so PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=golden/qwen35-0.8b/meta.json $V/python -m pytest -q -p no:cacheprovider tmp/hard/tests/python 2>&1 | tail -2; md5sum tmp/hard/build/aarch64/engine/lib/libpinfer.so
+
+......................                                                   [100%]
+94 passed in 110.18s (0:01:50)
+976b73ebcf972934c064e52fdcb9818e  tmp/hard/build/aarch64/engine/lib/libpinfer.so
+
+[exit 0]

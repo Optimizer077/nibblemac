@@ -1,0 +1,15 @@
+# 2026-10-22T08:30:27 pi@10.42.0.2
+$ for v in old new; do echo == $v; ./engine/thread_cmp_$v models/qwen35-0.8b-q4k-headq4k.pq data/prompt64.ids data/chat27.ids 32 4 2; done
+
+== old
+context 0: 32 tokens alone, 3 of 4 concurrent runs differ
+context 1: 32 tokens alone, 4 of 4 concurrent runs differ
+RACE: outputs differ
+RESULT {"bench":"thread_cmp","reps":4,"threads_per_ctx":2,"mismatch0":3,"mismatch1":4,"identical":false}
+== new
+context 0: 32 tokens alone, 0 of 4 concurrent runs differ
+context 1: 32 tokens alone, 0 of 4 concurrent runs differ
+concurrent == alone
+RESULT {"bench":"thread_cmp","reps":4,"threads_per_ctx":2,"mismatch0":0,"mismatch1":0,"identical":true}
+
+[exit 0]

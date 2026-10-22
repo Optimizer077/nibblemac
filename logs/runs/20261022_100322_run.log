@@ -1,0 +1,34 @@
+# 2026-10-22T10:03:22 pi@10.42.0.2
+$ cd ~/pinfer && du -sh /tmp/pytest-of-pi/pytest-6; ls /tmp/pytest-of-pi/pytest-6; rm -rf tmp/serve /tmp/pytest-of-pi/pytest-6; ls tmp; ls /tmp/pytest-of-pi; df -h /tmp | tail -1; md5sum engine/pinfer_run_fast; ls -la --time-style=+%H:%M venvs/pinfer/lib/python3.13/site-packages/pinfer/__init__.py
+
+25M	/tmp/pytest-of-pi/pytest-6
+state0
+statecurrent
+test_bad_model_file_bad_header0
+test_bad_model_file_bad_headercurrent
+test_bad_model_file_tiny_0
+test_bad_model_file_tiny_current
+test_bad_model_file_zeros_0
+test_bad_model_file_zeros_current
+test_error_exit_code0
+test_error_exit_codecurrent
+test_missing_model0
+test_missing_modelcurrent
+test_missing_tokenizer0
+test_missing_tokenizercurrent
+test_resolution_order0
+test_resolution_ordercurrent
+test_sidecar_directory0
+test_sidecar_directorycurrent
+ab
+att3
+pyctx
+tools
+pytest-4
+pytest-5
+pytest-current
+tmpfs           1.9G   49M  1.9G   3% /tmp
+9d30bbda58ddf2ffff07ca7f86328408  engine/pinfer_run_fast
+-rwxrwxr-x 1 pi pi 1588 02:22 venvs/pinfer/lib/python3.13/site-packages/pinfer/__init__.py
+
+[exit 0]

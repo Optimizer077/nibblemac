@@ -1,0 +1,11 @@
+# 2026-10-22T09:44:07 pi@10.42.0.2
+$ pgrep -af "flock /tmp/pinfer-bench.lock" | cut -c1-100; pgrep -af "pinfer serve" | grep -v pgrep | cut -c1-80; date
+
+32259 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_att3 -m 
+32392 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for r in 1 2 3; do for b in 
+32675 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for r in 1 2 3; do for D in 
+32866 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/serve/bench/serve_b
+32924 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -af "flock /tmp/pinfer-bench.lock" | cut
+Thu 22 Oct 09:44:08 KST 2026
+
+[exit 0]

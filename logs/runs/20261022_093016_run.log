@@ -1,0 +1,11 @@
+# 2026-10-22T09:30:16 pi@10.42.0.2
+$ pgrep -af "flock /tmp/pinfer-bench.lock" | cut -c1-160; uptime
+
+31638 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_att3 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c $((2048+64)) 
+31646 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ctx_check.sh ./engine/pinfer_run_merge3 ./engine/pinfer_run_fast
+32069 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_att4 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c $((4096+64)) 
+32100 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/python PINFER_LIB=$PWD/
+32122 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -af "flock /tmp/pinfer-bench.lock" | cut -c1-160; uptime
+ 09:30:17 up  7:55,  5 users,  load average: 4.24, 4.15, 4.02
+
+[exit 0]

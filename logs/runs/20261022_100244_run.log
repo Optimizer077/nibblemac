@@ -1,0 +1,7 @@
+# 2026-10-22T10:02:44 pi@10.42.0.2
+$ cd ~/pinfer && PYTHONPATH=tmp/serve/python PINFER_LIB=$PWD/tmp/serve/lib/libpinfer.so ~/pinfer/venvs/pinfer/bin/python -m pytest -q -p no:cacheprovider tmp/serve/tests/python/test_cli.py -k converter 2>&1 | tail -2
+
+.                                                                        [100%]
+1 passed, 7 deselected in 0.47s
+
+[exit 0]

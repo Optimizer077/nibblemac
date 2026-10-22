@@ -1,0 +1,20 @@
+# 2026-10-22T10:04:33 pi@10.42.0.2
+$ ps -eo pid,etimes,pcpu,rss,args --sort=-pcpu | head -8; echo; ls /tmp/pinfer-bench.lock 2>/dev/null; pgrep -af "pinfer|python" | grep -v pgrep | head -8
+
+    PID ELAPSED %CPU   RSS COMMAND
+  34450       5  396 567172 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 2 --ids-file data/ctx512.ids --dump-logits tmp/ctx/l512_old.bin
+  34467       0  100  3504 ps -eo pid,etimes,pcpu,rss,args --sort=-pcpu
+  34456       0 12.5 10632 sshd-session: pi [priv]
+  33275     924  0.2     0 [kworker/0:2-events_power_efficient]
+     91   30571  0.1     0 [irq/40-mmc0]
+  33620     556  0.1     0 [kworker/0:0-events]
+  32797    1339  0.1     0 [kworker/1:1-cgroup_release]
+
+/tmp/pinfer-bench.lock
+34041 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ctx_check.sh ./engine/pinfer_run_merge3 ./engine/pinfer_run_fast
+34311 timeout --kill-after=30 1200 bash -c bash engine/ctx_check.sh ./engine/pinfer_run_merge3 ./engine/pinfer_run_fast
+34312 bash engine/ctx_check.sh ./engine/pinfer_run_merge3 ./engine/pinfer_run_fast
+34424 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for C in 2048 4096; do for D in 0 1; do echo "== ctx $C kv $D"; bash tmp/att3/att3_pv_ab.sh $C tmp/att3/s${C}_kv$D.bin $D ./engine/pinfer_run_fast ./engine/pinfer_run_att4; done; done
+34450 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 2 --ids-file data/ctx512.ids --dump-logits tmp/ctx/l512_old.bin
+
+[exit 0]

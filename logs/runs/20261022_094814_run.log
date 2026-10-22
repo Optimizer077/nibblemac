@@ -1,0 +1,11 @@
+# 2026-10-22T09:48:14 pi@10.42.0.2
+$ md5sum engine/pinfer_run_merge3 engine/spec_exact.sh engine/ctx_check.sh; ls -la --time-style=+%H:%M engine/pinfer_run_merge3 engine/spec_exact.sh engine/ctx_check.sh
+
+md5sum: engine/pinfer_run_merge3: No such file or directory
+fb1e433576125bc19a25799e8e6e376f  engine/spec_exact.sh
+07561f150c64cd4079fdecf3e7dab1bd  engine/ctx_check.sh
+ls: -rwxr-xr-x 1 pi pi 1270 02:52 engine/ctx_check.sh
+-rwxr-xr-x 1 pi pi 1037 00:42 engine/spec_exact.sh
+cannot access 'engine/pinfer_run_merge3': No such file or directory
+
+[exit 2]

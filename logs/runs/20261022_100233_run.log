@@ -1,0 +1,10 @@
+# 2026-10-22T10:02:33 pi@10.42.0.2
+$ cd ~/pinfer && export PYTHONPATH=tmp/serve/python; ~/pinfer/venvs/pinfer/bin/python tmp/serve/tools/convert.py --help 2>&1 | tail -6; ls tmp/serve/tools; ~/pinfer/venvs/pinfer/bin/pip list 2>/dev/null | grep -i -E "safetensors|torch|ml.dtypes"; ls tmp/hard 2>/dev/null
+
+Traceback (most recent call last):
+  File "/home/pi/pinfer/tmp/serve/tools/convert.py", line 21, in <module>
+    from quant import Q4_G32, Q4K_G32, Q8_G32, quantize_pack
+ModuleNotFoundError: No module named 'quant'
+convert.py
+
+[exit 2]

@@ -1,0 +1,12 @@
+# 2026-10-22T10:03:14 pi@10.42.0.2
+$ cd ~/pinfer && du -sh tmp/serve; ls -la --time-style=+%H:%M /tmp/pytest-of-pi 2>/dev/null | tail -4; find /tmp/pytest-of-pi -name "same-layout.pq" -newer tmp/serve/lib/libpinfer.so -print 2>/dev/null; pgrep -af "pinfer serve" | grep -v pgrep || echo "no pinfer serve process"; (ss -ltn | grep -E ":809[0-9]") || echo "ports 8090-8099 free"
+
+1.1M	tmp/serve
+drwx------ 11 pi   pi   400 08:26 pytest-4
+drwx------ 11 pi   pi   400 08:29 pytest-5
+drwx------ 11 pi   pi   400 09:42 pytest-6
+lrwxrwxrwx  1 pi   pi    26 09:39 pytest-current -> /tmp/pytest-of-pi/pytest-6
+no pinfer serve process
+ports 8090-8099 free
+
+[exit 0]

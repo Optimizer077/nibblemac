@@ -1,0 +1,13 @@
+# 2026-10-22T08:57:32 pi@10.42.0.2
+$ date; ps aux --sort=-%cpu | head -3 | cut -c1-180; ls -la tmp/att3/*.bin | tail -4
+
+Thu 22 Oct 08:57:33 KST 2026
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+pi         29841  398  9.9 580648 387868 ?       Rl   08:54  11:49 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c 8256 --ids-file data/ctx8192.ids --spe
+root       29921 10.7  0.2  21456 10628 ?        Ss   08:57   0:00 sshd-session: pi [priv]
+-rw-rw-r-- 1 pi pi  45367368 Oct 22 06:54 tmp/att3/s2048_kv1.bin
+-rw-rw-r-- 1 pi pi 120864840 Oct 22 06:57 tmp/att3/s4096_kv0.bin
+-rw-rw-r-- 1 pi pi  70533192 Oct 22 06:59 tmp/att3/s4096_kv1.bin
+-rw-rw-r-- 1 pi pi 221528136 Oct 22 08:48 tmp/att3/s8192_kv0.bin
+
+[exit 0]

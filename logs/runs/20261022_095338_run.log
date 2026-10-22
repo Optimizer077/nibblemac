@@ -1,0 +1,15 @@
+# 2026-10-22T09:53:38 pi@10.42.0.2
+$ cd ~/pinfer && export PYTHONPATH=tmp/serve/python PINFER_LIB=$PWD/tmp/serve/lib/libpinfer.so; V=~/pinfer/venvs/pinfer/bin; PINFER_TEST_REQUIRE=1 PINFER_TEST_MODEL=models/qwen35-0.8b-bf16.pq PINFER_TEST_TOKENIZER=models/qwen35-0.8b-tokenizer PINFER_TEST_GOLDEN=golden/qwen35-0.8b/meta.json $V/python -m pytest -q -p no:cacheprovider tmp/serve/tests/python/test_cli.py -k converter 2>&1 | tail -2; timeout 100 $V/python -m pinfer serve -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer --host 10.42.0.2 --port 8092 2>&1 | tail -12; pgrep -af "pinfer serve" | grep -v pgrep || echo "no server left"
+
+FAILED tmp/serve/tests/python/test_cli.py::test_converter_is_available - Modu...
+1 failed, 7 deselected in 0.34s
+2026-10-22 10:00:25,174 INFO pinfer.model: loaded models/qwen35-0.8b-q4k-headq4k.pq: vocab 248320, max_ctx 4096, 4 threads, libpinfer 0.2.0 (/home/pi/pinfer/tmp/serve/lib/libpinfer.so)
+2026-10-22 10:00:30,200 INFO pinfer.server: serving qwen35-0.8b-q4k-headq4k on http://10.42.0.2:8092/v1 (max_ctx 4096, kv fp32, speculative k=default, reuse on, history generated, state cache 256 MB)
+2026-10-22 10:00:36,283 INFO pinfer.server: chat prompt=26 cached=0 (none) completion=48 end=length queue=0.00s prefill=0.78s decode=4.85s 9.69 tok/s spec k=2 1.741 tok/pass
+2026-10-22 10:00:39,704 INFO pinfer.server: chat prompt=20 cached=0 (none) completion=40 end=length queue=0.00s prefill=0.72s decode=2.54s 15.34 tok/s spec k=2 2.786 tok/pass
+2026-10-22 10:00:41,412 INFO pinfer.server: completion prompt=6 cached=0 (none) completion=16 end=length queue=0.00s prefill=0.23s decode=1.43s 10.46 tok/s spec k=2 1.875 tok/pass
+2026-10-22 10:00:43,772 INFO pinfer.server: chat prompt=17 cached=0 (none) completion=11 end=stop queue=0.00s prefill=0.57s decode=1.43s 6.99 tok/s spec k=2 1.375 tok/pass
+2026-10-22 10:02:02,781 INFO pinfer.server: interrupted, shutting down
+no server left
+
+[exit 0]

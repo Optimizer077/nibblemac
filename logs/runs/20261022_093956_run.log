@@ -1,0 +1,13 @@
+# 2026-10-22T09:39:56 pi@10.42.0.2
+$ pgrep -af "flock /tmp/pinfer-bench.lock" | cut -c1-140; pgrep -af "pytest" | cut -c1-120 | head -3; date
+
+32100 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/pyt
+32259 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_run_att3 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -
+32392 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for r in 1 2 3; do for b in fast merge3; do for S in "" "--spec 3 --
+32548 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -af "flock /tmp/pinfer-bench.lock" | cut -c1-140; pgrep -af "pytest" | cut -c1-1
+32100 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTH
+32403 timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/python PINFE
+32404 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/python PINFER_LIB=$PWD/tmp/serve/lib/libp
+Thu 22 Oct 09:39:57 KST 2026
+
+[exit 0]

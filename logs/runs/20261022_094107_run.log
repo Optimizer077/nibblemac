@@ -1,0 +1,15 @@
+# 2026-10-22T09:41:07 pi@10.42.0.2
+$ pgrep -af "pytest|pinfer serve" | cut -c1-150 | head -5; ls tmp/serve; date
+
+32100 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/python PINFER
+32403 timeout --kill-after=30 1200 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/python PINFER_LIB=$PWD/tmp/serve/lib/libpi
+32404 bash -c cd ~/pinfer && V=~/pinfer/venvs/pinfer/bin; PYTHONPATH=tmp/serve/python PINFER_LIB=$PWD/tmp/serve/lib/libpinfer.so PINFER_TEST_REQUIRE=1
+32405 /home/pi/pinfer/venvs/pinfer/bin/python -m pytest -q -p no:cacheprovider --durations=10 tmp/serve/tests/python
+32737 bash -c mkdir -p pinfer && cd pinfer || exit 1; pgrep -af "pytest|pinfer serve" | cut -c1-150 | head -5; ls tmp/serve; date
+bench
+lib
+python
+tests
+Thu 22 Oct 09:41:07 KST 2026
+
+[exit 0]

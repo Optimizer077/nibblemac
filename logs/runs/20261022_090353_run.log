@@ -1,0 +1,8 @@
+# 2026-10-22T09:03:53 pi@10.42.0.2
+$ date; ps aux --sort=-%cpu | head -2 | cut -c1-200
+
+Thu 22 Oct 09:03:53 KST 2026
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+pi         30178  398 11.3 681732 440036 ?       Rl   09:01  10:32 ./engine/pinfer_run_att2 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 1 -c 8256 --ids-file data/ctx8192.ids --spec 0 --kv-dtype 0 --n
+
+[exit 0]
