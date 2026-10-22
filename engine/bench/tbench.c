@@ -8,7 +8,8 @@
  * pf_matmul does; variants run on the same pf_act, so only the matrix kernel is timed.
  *
  *   tbench [--dtypes q4,q4k] [--shapes kv,qkv,...] [--batch 1,4,7] [--threads 1,4]
- *          [--vars ref,lut,...] [--hot] [--time 0.08] [--reps 3] [--check] [--tag NAME]
+ *          [--vars ref,lut,...] [--hot] [--core] [--time 0.08] [--reps 3] [--check] [--tag NAME]
+ * --core: time one 4-row tile on the calling thread, all its data in L1 (the loop's own speed).
  * Prints one `RESULT {json}` per configuration; exit 1 if any variant is not exact.
  */
 #define _GNU_SOURCE
@@ -37,9 +38,9 @@ static const shape_t SHAPES[] = {
 
 static struct {
     char dtypes[64], shapes[256], vars[256], tag[64];
-    int batch[16], nbatch, threads[8], nthreads, hot, check, reps;
+    int batch[16], nbatch, threads[8], nthreads, hot, check, reps, core;
     double time;
-} opt = {"q4,q4k", "kv,qkv,gate,down", "ref", "tbench", {1, 4, 7}, 3, {1, 4}, 2, 0, 0, 3, 0.08};
+} opt = {"q4,q4k", "kv,qkv,gate,down", "ref", "tbench", {1, 4, 7}, 3, {1, 4}, 2, 0, 0, 3, 0, 0.08};
 
 static double now(void) {
     struct timespec ts;
@@ -97,7 +98,6 @@ static void call_task(void *arg, int tid, int nthr) {
 static void run(pf_pool *pool, int thr, const qvar *v, const pf_mat *W, const void *aux,
                 const pf_act *A, float *Y, int n) {
     call_t c = {v->fn, W, aux, A, Y, n};
-    kern_q4_asm = v->q4asm;
     kern_pool_run(pool, call_task, &c, thr);
 }
 
@@ -144,7 +144,8 @@ static int bench_shape(unsigned dtype, const char *dname, const shape_t *sh, pf_
                 int noisy = 0;
                 if (!opt.check) {
                     const double t1 = now();
-                    run(pools[ti], thr, v, &Ws[0], aux[0], &A, Y, n);
+                    if (opt.core) v->fn(&Ws[0], aux[0], &A, Y, n, 0, 4);
+                    else run(pools[ti], thr, v, &Ws[0], aux[0], &A, Y, n);
                     const double one = now() - t1 + 1e-7;
                     iters = (long)(opt.time / one) + 1;
                     if (iters < copies && copies > 1) iters = copies;
@@ -152,8 +153,11 @@ static int bench_shape(unsigned dtype, const char *dname, const shape_t *sh, pf_
                     double best_any = 1e30;
                     for (int rep = 0, clean = 0; rep < opt.reps + 4 && clean < opt.reps; rep++) {
                         const double b0 = busy_seconds(), s0 = self_seconds(), t0 = now();
-                        for (long i = 0; i < iters; i++)
-                            run(pools[ti], thr, v, &Ws[i % copies], aux[i % copies], &A, Y, n);
+                        if (opt.core) /* one tile, all data in L1: the loop's own speed */
+                            for (long i = 0; i < iters; i++) v->fn(&Ws[0], aux[0], &A, Y, n, 0, 4);
+                        else
+                            for (long i = 0; i < iters; i++)
+                                run(pools[ti], thr, v, &Ws[i % copies], aux[i % copies], &A, Y, n);
                         const double wall = now() - t0, per = wall / iters;
                         const double fr = (busy_seconds() - b0) - (self_seconds() - s0);
                         if (fr < foreign) foreign = fr;
@@ -165,16 +169,17 @@ static int bench_shape(unsigned dtype, const char *dname, const shape_t *sh, pf_
                     }
                     if (noisy) best = best_any;
                 }
-                const double gops = best > 0 ? 2.0 * rows * cols * n / best / 1e9 : 0;
-                const double cbv = best * 1.5e9 * thr / ((double)rows / 4 * cols / 32 * n);
+                const double gops = best > 0 ? 2.0 * (opt.core ? 4 : rows) * cols * n / best / 1e9 : 0;
+                const double tiles = opt.core ? 1.0 : (double)rows / 4, used = opt.core ? 1 : thr;
+                const double cbv = best * 1.5e9 * used / (tiles * cols / 32 * n);
                 printf("%-8s %-4s %-6s %5dx%-5d n=%-2d thr=%d %10.1f us %6.2f GOP/s %6.2f c/bv %s%s\n",
                        v->name, dname, sh->name, rows, cols, n, thr, best * 1e6, gops, cbv,
                        exact ? "exact" : "MISMATCH", noisy ? " NOISY" : "");
                 printf("RESULT {\"bench\":\"tbench\",\"tag\":\"%s\",\"var\":\"%s\",\"dtype\":\"%s\","
                        "\"shape\":\"%s\",\"rows\":%d,\"cols\":%d,\"n\":%d,\"threads\":%d,\"hot\":%d,"
-                       "\"us\":%.2f,\"gops\":%.3f,\"cbv\":%.3f,\"iters\":%ld,\"aux_bytes\":%zu,"
+                       "\"core\":%d,\"us\":%.2f,\"gops\":%.3f,\"cbv\":%.3f,\"iters\":%ld,\"aux_bytes\":%zu,"
                        "\"exact\":%s,\"noisy\":%s,\"foreign_cpu_s\":%.3f}\n",
-                       opt.tag, v->name, dname, sh->name, rows, cols, n, thr, opt.hot, best * 1e6,
+                       opt.tag, v->name, dname, sh->name, rows, cols, n, thr, opt.hot, opt.core, best * 1e6,
                        gops, cbv, iters, auxb, exact ? "true" : "false", noisy ? "true" : "false",
                        foreign);
                 fflush(stdout);
@@ -199,6 +204,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--time")) opt.time = atof(v), i++;
         else if (!strcmp(a, "--reps")) opt.reps = atoi(v), i++;
         else if (!strcmp(a, "--hot")) opt.hot = 1;
+        else if (!strcmp(a, "--core")) opt.core = opt.hot = 1; /* tile 0 only, 1 thread */
         else if (!strcmp(a, "--check")) opt.check = 1;
         else if (!strcmp(a, "--list")) {
             for (int k = 0; k < NQVARS; k++) printf("%-8s %s\n", QVARS[k].name, QVARS[k].about);

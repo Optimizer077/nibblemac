@@ -12,6 +12,23 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Table-lookup kernels and the multiply loop's dispatch order (lut agent, 17:12–22:20; branch `worktree-agent-aa5998fa1cda1365d`) — measured, nothing integrated
+- Engine unchanged (rebuild byte-identical to 69b31a3, md5 `508f1d74`). Added bench tools:
+  `engine/bench/ubench2.c` (A72 pairing rules with the dispatch order controlled),
+  `engine/bench/tbench.c` + `qvar_*.c` (A/B bench of Q4 / Q4K kernel variants, byte-compared with the
+  C loops; `--core` times one L1-resident tile), `tools/gen_kern_q4s.py` (asm generator →
+  `engine/bench/q4{s,e,m}_gen.h`). Details: `engine/bench/KERNELS.md` Part 5.
+- Measured: SMLAL pairs perfectly with D-form ops (8.34 cycles per 8 + 8) but Q-form ops cost
+  +0.5–0.7 cycle each next to it; TBL .8b issues 2 per cycle, TBL .16b 1.5 cycles
+  (`bench/results/lut-ubench2_20261022_175209.json`, `lut-ubench2b_20261022_175214.json`).
+- Dead end: exact T-MAC-style LUT kernel 4.5–8× slower than SMLAL (0.49 vs 0.26 instructions per
+  MAC; c4gate n = 7 10.6 vs 53.7 GOP/s) (`lut-tbench-r1_20261022_215231.json`).
+- Dispatch-ordered asm passes: −9 to −13 % cycles per block-vector on Q4 (one L1 tile, n = 7:
+  26.0 → 22.6), exact (416 kbench configs, yhash = 69b31a3), but 4B prefill only +2.1 % (64 tokens)
+  / +3.5 % (256) in one A/B round vs `pinfer_run_csp1` (`cerno-lut-e2e4b-r1_20261022_221018.json`,
+  gitignored with the Cerno results): below the 5 % bar, not integrated.
+- Pi: scratch `tmp/lut/`, `engine/pinfer_run_lut0/1` removed; `pinfer_run_fast` untouched (`d48ffda1`).
+
 ### Renamed (lead, 15:35): piquant → **nibblepi**
 - Owner asked for a better name; a naming review checked meaning, collisions (GitHub, PyPI, npm, web)
   and trademark: `nibblepi` (a nibble = 4 bits, the weight size; pi = the board) was the only candidate

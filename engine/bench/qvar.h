@@ -17,7 +17,6 @@ typedef struct {
     qvar_prep prep;
     qvar_fn fn;
     const char *about;
-    int q4asm; /* kern_q4_asm while this variant runs (ref: 0 = the C loops) */
 } qvar;
 
 extern const qvar QVARS[];
@@ -29,6 +28,7 @@ void qv_lut(const pf_mat *W, const void *aux, const pf_act *A, float *Y, int n, 
 void *qv_lut_prep(const pf_mat *W, size_t *bytes);
 void qv_isq(const pf_mat *W, const void *aux, const pf_act *A, float *Y, int n, int r0, int r1);
 void qv_q4s(const pf_mat *W, const void *aux, const pf_act *A, float *Y, int n, int r0, int r1);
+void qv_q4e(const pf_mat *W, const void *aux, const pf_act *A, float *Y, int n, int r0, int r1);
 void qv_q4m(const pf_mat *W, const void *aux, const pf_act *A, float *Y, int n, int r0, int r1);
 
 #endif

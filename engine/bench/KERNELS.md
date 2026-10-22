@@ -650,3 +650,99 @@ standard and 6 adaptive rows all match. The rerun above uses this branch's scrip
   the numerics, so opt-in with a perplexity check; 3 threads for n = 2-3 (memory-bound).
 - k = 4 verification (n = 5) and prefill now run 7-vector passes; n = 8+ verification (k >= 7)
   splits into two passes again.
+
+---
+## Part 5 (2026-10-22): table-lookup kernels and the dispatch order of the multiply loop (lut agent)
+
+Goal: raise the compute ceiling of the batched Q4 kernels (prefill, verify passes, Cerno 4B
+decisions; a 4B prefill is 93 % matmul at ~54 GOP/s = 28-30 cycles per block-vector, c/bv), with
+bit-identical results. Branch `worktree-agent-aa5998fa1cda1365d` from 69b31a3. **Result: nothing
+integrated.** The T-MAC-style LUT kernel is 4.5-8x slower than SMLAL; a hand-scheduled asm loop is
+9-13 % faster per block-vector on Q4 but only +2.1 / +3.5 % on the 4B prefill (64 / 256 tokens),
+below the 5 % bar. What remains: the measured issue rules below, `engine/bench/ubench2.c`,
+`engine/bench/tbench.c` + `qvar_*.c` (A/B bench of kernel variants, byte-compared with the C
+loops; `--core` = one L1-resident tile) and `tools/gen_kern_q4s.py` (asm generator).
+
+### What the A72 guide says (Arm Cortex-A72 Software Optimization Guide, UAN0016A, 2015)
+- 4.1: dispatch takes up to **3 uops per cycle in program order**, at most **one uop to F0 and one
+  to F1** per cycle.
+- p. 25: SMULL / SMLAL(2) latency 4 (accumulate 1), throughput 1, **F0 only**; SADALP, USHR / SHL /
+  SSHLL F1 only, throughput 1. p. 24: ADD / ADDP / SADDLP / AND F0/F1, throughput 2.
+- p. 27: FMUL / FMLA / FSUB Q-form throughput 1 (D-form 2), F0/F1; SCVTF Q-form F32 latency 4,
+  throughput 1/2, F0 only. p. 30: TBL / TBX D-form latency 3 x N, Q-form 3 x N + 3 (N table
+  registers), F0/F1, no throughput given.
+
+### ubench2: pairing rules with the dispatch order controlled
+Loops of 16 independent ops, mixes interleaved A B A B (`bench/results/lut-ubench2_20261022_175209.json`,
+`lut-ubench2b_20261022_175214.json`). Cycles per loop at 1.5 GHz:
+
+| test | cycles / 16 ops |
+|---|---|
+| SMLAL x 16 | 16.0 (1 per cycle, F0) |
+| SMLAL + any D-form op, 8 + 8 (USHR / ADD .8b, FMLA / FMUL / FSUB .2s, TBL .8b, scalar MADD) | **8.34** (perfect pairing) |
+| SMLAL + ADD / ADDP / AND / MOVI / ZIP Q-form | 11.95 |
+| SMLAL + USHR / SADDLP / FMUL / FSUB Q-form; + FMLA .4s; + SADALP; + LDR q | 13.68; 12.39; 11.01; 11.02 |
+| SMLAL + SCVTF .4s | 24.0 (F0, 2 cycles each) |
+| grouped 8 SMLAL then 8 USHR .16b (ubench.c's order, its "0.94 serialized") | 15.56 (13.68 interleaved) |
+| 24 SMLAL + 8 FMLA / FMUL / FSUB .4s; + 8 ADDP; + 8 TBL .8b | 25.0; 24.0; 24.1 (nearly free at 3:1) |
+| one Q4 block-vector's ops hand-interleaved, no dependencies (16 SMLAL, 3 ADDP, SADDLP, SCVTF, FMUL, FMLA, FMLS, 2 LDR q) | 19.9 (D-form float + magic int->float: 19.7) |
+| TBL .16b with 1 / 2 / 4 table registers; TBL .8b with 1 / 2 | 1.50 / 3.0 / 7.0; **0.50** / 1.0 per op |
+
+A model that fits most rows: the FP/ASIMD register file takes ~3 x 64-bit result writes per cycle
+(SMLAL, Q-form ops and LDR q write 2 units, D-form ops 1). A Q4 block-vector needs ~52-54 units:
+~18-20 cycles, not the 16 of the multiplies.
+
+### T-MAC-style table lookup (`qvar_lut.c`): exact, and 4.5-8x slower
+x = 16 h + l (l = x & 15, h = x >> 4); per group of 4 columns two 16-entry byte tables (subset
+sums of l: 0..60, of h: -32..28); weights repacked once into 16-row panels of bit-plane indices
+(1 byte per weight + fp32 scales); per 16 rows x 32 columns x 1 vector: 4 planes x 8 groups x 2 =
+64 TBL .16b, byte sums of 4 groups (no overflow), planes combined in int16, t = 16 H + L in int32,
+then the float update of kern_quant.c => bit-identical (tbench `exact`). Why it cannot win here: an
+exact table entry is a byte, so a TBL lane carries at most 16 bit-products = 0.5 MAC; TBL .8b gives
+4 MACs per 64-bit write, SMLAL 8 MACs per 128-bit write (the same per write unit), and the LUT's
+bytes still need accumulating adds while SMLAL accumulates in place. Measured (`lut-tbench-r1`):
+63 instructions per block-vector (0.49 per MAC; 64 TBL .16b, 81 ADD per 4 block-vectors) vs 33
+(0.26 per MAC) in kern_q4; hot 1 thread 93-111 c/bv vs 26-41; 4B shapes cold 4 threads, n = 7:
+c4gate 144.7 c/bv = 10.6 GOP/s vs ref 28.6 = 53.7 GOP/s, c4down 240.6 (6.4 GOP/s) vs 30.2 (50.9),
+c4qkv 146.5 (10.5) vs 27.9 (55.1). Dropped.
+
+### Dispatch-ordered asm passes (`tools/gen_kern_q4s.py`, tbench variants q4s / q4e / q4m)
+One asm loop per pass size NV = 2..7 (Q4_G32 and Q4K_G32): every multiply of vector v is followed by
+one op of vector v-1's reduction (3 ADDP + SADDLP) or of vector v-2's float update (SCVTF, FMUL,
+FMLA, FMLS: the same ops and operands as kern_quant.c), a software pipeline that runs across blocks;
+fixed registers (all 32 at NV = 7). GCC's code for the C loop clusters 8-12 multiplies without an
+F1 op between them; `-fno-schedule-insns{,2}` on an interleaved C version (`isq`) does not keep the
+order (GIMPLE reorders; register MOVs and a spill per block). q4e = q4s with the per-vector scale / sum loads
+at the start of each step; q4m = magic-number int->float (ADD 0x4B400000, FSUB 1.5 x 2^23; exact for
+|t| < 2^22), NV <= 6. All exact: qemu tbench `--check` (n = 1-9, 13, 16, 64, 1 / 3 threads) and
+kbench `--check` with the asm in pf_matmul, 416 configurations, yhash identical to a 69b31a3 build.
+
+c/bv, Q4_G32 (ref = kern_q4 C loops / asm q4s / q4e / q4m):
+
+| run | n = 2 | n = 4 | n = 5 | n = 7 | file |
+|---|---|---|---|---|---|
+| one L1-resident tile, K = 1024 | 33.2 / 29.9 / 29.1 / - | 27.6 / 25.0 / 24.6 / - | 27.0 / 24.0 / 23.8 / - | 26.0 / 23.8 / **22.6** / - | `lut-tbench-core_20261022_220303.json` |
+| one L1-resident tile, K = 9216 | 33.9 / 31.4 / 30.7 / - | 28.4 / 25.9 / 25.7 / - | 27.7 / 24.4 / 24.6 / - | 26.7 / 24.0 / 23.2 / - | same |
+| hot, 1 thread, kv 512 x 1024 | 33.1 / 30.0 / 29.1 / 31.0 | 27.5 / 25.1 / 24.8 / 26.0 | 26.7 / 23.8 / 23.9 / 24.8 | 25.8 / 23.4 / 22.4 / 30.5 | `lut-tbench-r1_20261022_215231.json` |
+| cold, 4 threads, c4gate 9216 x 2560 | | | 29.3 / 26.7 / 26.5 / 27.6 | 28.6 / 28.9 / 27.8 / 34.4 | same |
+| cold, 4 threads, c4down 2560 x 9216 | | | 32.8 / 30.6 / 30.5 / 30.8 | 30.2 / 29.4 / 28.4 / 43.2 | same |
+| cold, 4 threads, c4qkv 8192 x 2560 | | | 29.4 / 27.4 / 27.0 / 27.8 | 27.9 / 26.3 / 25.3 / 36.0 | same |
+
+Q4K (0.8B) gains less or loses: one L1 tile n = 7 25.1 / 25.2 / 23.8; cold 4 threads n = 4 on
+gate 31.6 -> 41.5 (q4s), n = 7 on qkv 27.2 -> 32.9. pf_matmul level (kbench, asm on vs off, 4B
+shapes, 4 threads, n = 64 in groups of 7): c4qkv 50.3 -> 46.4 ms, c4out 26.3 -> 25.0, c4gate
+57.9 -> 56.0, c4down 60.7 -> 58.5 (-3 to -8 %); n = 5 / 7 mixed (-8 to +6 %).
+
+**End to end, one A/B round** (`pinfer_run_csp1` = 69b31a3, md5 508f1d74, vs the asm build
+e6d73aa3; 1.5 GHz; `bench/results/cerno-lut-e2e4b-r1_20261022_221018.json`, gitignored with the other
+Cerno results): 4B prefill 64 tokens 6.800 -> 6.943 tok/s (+2.1 %), 256 tokens 6.806 -> 7.047
+(+3.5 %). Below the 5 % bar the owner set for integrating it: **not integrated**; the engine on
+this branch is byte-identical to 69b31a3 (rebuild md5 508f1d74).
+
+Why the ~20 c/bv of the dependency-free mix is not reached: with every byte in L1 the loop still
+needs 22.6-24 c/bv, so the gap is in the loop, not memory. Each step has ~10 dependent non-multiply
+ops (reduction chain ADDP -> ADDP -> SADDLP, float chain load -> FMUL -> FMLA -> FMLS) that wait in
+the issue queues; moving the loads earlier (q4e) gained ~1 c/bv. The schedule has no free register
+at NV = 7 to stretch the chains further (32 used). Ideas not tried (stopped by the owner's budget
+rule): an F-stage lag of 3 at NV <= 6 (v30 free); why Q4K (which loads its decoded (d4, o4) from a
+per-tile buffer) gains less than Q4 was not analysed.

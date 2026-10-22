@@ -1,6 +1,11 @@
 """Generate the dispatch-ordered Q4_G32 / Q4K_G32 batched kernels (KERNELS.md Part 5).
 
-usage: python tools/gen_kern_q4s.py OUT.c [--magic] [--prefix NAME]
+usage: python tools/gen_kern_q4s.py OUT.h [--magic] [--early] [--prefix NAME]
+  engine/bench/q4s_gen.h  = --prefix q4s          (tbench variant q4s)
+  engine/bench/q4e_gen.h  = --early --prefix q4e  (q4e: per-vector loads at the step start)
+  engine/bench/q4m_gen.h  = --magic --prefix q4m  (q4m: magic-number int->float, NV <= 6)
+Measured and NOT integrated: -9 to -13 % cycles per block-vector on Q4 with all data in L1,
++2.1 / +3.5 % on the 4B prefill (64 / 256 tokens), below the 5 % bar (KERNELS.md Part 5).
 
 The Cortex-A72 dispatches at most 3 uops per cycle in program order, at most one to each of
 the F0 and F1 pipes (Arm Cortex-A72 Software Optimization Guide UAN0016A, section 4.1), and
@@ -25,6 +30,7 @@ mask (v30 the magic constant with --magic, NV <= 6).
 import sys
 
 MAGIC = "--magic" in sys.argv
+EARLY = "--early" in sys.argv  # per-vector scale / sum loads at the start of the step
 PREFIX = sys.argv[sys.argv.index("--prefix") + 1] if "--prefix" in sys.argv else "q4s"
 OUT = sys.argv[1]
 
@@ -113,9 +119,9 @@ def block_steps(NV, b_parity, kq, has_m=True, first=False, last=False, drain=Fal
                 st.at(2, "fsub %s.4s, %s.4s, v30.4s" % (Tf, Tf))
             else:
                 st.at(2, "scvtf %s.4s, %s.4s" % (Tf, Tf))
-            st.at(3, "ldr s10, [%%[fd], #%d]" % (4 * w))
+            st.at(-1 if EARLY else 3, "ldr s10, [%%[fd], #%d]" % (4 * w))
             st.at(4, "fmul v10.4s, v8.4s, v10.s[0]")
-            st.at(7, "ldr s11, [%%[ff], #%d]" % (4 * w))
+            st.at(-1 if EARLY else 7, "ldr s11, [%%[ff], #%d]" % (4 * w))
             st.at(8, "fmla %s.4s, %s.4s, v10.4s" % (acc, Tf))
             st.at(12, "fmls %s.4s, v9.4s, v11.s[0]" % acc)
         if v == 1 and not drain:
