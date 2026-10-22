@@ -94,8 +94,21 @@ sc[k * 4 + i] = (__fp16)(mx / -8.0f);
 
 Dumping the packed Q4 matrix of `kb_fill_matrix` (512 x 1024, seed 42; `q4dump.c` / `q4diff.py`)
 from a GCC 15 build and a clang 20 `-O3` build of that file: **274 of 16384 blocks (1.7 %) have a
-different scale, none of them a sign flip** (fp16 0x531e vs 0x511d, 0x0d27 vs 0x349d, ...), i.e. clang
-20 picks an element with a different |x| as the maximum, and 265 of those blocks' codes differ. Flag
+different scale, none of them a sign flip**, i.e. clang 20 picks an element with a different |x| as the
+maximum, and 265 of those blocks' codes differ. The first four differing blocks (d = mx / -8, fp16):
+
+| block (tile, sb, k, row) | GCC 15 d | clang 20 d | max found by GCC / clang 20 |
+|---|---|---|---|
+| 0, 0, 3, 3 | 0x1e53 = 0.00617 | 0x1d51 = 0.00520 | 0.0494 / 0.0416 |
+| 0, 2, 0, 2 | 0x1d01 = 0.00489 | 0x9c84 = -0.00441 | 0.0391 / 0.0353 |
+| 0, 2, 6, 0 | 0x270d = 0.0275 | 0x9d34 = -0.00508 | 0.220 / 0.0406 |
+| 1, 2, 2, 0 | 0x1d0a = 0.00491 | 0x1c57 = 0.00424 | 0.0393 / 0.0339 |
+
+In **all 274 differing blocks clang 20's maximum is the smaller one** (274 smaller, 0 larger, 0 equal;
+`q4diff.py`). A max-by-magnitude search returns the value of one element of the block, so the build
+that reports the larger |x| has found an element the other build missed: GCC's answer (shared by GCC
+13 / 14 / 16, clang 22 and clang 20 at `-O2`) is the true maximum and clang 20 `-O3`'s is wrong; in
+block (0, 2, 6, 0) it misses a 6x outlier. Flag
 bisection on that file alone (`bisect.sh`, `bisect2.sh`): `-O2`, `-O1`, `-O0`, `-fno-unroll-loops`,
 `-fno-builtin-fabsf`, `-frounding-math`, `-ffp-exception-behavior=strict` and `-ffp-model=strict` each
 restore GCC's result; `-fno-vectorize -fno-slp-vectorize`, `-fno-builtin-lrintf`, `-fno-builtin-fmaxf`,
@@ -105,6 +118,14 @@ restore GCC's result; `-fno-vectorize -fno-slp-vectorize`, `-fno-builtin-lrintf`
 Whatever the LLVM 20 transformation is, it changes the result of plain C floating-point code, which
 CONTRIBUTING.md §5 forbids: **clang 20 is out**, whatever its kernel speed. (The engine's own objects
 are not affected on this input, but the same idiom appears in the engine's quantizers.)
+
+**Standalone reproducer: `engine/bench/clang20_maxabs.c`** (the generator and the loop copied from
+kbench_util.c, every 32-column block of tile 0 checked against a volatile scalar pass). Under qemu:
+GCC 15 `-O3`, clang 22 `-O3`, clang 20 `-O2` / `-O3 -fno-unroll-loops` / `-O3 -fno-builtin-fabsf`:
+checksum -2.00933693, 0 wrong blocks; **clang 20 `-O3` for AArch64: 3 of 128 blocks wrong**, the first
+"row 0 block 22: loop 0.0406423, true -0.220291" (= block (0, 2, 6, 0) above: the 6x outlier is
+skipped); clang 20 `-O3` on x86-64: correct. So it is the AArch64 code generation of LLVM 20.1.8 for
+an unrolled `if (fabsf(x) > fabsf(mx)) mx = x` chain, fixed by LLVM 22.
 
 ## 4. Pi pilot (compilers at the project flags)
 

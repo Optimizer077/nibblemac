@@ -68,6 +68,15 @@ matter. Speculative decoding, prefix reuse and state restore all depend on it
 - threads split only independent rows, heads, channel ranges or KV groups, never a sum;
 - private data layouts stay behind the `engine/src/ops.h` contract.
 
+**Compilers.** Build with the compiler in `engine/Makefile` (GCC 15 cross; GCC 13, 14 and 16 and
+clang 22 produce bit-identical kernel output, `engine/TOOLCHAIN.md` §3). Do not build with clang 20:
+at `-O3` for AArch64 it miscompiles the quantizers' max-by-magnitude idiom
+`for (j) if (fabsf(x[j]) > fabsf(mx)) mx = x[j];` (a smaller maximum in ~2 % of 32-element blocks,
+so different scales and codes; `-ffp-contract=off` is not the issue, no FMA is involved). Reproducer:
+`engine/bench/clang20_maxabs.c` (exit 1 on a bad compiler; `engine/TOOLCHAIN.md` §3.1). Before
+trusting any new compiler or flag set, run kbench `--check` and compare its `yhash` values with the
+shipping build's, then the Pi gates below.
+
 **Anything that changes outputs is opt-in** and off by default until its quality is measured, for
 example `kv_dtype` fp16 / int8 (`engine/include/pinfer.h`).
 

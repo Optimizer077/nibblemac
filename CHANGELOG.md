@@ -12,6 +12,22 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Compilers pilot (toolchain agent, 17:37–; branch `worktree-agent-a75a53a7559d5b274`)
+- Added `engine/TOOLCHAIN.md` (every compiler / flag set tried, with numbers and result files) and
+  `engine/PILOTS.md` (index of pilot verdicts; first entry "Compilers").
+- PC (WSL, apt): cross GCC 13.4 / 14.3 / 16.0.1 and clang 20.1.8 / 22.1.2 installed next to the shipping
+  GCC 15.2; the engine builds static for the Pi with all of them at the project flags.
+- Exactness under qemu (kbench `--check`, 880 configurations per build): GCC 13 / 14 / 15 / 16 and clang 22
+  produce the shipping build's output bytes on every row; **clang 20 rejected**: at `-O3` it miscompiles a
+  max-by-magnitude loop (kbench's Q4 fill, 1.7 % of blocks get a different maximum), i.e. it changes plain
+  C floating-point results. No compiler contracts multiply-adds (`-ffp-contract=off` honoured by all).
+- Dead end: `-fno-schedule-insns` on `kern_quant.c` removes every stack spill of the Q4 loops but is 6–15 %
+  slower on the Pi (speed4b's `cerno-speed-kb8-nosched_*`): instruction count is the wrong proxy on the
+  in-order A72.
+- Pi: (pending) kbench Q4 n = 5 / 7 on the 4B shapes and 4B prefill p256 per compiler.
+- Scratchpad incident: three pre-existing files in the shared session scratchpad root overwritten (17:39–17:54)
+  and removed (18:18); nothing in the repo or on the Pi affected; details in the journal.
+
 ### Pi: overclock test reverted (21:01)
 - Boot partition edited on the PC (F:): `tryboot.txt` back to the custom-kernel test file, overclock files removed; `config.txt` / `cmdline.txt` unchanged; standard 1.5 GHz profile. `docs/pi-state.md` #5.
 
