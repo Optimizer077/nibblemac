@@ -401,7 +401,7 @@ python tools/convert.py models/Qwen3.5-0.8B models/pq/qwen35-0.8b-q4k-headq4k.pq
 
 # Pi: C CLI
 ./engine/pinfer_run -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 64 --ids-file data/prompt64.ids \
-    --spec 3 --draft-vocab 32768 --bench
+    --spec 4 --draft-vocab 32768 --adaptive --ngram 7 --bench     # the library's default speculation
 
 # Pi: Python package (wheel in build/dist/, install per docs/library.md)
 pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer \
@@ -449,6 +449,16 @@ re-read, and a memory-bounded cache of saved states keeps alternating conversati
 Full guide: [docs/library.md](docs/library.md) (§10: server). License: [Apache-2.0](LICENSE); the Qwen3.5
 weights (also Apache-2.0) are not included and are downloaded from Hugging Face. Not on PyPI yet.
 
+**Other Qwen3.5 models and llama.cpp files.** `tools/gguf_to_pq.py` converts a llama.cpp GGUF with
+Q4_0 / Q8_0 weights to `.pq` without re-quantizing: llama.cpp's blocks are the same as pinfer's
+Q4_G32 / Q8_G32, so every block is copied bit for bit (`--verify` checks it). Untied output heads are
+supported, and `Model.eval_select(tokens, ids)` returns the logits of the vocabulary ids `ids` only, for
+models that score a few answer options instead of generating text. The first user is
+[cerno-pi](https://github.com/Optimizer077/cerno-pi), which runs the Cerno 4B decision model (by Apertix,
+built on Qwen3.5-4B) on the Pi: a decision takes a median **27.6 s with pinfer and 112.4 s with
+llama.cpp** on the same Pi and file (4.5×), in 2.4 GB instead of 3.6 GB, with the same answers as
+Cerno's own engine (largest probability difference 0.011).
+
 ## 7. Methodology and records
 
 Everything that touched the Pi went through `harness/pi.py` (check / push / run / bench / snapshot),
@@ -493,10 +503,10 @@ docs/                     design, library guide, journal, pi-state, figures
 - Done: engine, kernels, exact speculative decoding, Python package and CLI, baselines, OS experiment,
   context window (two attention rewrites, fp16/int8 KV cache, state snapshots, keep-state chat, adaptive k),
   hardening for malformed input (version 0.2.0), a cheaper verify pass, prompt-lookup drafts and adaptive k (20.2 tok/s), batched kernels
-  (prefill 43 tok/s), `pinfer serve`, Qwen3.5-2B support.
-- Next: the approved 2.0 GHz overclock test (#10); a bounded-context mode for unbounded chats
-  (`engine/CONTEXT.md` §7); more models: Cerno 4B (in [cerno-pi](https://github.com/Optimizer077/cerno-pi))
-  and Gemma 4.
+  (prefill 43 tok/s), `pinfer serve`, Qwen3.5-2B support, lossless GGUF import and Cerno 4B
+  (in [cerno-pi](https://github.com/Optimizer077/cerno-pi)).
+- Next: prompt reading tuned for 4B-sized layers (in progress); the approved 2.0 GHz overclock test (#10);
+  a bounded-context mode for unbounded chats (`engine/CONTEXT.md` §7); Gemma 4.
 - Open decision: PyPI and a model asset for the release (#9).
 - Reproducing everything from a blank SD card / SSD: [docs/REPRODUCE.md](docs/REPRODUCE.md).
 
