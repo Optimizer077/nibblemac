@@ -145,13 +145,23 @@ def check(n: int, R: int = 64, K: int = 256, seed: int = 0) -> bool:
                   g.nb.name: c(B), g.yaddr.name: c(ybase) + 4 * lane})
     ca = c(cbase) + 32 * lane
     sa = c(sbase) + 4 * lane
-    # prologue: block 0 in registers, block 1 in the TMU FIFO, CA / SA at block 2
+    # prologue: block 0 in registers; the plan's pending segments of block 1 in the TMU FIFO;
+    # CA / SA advanced past the requested segments
     w = [mem[(ca + 4 * k) // 4] for k in range(8)]
     for k in range(8):
         e.reg[g.w[k].name] = w[k]
     e.reg[g.sc.name] = mem[sa // 4]
-    e.fifo = [mem[(ca + 512 + 4 * k) // 4].copy() for k in range(8)] + [mem[(sa + 64) // 4].copy()]
-    e.reg[g.ca.name], e.reg[g.sa.name] = ca + 1024, sa + 128
+    ca1, sa1 = ca + 512, sa + 64
+    for seg in q4gpu.PLANS[q4gpu.PLAN]["pending"]:
+        if seg == "lo":
+            e.fifo += [mem[(ca1 + 4 * k) // 4].copy() for k in range(4)]
+        elif seg == "hi":
+            e.fifo += [mem[(ca1 + 16 + 4 * k) // 4].copy() for k in range(4)]
+            ca1 = ca1 + 512
+        else:
+            e.fifo.append(mem[sa1 // 4].copy())
+            sa1 = sa1 + 64
+    e.reg[g.ca.name], e.reg[g.sa.name] = ca1, sa1
     for t in range(T):
         e.up = 0
         e.run(kern.start_slots)
@@ -159,15 +169,16 @@ def check(n: int, R: int = 64, K: int = 256, seed: int = 0) -> bool:
             e.run(kern.body_slots)
         assert e.up == len(unif), (e.up, len(unif))
         e.run(kern.end_slots)
-    assert len(e.fifo) == 9, len(e.fifo)   # the epilogue drains exactly one block
+    assert len(e.fifo) == q4gpu.pending_words(), (len(e.fifo), q4gpu.pending_words())  # drain
     y = mem[ybase // 4: ybase // 4 + n * R].view(np.float32).reshape(n, R)
     ref = q4gpu.reference_gpu(u, d, q, dx)
     cpu = q4gpu.reference_cpu_order(u, d, q, dx)
     exact = bool(np.array_equal(y.view(np.uint32), ref.view(np.uint32)))
     rel = float(np.abs(y - cpu).max() / np.abs(cpu).max())
     ndiff = int((y != cpu).sum())
-    print(f"n={n}: emulator == reference_gpu: {exact}; vs CPU formula: {ndiff}/{y.size} differ, "
-          f"max |diff| / max|y| = {rel:.2e}; stats {kern.stats()}")
+    print(f"plan={q4gpu.PLAN} n={n}: emulator == reference_gpu: {exact}; vs CPU formula: "
+          f"{ndiff}/{y.size} differ, max |diff| / max|y| = {rel:.2e}; max TMU FIFO {e.max_fifo}; "
+          f"stats {kern.stats()}")
     code = assemble(kern.program())
     print(f"   assembled {len(code)} instructions")
     return exact
@@ -175,6 +186,9 @@ def check(n: int, R: int = 64, K: int = 256, seed: int = 0) -> bool:
 
 if __name__ == "__main__":
     ns = [int(a) for a in sys.argv[2:]] or [1, 2, 7, 8, 11]
-    ok = all(check(n) for n in ns)
+    ok = True
+    for plan in q4gpu.PLANS:
+        q4gpu.PLAN = plan
+        ok = all([check(n) for n in ns]) and ok
     print("ALL OK" if ok else "FAIL")
     sys.exit(0 if ok else 1)

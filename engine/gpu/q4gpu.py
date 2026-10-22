@@ -33,7 +33,6 @@ EITHER = ("add", "mul")
 NPROD = 2
 MUL_ADDS = [1, 1, 1, 1]
 ACC_ALUS = ("add", "mul")
-REQUEST_AFTER_WORD = 4   # TMU request for block b+2 after word 4 of b+1 was consumed
 PARAMS = ["codes", "scales", "y", "act", "nt", "nb", "tsc", "tss", "tsy", "r4", "mask", "k65536",
           "k512", "k64"]
 
@@ -73,10 +72,7 @@ def block_ops(n: int, g: Regs) -> list[Q.Op]:
                 ops += [A("shr", r4, g.w[k], g.sh[m]), A("band", p, r4, g.mask)]
             if m == 3:
                 ops.append(S("ldtmu", g.w[k]))  # next block's word k
-                if k == REQUEST_AFTER_WORD:
-                    # request block b+2 once k+1 of the 9 words of b+1 left the TMU output
-                    # FIFO (16 words on V3D 4.x): (8 - k) + 9 <= 16 outstanding
-                    ops += tmu_request_ops(g)
+                ops += tmu_request_ops(g, k)    # requests the plan places after word k
             # accumulate adds: add ALU, except MUL_ADDS[m] of them (the last ones) on the mul ALU
             nmul = MUL_ADDS[m] if (m or k % 2) else 0
             for v in range(n):
@@ -103,17 +99,51 @@ def block_ops(n: int, g: Regs) -> list[Q.Op]:
                 # start value of the next block (a dummy after the tile's last block)
                 S("ldunif", tag=("negc_next", v)), A("mov", g.acc[v], r5, alus=EITHER)]
     ops.append(S("ldtmu", g.sc))  # next block's scales
+    ops += tmu_request_ops(g, 8)  # requests placed after the scale word
     ops.append(A("sub", g.bcnt, g.bcnt, 1, alus=("add",), cond="pushz"))
     return ops
 
 
-def tmu_request_ops(g: Regs) -> list[Q.Op]:
-    """Request the block at CA / SA (two vec4 code reads + one scale read), advance CA / SA."""
+# TMU request plans: which segments of a block (lo = words 0-3, hi = words 4-7, sc = scale)
+# are requested after which ldtmu of the body (word index 0-7, 8 = after the scale), for the
+# block whose turn it is: the FIFO delivers in request order, and a block's lo / hi / sc must
+# be requested in that order. CA advances after "hi", SA after "sc". `pending` = words of the
+# next block in the FIFO at the start of a body (what the prologue requests for block 1 and
+# the epilogue drains). Max outstanding words: mid4 13, end 9, split 7.
+PLANS = {
+    "mid4": {"req": [(4, ["lo", "hi", "sc"])], "pending": ["lo", "hi", "sc"]},
+    "end": {"req": [(8, ["lo", "hi", "sc"])], "pending": ["lo", "hi", "sc"]},
+    "split": {"req": [(1, ["hi"]), (5, ["sc", "lo"])], "pending": ["lo"]},
+}
+PLAN = "split"
+SEG_WORDS = {"lo": 4, "hi": 4, "sc": 1}
+
+
+def segment_ops(g: Regs, segs: list[str]) -> list[Q.Op]:
     A, M = Q.alu, ("mul",)
-    return [A("mov", tmuc, -4, alus=M), A("mov", tmua, g.ca, alus=EITHER),    # -4 = vec4 config
-            A("mov", tmuc, -4, alus=M), A("sub", tmua, g.ca, -16, alus=EITHER),
-            A("mov", tmua, g.sa, alus=EITHER),
-            A("add", g.ca, g.ca, g.k512, alus=EITHER), A("add", g.sa, g.sa, g.k64, alus=EITHER)]
+    ops = []
+    for s in segs:
+        if s == "lo":
+            ops += [A("mov", tmuc, -4, alus=M), A("mov", tmua, g.ca, alus=EITHER)]  # -4: vec4
+        elif s == "hi":
+            ops += [A("mov", tmuc, -4, alus=M), A("sub", tmua, g.ca, -16, alus=EITHER),
+                    A("add", g.ca, g.ca, g.k512, alus=EITHER)]
+        else:
+            ops += [A("mov", tmua, g.sa, alus=EITHER), A("add", g.sa, g.sa, g.k64, alus=EITHER)]
+    return ops
+
+
+def tmu_request_ops(g: Regs, after_word: int) -> list[Q.Op]:
+    """The plan's requests placed after the ldtmu of `after_word` (8 = the scale)."""
+    ops = []
+    for k, segs in PLANS[PLAN]["req"]:
+        if k == after_word:
+            ops += segment_ops(g, segs)
+    return ops
+
+
+def pending_words() -> int:
+    return sum(SEG_WORDS[s] for s in PLANS[PLAN]["pending"])
 
 
 def tile_end_ops(n: int, g: Regs) -> list[Q.Op]:
@@ -193,12 +223,12 @@ class Kernel:
             G["mov"](g.sh8, 8)
             G["mov"](g.sh12, 12)
             G["mov"](g.k16, -16)                       # shift amounts use the low 5 bits
-            # block 0 of the first tile into registers, block 1 requested (2 blocks in flight)
-            Q.emit(G, Q.schedule(tmu_request_ops(g)))
+            # block 0 of the first tile into registers, then the plan's pending part of block 1
+            Q.emit(G, Q.schedule(segment_ops(g, ["lo", "hi", "sc"])))
             for w in g.w:
                 G["nop"](sig=G["ldtmu"](w))
             G["nop"](sig=G["ldtmu"](g.sc))
-            Q.emit(G, Q.schedule(tmu_request_ops(g)))
+            Q.emit(G, Q.schedule(segment_ops(g, PLANS[PLAN]["pending"])))
             G["b"](G["R"].tile, cond="always").unif_addr(g.act)
             G["nop"]()
             G["nop"]()
@@ -216,7 +246,7 @@ class Kernel:
             G["nop"]()
             G["nop"]()
             G["nop"]()
-            for _ in range(9):   # drain the request for the block after the last one
+            for _ in range(pending_words()):   # drain what was requested past the last block
                 G["nop"](sig=G["ldtmu"](r0))
             G["tmuwt"]()
             G["nop"](sig=G["thrsw"])

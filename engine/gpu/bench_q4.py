@@ -20,7 +20,8 @@ import numpy as np
 import q4gpu
 from videocore6.driver import Driver
 
-SHAPES = {"gate": (9216, 2560), "down": (2560, 9216), "qkv": (8192, 2560), "c08gate": (3584, 1024)}
+SHAPES = {"gate": (9216, 2560), "down": (2560, 9216), "qkv": (8192, 2560), "c08gate": (3584, 1024),
+          "tiny": (256, 256), "small": (1024, 1024)}
 
 
 def pass_sizes(n: int, max_pass: int) -> list[int]:
@@ -116,7 +117,8 @@ def run_shape(name: str, n: int, iters: int, seconds: float, until_file: str = "
         model_t = sum((T // 8) * (B * (kerns[s].stats()["instr"] + 4)) * 4 / 500e6 for s in sizes)
         wbytes = (codes.nbytes + scales.nbytes) * len(sizes)   # weights re-read per pass
         ubytes = sum(uu.nbytes for uu in unifs) * 8             # every QPU reads the stream
-        res = {"shape": name, "rows": R, "cols": K, "n": n, "passes": sizes, "calls": len(times),
+        res = {"shape": name, "rows": R, "cols": K, "n": n, "passes": sizes, "plan": q4gpu.PLAN,
+               "calls": len(times),
                "sec": t, "gops": 2 * R * K * n / t / 1e9, "exact_vs_model": exact,
                "bad_words": nbad, "checked_words": int(ref.size), "all_finite": finite,
                "weight_bytes_per_call": wbytes, "uniform_bytes_per_call": ubytes,
@@ -140,7 +142,10 @@ def main() -> None:
     ap.add_argument("--tag", default="gpu-alone")
     ap.add_argument("--pass", dest="max_pass", type=int, default=8,
                     help="max vectors per register pass (n > this runs several passes)")
+    ap.add_argument("--plan", default=q4gpu.PLAN, choices=sorted(q4gpu.PLANS),
+                    help="TMU request plan (max outstanding words: mid4 13, end 9, split 7)")
     a = ap.parse_args()
+    q4gpu.PLAN = a.plan
     for name in a.shapes.split(","):
         for n in [int(v) for v in a.n.split(",")]:
             res = run_shape(name, n, a.iters, a.seconds, a.until_file, a.tag, a.max_pass)
