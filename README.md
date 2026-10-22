@@ -43,13 +43,56 @@ engine and package: `pinfer`.
 
 ## 1. Why the Pi 4 is hard, and what follows from it
 
-Three hardware facts decided the whole design.
+### The hardware
 
-- **One core saturates the memory bus.** A 256 MB streaming read runs at 4.20 GB/s on one core and
-  4.07 GB/s on four (`bench/memband`). Generating a token means reading *every* weight once, so decode
-  speed is simply `bandwidth ÷ bytes of weights per token`. A plain decode step of the 4.5-bit model
-  reads 424.9 MB (the 11.5 MB MTP head is only read when drafting), so that ceiling is about 9.9 tokens/s
-  at 4.2 GB/s; nothing done on the cores can move it.
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/pi4_hardware-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/pi4_hardware-mobile.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/pi4_hardware-dark.png">
+  <img alt="The Pi 4's BCM2711: four Cortex-A72 cores at 1.5 GHz with 32 KB L1 data caches, a shared 1 MB L2 and 4 GB of LPDDR4 DRAM read at a measured 4.20 GB/s. Every generated token streams 424.9 MB of weights, 405 times the L2, plus the 18.9 MB recurrent state from DRAM; what stays in L1 is a 16 KB chunk of the recurrent state and the int8 activations being multiplied. Decode is therefore at most 9.9 tokens/s; pinfer reaches 7.89." src="docs/figures/pi4_hardware.png">
+</picture>
+
+The Pi 4's processor has four Cortex-A72 cores at 1.5 GHz. Each core has a NEON unit (Arm's SIMD
+engine: one instruction works on a 128-bit register, for example 16 int8 values) and small private
+caches; L1, the fastest, holds 32 KB of data. The four cores share a 1 MB L2 cache, and everything else
+lives in DRAM, whose bandwidth (the rate at which bytes arrive from it) measures 4.20 GB/s on one core
+and no more on four. A token needs all 424.9 MB of weights, 405× the L2, so every weight comes from DRAM
+every time: decode speed ≈ bandwidth ÷ bytes of weights per token, at most 9.9 tokens/s here.
+
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/roofline-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/roofline-mobile.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/roofline-dark.png">
+  <img alt="Roofline on log-log axes: a plain decode step does 3.5 operations per byte of weights and reaches 11.9 GOP/s, under the 4.20 GB/s DRAM roof; a verify pass over 4 positions does 14.2 operations per byte and reaches 39.3 GOP/s, near the Q4K kernel's measured 47.5 GOP/s compute roof; prefill in groups of 16 reaches 37.2 GOP/s at 50.5 operations per byte. The A72's int8 instruction peak is 96 GOP/s." src="docs/figures/roofline.png">
+</picture>
+
+Arithmetic intensity is the number of operations done per byte read from DRAM; in this roofline plot a
+pass can go no higher than DRAM bandwidth × intensity (the DRAM roof) or the cores' arithmetic speed (the
+compute roof). A decode step does two operations (multiply, add) per weight and a 4.5-bit weight is 0.56
+bytes, so it manages only about 3.5 operations per byte: 11.9 billion per second (GOP/s), 80% of its DRAM
+roof (4.20 GB/s × 3.54 = 14.9). The cores could do 4× that (the 4-bit kernel computes 47.5 GOP/s when
+each weight serves 16 token positions), so scoring 4 positions per weight read costs only 1.20× scoring
+one, which is why speculative decoding pays; prefill reuses each weight for 16 positions and is limited by
+compute instead (37.2 GOP/s).
+
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/arm_isa-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="docs/figures/arm_isa-mobile.png">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/arm_isa-dark.png">
+  <img alt="Multiply-accumulates per 128-bit instruction: fp32 FMLA 4 and int8 SMLAL 8 are available on the Pi 4's Cortex-A72; fp16 FMLA 8 (Armv8.2), int8 SDOT 16 (Armv8.2, in the Pi 5's Cortex-A76) and int8 SMMLA 32 (Armv8.6) are not." src="docs/figures/arm_isa.png">
+</picture>
+
+The A72 implements Armv8.0-A, which predates Arm's machine-learning instructions: no fp16 arithmetic, no
+int8 dot product (SDOT) and no int8 matrix multiply (SMMLA). Its best int8 instruction, SMLAL, does 8
+multiply-accumulates into 16-bit sums that need extra pairwise adds to widen to 32 bits; SDOT does 16
+straight into 32-bit sums. This compares instructions, not chips: the figure says nothing about how fast
+a Pi 5 runs the model. Sources and derivations: [docs/ARCHITECTURE.md §9](docs/ARCHITECTURE.md#9-hardware).
+
+### Three facts that decided the design
+
+- **One core saturates the memory bus** (4.20 GB/s on one core, 4.07 on four; `bench/memband`). A plain
+  decode step of the 4.5-bit model reads 424.9 MB (the 11.5 MB MTP head is only read when drafting), so
+  the ceiling is about 9.9 tokens/s; nothing done on the cores can move it.
 - **The Cortex-A72 has NEON but none of the newer instructions** (`asimddp` dot-product, `fp16`,
   `i8mm`). Every modern ARM inference library — llama.cpp, MNN, ONNX Runtime, LiteRT — keeps its fast
   paths behind those features and falls back to plain NEON on this chip. LiteRT-LM's prebuilt binaries
@@ -104,8 +147,9 @@ their quality decided the default:
 - **Q8** is indistinguishable from bf16 (17.96 vs 17.93) at half the bytes.
 
 Activations are quantized to int8 per 32 columns at run time; the kernels use `SMULL`/`SMLAL` into
-16-bit lanes, widened into int32 with `SADALP` (one 128-bit NEON instruction per cycle on the A72, which is
-why int8 beats fp32 here).
+16-bit lanes, widened into int32 with pairwise adds (`SADDLP`/`SADALP`). The A72 issues one of these
+multiplies per cycle, 8 multiply-accumulates against 4 for an fp32 `FMLA`, which is why int8 beats fp32
+here (instruction figure in §1).
 
 ### 2.2 Kernels that run at the memory wall
 Per-dtype thread policy (Q8 on one thread already saturates DRAM; Q4K needs three to keep up with
@@ -363,7 +407,9 @@ benchmarks with a Pi-wide lock so parallel work never measures on top of itself.
 | Index of all documentation | [`docs/README.md`](docs/README.md) |
 | Kernel / speculation / vectorization / OS / baselines lab notebooks | `engine/bench/KERNELS.md`, `engine/SPEC.md`, `engine/CORE.md`, `os/kernel/KERNEL.md`, `bench/BASELINES.md` |
 
-Figures are rendered from these records by `tools/make_figures.py` and `tools/make_figures2.py`.
+Figures are rendered from these records by `tools/make_figures.py`, `tools/make_figures2.py` and
+`tools/make_figures3.py` (hardware figures; their Arm and Raspberry Pi sources are in
+[docs/ARCHITECTURE.md §9](docs/ARCHITECTURE.md#9-hardware)).
 
 ## 8. Repository layout
 ```

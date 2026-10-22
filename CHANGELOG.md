@@ -12,6 +12,21 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Hardware figures (figures agent, 13:35–14:10; branch `worktree-agent-a83b76690e63d2416`)
+- Added: `tools/make_figures3.py` and three figures in four variants each (desktop / phone × light /
+  dark): `pi4_hardware` (BCM2711 cores, caches and DRAM, and what pinfer keeps in L1 or streams from
+  DRAM per token), `roofline` (DRAM roof 4.20 GB/s, Q4K kernel 47.5 GOP/s on qkv at a batch of 16,
+  int8 instruction peak 96 GOP/s; plain decode 11.9, verify pass 39.3, prefill 37.2 GOP/s) and `arm_isa`
+  (multiply-accumulates
+  per 128-bit instruction: fp32 FMLA 4, int8 SMLAL 8 on the A72; fp16 FMLA 8, SDOT 16, SMMLA 32 not).
+- README §1 opens with "The hardware" (the three figures, with L1/L2, DRAM bandwidth, arithmetic
+  intensity and NEON defined); the three-facts list below it is shortened where the figures now show the
+  numbers; §2.1 names the widening adds (`SADDLP`/`SADALP`) correctly. New `docs/ARCHITECTURE.md` §9
+  "Hardware" with the derivations and the Arm / Raspberry Pi sources; `docs/RESULTS.md` §8 and §13.
+- Not verified, so labelled as an estimate: the Pi 4's theoretical DRAM peak (≈ 9.6 GB/s from
+  "LPDDR4-2400" × an assumed 32-bit bus; Raspberry Pi does not publish the width).
+- Existing figures unchanged: `make_figures.py` and `make_figures2.py` re-render byte-identically.
+
 ### Published (lead, 13:30)
 - The repository is public at `github.com/Optimizer077/piquant` under **Apache-2.0** (`LICENSE`).
   The history was rewritten before publishing: the Wi-Fi network name and the router and Pi MAC
