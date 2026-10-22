@@ -45,6 +45,7 @@ class Op:
     reads: set = field(default_factory=set)
     writes: set = field(default_factory=set)
     imm: object = None
+    thrsw: bool = False            # ALU op carries the thrsw signal (TMU load requests)
 
     def finish(self) -> "Op":
         for s in self.srcs:
@@ -78,8 +79,8 @@ class Op:
         return {_name(s) for s in self.srcs if _is_rf(s)} if self.kind == "alu" else set()
 
 
-def alu(name, dst, *srcs, alus=("add",), cond=None) -> Op:
-    return Op("alu", name, dst, tuple(srcs), alus, cond).finish()
+def alu(name, dst, *srcs, alus=("add",), cond=None, thrsw=False) -> Op:
+    return Op("alu", name, dst, tuple(srcs), alus, cond, thrsw=thrsw).finish()
 
 
 def sig(name, dst=None, tag=None) -> Op:
@@ -87,18 +88,24 @@ def sig(name, dst=None, tag=None) -> Op:
 
 
 class Slot:
-    __slots__ = ("add", "mul", "sigs")
+    __slots__ = ("add", "mul", "sigs", "no_sigs")
 
     def __init__(self):
         self.add = None
         self.mul = None
         self.sigs: list[Op] = []
+        self.no_sigs = False      # one of the two instructions after a thrsw: no signals
 
     def ops(self):
         return [o for o in (self.add, self.mul) if o is not None]
 
+    def has_thrsw(self) -> bool:
+        return any(o.thrsw for o in self.ops())
+
     def fits(self, op: Op, unit: str | None) -> bool:
         if unit is not None and getattr(self, unit) is not None:
+            return False
+        if self.no_sigs and (op.kind == "sig" or op.thrsw):
             return False
         alu_ops = self.ops() + ([op] if op.kind == "alu" else [])
         sigs = self.sigs + ([op] if op.kind == "sig" else [])
@@ -106,8 +113,9 @@ class Slot:
         if len(imms) > 1:
             return False
         rfr = set().union(*[o.rf_reads() for o in alu_ops]) if alu_ops else set()
-        sset = frozenset(s.name for s in sigs)
-        if len(sset) != len(sigs):
+        names = [s.name for s in sigs] + ["thrsw"] * sum(1 for o in alu_ops if o.thrsw)
+        sset = frozenset(names)
+        if len(sset) != len(names):
             return False
         if imms:
             if len(rfr) > 1 or sset not in SIG_OK_SMIMM:
@@ -147,14 +155,17 @@ def schedule(ops: list[Op], prefer_mul: bool = False) -> list[Slot]:
         units = [None] if op.kind == "sig" else (
             sorted(op.alus, key=lambda u: (u != "mul") if prefer_mul else (u != "add")))
         while True:
-            while len(slots) <= t:
+            while len(slots) <= t + 2:
                 slots.append(Slot())
             placed = None
             for u in units:
                 if slots[t].fits(op, u):
                     placed = u
                     break
-            if placed is not None or (op.kind == "sig" and slots[t].fits(op, None)):
+            ok = placed is not None or (op.kind == "sig" and slots[t].fits(op, None))
+            if ok and op.thrsw:   # the two instructions after a thrsw carry no signals
+                ok = not any(slots[t + d].sigs or slots[t + d].has_thrsw() for d in (1, 2))
+            if ok:
                 break
             t += 1
         s = slots[t]
@@ -163,10 +174,16 @@ def schedule(ops: list[Op], prefer_mul: bool = False) -> list[Slot]:
         else:
             setattr(s, placed, op)
             op.alus = (placed,)
+            if op.thrsw:
+                slots[t + 1].no_sigs = slots[t + 2].no_sigs = True
         for r in op.reads:
             last_r[r] = max(last_r.get(r, -1), t)
         for w in op.writes:
             last_w[w] = t
+    while slots and not slots[-1].ops() and not slots[-1].sigs:   # trailing padding
+        if any(s.has_thrsw() for s in slots[-3:-1]):
+            break
+        slots.pop()
     return slots
 
 
@@ -184,6 +201,8 @@ def emit(g: dict, slots: list[Slot]) -> None:
                 sigs.append(g["ldunif"])
             else:
                 sigs.append(g[o.name](o.dst))
+        if s.has_thrsw():
+            sigs.append(g["thrsw"])
         sig_arg = sigs if sigs else None
         a, m = s.add, s.mul
         if a is not None:

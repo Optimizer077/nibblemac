@@ -79,7 +79,11 @@ def run_shape(name: str, n: int, iters: int, seconds: float, until_file: str = "
         unif = unifs[0]
         ubuf = ubufs[0]
         kern = kerns[sizes[0]]
+        t0 = time.perf_counter()
         call()
+        first_call = time.perf_counter() - t0
+        if first_call > 0.5 * len(sizes):   # a GPU hang costs ~1 s per dispatch: do not loop
+            iters, seconds = 1, 0.0
         # CPU access speed of the (write-combined) BO mapping: read Y, write the uniform stream
         t0 = time.perf_counter()
         for _ in range(5):
@@ -101,6 +105,8 @@ def run_shape(name: str, n: int, iters: int, seconds: float, until_file: str = "
         exact = bool(np.array_equal(y[:, rows].view(np.uint32), ref.view(np.uint32)))
         nbad = int((y[:, rows].view(np.uint32) != ref.view(np.uint32)).sum())
         finite = bool(np.isfinite(y).all())
+        if not exact:
+            iters, seconds = 1, 0.0        # wrong output: one timed call, no loop
         times = []
         t_end = time.perf_counter() + seconds
         if until_file:
@@ -127,7 +133,8 @@ def run_shape(name: str, n: int, iters: int, seconds: float, until_file: str = "
                "model_sec_no_stall": model_t, "efficiency_vs_model": model_t / t,
                "t_min": float(np.min(times)), "t_max": float(np.max(times)),
                "t_p10": float(np.percentile(times, 10)), "t_p90": float(np.percentile(times, 90)),
-               "host_cpu_frac": host_cpu, "tag": tag, "bo_read_gbs": y_read_gbs,
+               "host_cpu_frac": host_cpu, "tag": tag, "first_call_sec": first_call,
+               "bo_read_gbs": y_read_gbs,
                "bo_write_gbs": u_write_gbs, "host_copy_gbs": host_copy_gbs}
         return res
 

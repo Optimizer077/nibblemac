@@ -120,16 +120,21 @@ SEG_WORDS = {"lo": 4, "hi": 4, "sc": 1}
 
 
 def segment_ops(g: Regs, segs: list[str]) -> list[Q.Op]:
+    """TMU load requests. Every load request carries the thrsw signal: without it the
+    V3D 4.2 TMU never returns the data and the GPU hangs (gpu-diag_20261022_220321)."""
     A, M = Q.alu, ("mul",)
     ops = []
     for s in segs:
         if s == "lo":
-            ops += [A("mov", tmuc, -4, alus=M), A("mov", tmua, g.ca, alus=EITHER)]  # -4: vec4
+            ops += [A("mov", tmuc, -4, alus=M),                                 # -4: vec4
+                    A("mov", tmua, g.ca, alus=EITHER, thrsw=True)]
         elif s == "hi":
-            ops += [A("mov", tmuc, -4, alus=M), A("sub", tmua, g.ca, -16, alus=EITHER),
+            ops += [A("mov", tmuc, -4, alus=M),
+                    A("sub", tmua, g.ca, g.k16, alus=EITHER, thrsw=True),      # ca + 16
                     A("add", g.ca, g.ca, g.k512, alus=EITHER)]
         else:
-            ops += [A("mov", tmua, g.sa, alus=EITHER), A("add", g.sa, g.sa, g.k64, alus=EITHER)]
+            ops += [A("mov", tmua, g.sa, alus=EITHER, thrsw=True),
+                    A("add", g.sa, g.sa, g.k64, alus=EITHER)]
     return ops
 
 
@@ -223,11 +228,12 @@ class Kernel:
             G["mov"](g.sh8, 8)
             G["mov"](g.sh12, 12)
             G["mov"](g.k16, -16)                       # shift amounts use the low 5 bits
-            # block 0 of the first tile into registers, then the plan's pending part of block 1
-            Q.emit(G, Q.schedule(segment_ops(g, ["lo", "hi", "sc"])))
-            for w in g.w:
-                G["nop"](sig=G["ldtmu"](w))
-            G["nop"](sig=G["ldtmu"](g.sc))
+            # block 0 of the first tile into registers, one segment at a time (<= 4 words
+            # outstanding), then the plan's pending part of block 1
+            for seg, dsts in (("lo", g.w[:4]), ("hi", g.w[4:]), ("sc", [g.sc])):
+                Q.emit(G, Q.schedule(segment_ops(g, [seg])))
+                for d in dsts:
+                    G["nop"](sig=G["ldtmu"](d))
             Q.emit(G, Q.schedule(segment_ops(g, PLANS[PLAN]["pending"])))
             G["b"](G["R"].tile, cond="always").unif_addr(g.act)
             G["nop"]()

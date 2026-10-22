@@ -110,9 +110,72 @@ n = 11: 476, i.e. 1.35 / 1.37 / 1.47 MAC per lane-instruction. No-stall model:
   a different summation order, ~1e-7 relative); opt-in only, with the Cerno agreement check
   (max |dp| <= 0.0146, top answer >= 51 / 52) and 0.8B perplexity before it is enabled.
 
-## Results
+## Results (2026-10-22, Pi at stock 1.5 GHz, V3D 500 MHz, all runs under the bench lock, throttled 0x0)
 
-(filled in below as measured)
+### Pi runs, in order
+| time (KST) | run | result | file |
+|---|---|---|---|
+| 21:4x | smoke (`hello.py`, `run --lock`) | lane add OK; an 8-batch CSD dispatch lands on 8 distinct QPUs (ids 0-7) | `logs/harness.jsonl` |
+| 21:48 | first kernel run, gate n = 7 | **GPU hang**: 1.02 s per call, NaN output (driver timeout + reset) | `bench/results/gpu-q4-first_20261022_214808.json` |
+| 22:03 | `diag.py` + the 256x256 shape with 3 request plans | `unif` (uniform-stream loop + `unif_addr`) OK; `math` and `fifo` **hang** on the first TMU load; all 3 plans hang; dmesg `v3d_reset: Resetting GPU for hang, V3D_ERR_STAT 0x1000` x 6 | `bench/results/gpu-diag_20261022_220321.json` |
+| 22:10 | `gpu-q4-alone` (thrsw fix) | all 6 configs bit-exact, 27-28 GOP/s | `bench/results/gpu-q4-alone_20261022_221029.json` |
+| 22:12 | `gpu-corun` | CPU keeps 94 %, combined 1.41-1.47x | `bench/results/gpu-corun_20261022_221209.json` |
+
+**The hang and its fix.** Every TMU *load* issued without the `thrsw` signal hangs the V3D 4.2
+(even one regular 32-bit read; stores are fine; the uniform stream is fine). The smoke kernel's
+load carried `sig=thrsw`, as every load in py-videocore6's examples and tests does, and worked.
+Fix (`segment_ops`): `thrsw` on every load request, the two following instructions free of
+signals, at most 4 words outstanding in the prologue. The TMU output FIFO depth could not be
+probed (the probe hung for the same reason); the kernel keeps <= 7 words outstanding
+(plan `split`), which runs.
+
+### Question 1: GPU alone (`bench_q4.py --plan split`, median of 10 calls)
+| shape | n | passes | ms / call | GOP/s | of no-stall model | bytes read / call | exact vs model |
+|---|---|---|---|---|---|---|---|
+| gate 9216x2560 | 7 | 1 | 12.16 | **27.2** | 63 % | 13.9 MB (1.14 GB/s) | yes (896 words) |
+| gate 9216x2560 | 64 | 8 x 8 | 108.8 | **27.8** | 63 % | 111.7 MB (1.03 GB/s) | yes (8192 words) |
+| down 2560x9216 | 7 | 1 | 12.03 | **27.5** | 64 % | 15.5 MB (1.29 GB/s) | yes |
+| down 2560x9216 | 64 | 8 x 8 | 107.6 | **28.1** | 64 % | 126.2 MB (1.17 GB/s) | yes |
+| qkv 8192x2560 | 7 | 1 | 10.88 | **27.0** | 62 % | 12.4 MB (1.14 GB/s) | yes |
+| qkv 8192x2560 | 64 | 8 x 8 | 97.7 | **27.5** | 63 % | 99.9 MB (1.02 GB/s) | yes |
+
+GOP/s = 2 R K n / t (same convention as the CPU numbers). "Exact vs model": the output equals
+`reference_gpu` (exact integer block sums, then fp32 mul / add) bit for bit on 4 sampled
+32-row tiles over all n vectors, so the int16 block sums are exact. The no-stall model is
+8 QPUs x 125 M instructions/s with 328 / 369 instructions per block (n = 7 / 8): the QPUs
+stall ~37 % (TMU / uniform latency with 7 words in flight). Bytes read = weights x passes +
+the uniform stream x 8 QPUs; the feeding Python thread uses ~1 % of a core; the GPU rate did
+not change when the ARM cores idled down to 600 MHz (ondemand) during this phase.
+Reading Y back from the write-combined BO runs at 0.6-0.7 GB/s (2.4 MB for gate n = 64 =
+~4 ms, 3.4 % of the call); writing the uniform stream at 1.9-2.7 GB/s.
+
+### Question 2: CPU + GPU together vs CPU alone (`corun.sh gate 64 7 1.0 3 8`)
+kbench `kbench_gpu1 --dtypes q4 --shapes c4qkv,c4gate,c4down --threads 4 --batch 7 --time 1.0
+--reps 3` (cold weights), with the GPU looping on gate n = 64 during the "co-run" pass; the
+sampler logged temperature, throttle flags and ARM / V3D clocks every 2 s (max 63.3 C,
+throttled 0x0, ARM 1500 MHz in every loaded phase).
+
+| shape (CPU, n = 7, 4 thr) | CPU alone #1 | CPU alone #2 | CPU during co-run | GPU during co-run (gate n = 64) | combined | vs CPU alone (mean) |
+|---|---|---|---|---|---|---|
+| c4qkv 8192x2560 | 5346.7 us = 54.9 GOP/s | 5287.6 = 55.5 | 5678.4 = **51.7** (-6 %) | 115.9 ms = **26.1** | **77.8** | **1.41x** |
+| c4gate 9216x2560 | 6001.1 = 55.0 | 5933.2 = 55.7 | 6357.9 = **52.0** (-6 %) | 26.1 | **78.0** | **1.41x** |
+| c4down 2560x9216 | 6510.0 = 50.7 | 6616.8 = 49.9 | 6882.8 = **48.0** (-5 %, kbench "noisy") | 26.1 | **74.1** | **1.47x** |
+
+CPU weight stream 2.0-2.2 GB/s alone -> 1.9-2.1 GB/s in the co-run; the GPU adds ~1.0 GB/s;
+the GPU itself lost 6 % (27.7 -> 26.1 GOP/s, 393 calls) and its feeding thread took 3 % of a
+core. yhash of the CPU outputs identical in all three passes (the CPU path is untouched).
+
+## Verdict
+
+**Go** (combined >= 1.2x CPU alone: 1.41-1.47x). The QPUs add ~26 GOP/s to the ~52-55 GOP/s
+of the four cores on the Cerno 4B shapes while the CPU keeps 94 % of its rate, with no
+throttling. Caveats before scaling up: (1) exactness class (b) only (fp32 mul / add vs the
+CPU's FMLA / FMLS, ~2e-7 relative on the GPU rows), opt-in with the Cerno agreement check;
+(2) the kernel runs at 63 % of its instruction model: more TMU words in flight (now that
+`thrsw` is on) is the first lever; (3) the Python feeder must become C (3 % of a core, plus
+the uniform-stream build); (4) the row split must give the GPU ~1/3 of the tiles so that
+both finish together (~26 : 52). Expected end-to-end gain on a 93 %-matmul decision:
+up to ~1.3x if the split overlaps perfectly, less with the Y read-back and the stream build.
 
 ## Credits
 

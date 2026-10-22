@@ -331,3 +331,18 @@ chat27), `spec-exact-2b-q4k_20261022_114018.json`; llama.cpp perplexity on the P
   does not help. The 2B head's fp32 acceptance is also below 0.8B's (first draft 83.4 vs 87.3%).
 - **Verdict:** 2B fits (≈1.1 GB of 3.7 GB) and is exact; usable as an opt-in quality model at
   ~4.8 tok/s chat; 0.8B stays the interactive default.
+
+## GPU co-processing pilot — V3D 4.2 QPUs next to the 4 cores (2026-10-22 21:48–22:12, GPU agent; `engine/GPU.md`, `engine/PILOTS.md`)
+Integer Q4_0 x int8 kernel on the 8 QPUs (two rows per `smul24`, exact int16 block sums, fp32 mul / add
+tail = exactness class b), py-videocore6 in a venv, all runs under the lock, stock 1.5 GHz, V3D 500 MHz,
+throttled 0x0. GOP/s = 2 R K n / t.
+| what | gate 9216x2560 | down 2560x9216 | qkv 8192x2560 | file |
+|---|---|---|---|---|
+| GPU alone, n = 7 | 27.2 | 27.5 | 27.0 | `bench/results/gpu-q4-alone_20261022_221029.json` |
+| GPU alone, n = 64 (8 passes of 8) | 27.8 | 28.1 | 27.5 | same |
+| CPU alone, kbench q4 4 thr n = 7 cold (mean of 2) | 55.4 | 50.3 | 55.2 | `bench/results/gpu-corun_20261022_221209.json` |
+| CPU while the GPU loops on gate n = 64 | 52.0 | 48.0 | 51.7 | same |
+| GPU during the co-run (gate n = 64) | 26.1 | 26.1 | 26.1 | same |
+| **combined / CPU alone** | **78.0 = 1.41x** | **74.1 = 1.47x** | **77.8 = 1.41x** | same |
+Dead end on the way: TMU loads without the `thrsw` signal hang the GPU (`gpu-q4-first_20261022_214808.json`,
+`gpu-diag_20261022_220321.json`). Verdict: go (>= 1.2x); scale-up = DRM-ioctl integration, class (b) opt-in.

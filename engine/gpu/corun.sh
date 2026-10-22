@@ -25,7 +25,11 @@ trap 'kill $SP 2>/dev/null; touch "$STOP"' EXIT
 echo "PHASE cpu-alone $(date +%T)"
 $KB --variant cpu-alone
 echo "PHASE gpu-alone $(date +%T)"
-bash "$G/gpurun.sh" bench_q4.py --shapes "$GSHAPE" --n "$NG" --seconds "$GS" --tag gpu-alone
+bash "$G/gpurun.sh" bench_q4.py --shapes "$GSHAPE" --n "$NG" --seconds "$GS" --tag gpu-alone | tee "$G/corun_gpu_alone.out"
+if ! grep -q '"exact_vs_model": true' "$G/corun_gpu_alone.out"; then
+    echo "GPU kernel output not exact or hung: co-run skipped $(date +%T)"
+    exit 0
+fi
 echo "PHASE corun $(date +%T)"
 bash "$G/gpurun.sh" bench_q4.py --shapes "$GSHAPE" --n "$NG" --seconds 400 --until-file "$STOP" \
      --tag gpu-corun > "$GOUT" 2>&1 &

@@ -21,7 +21,16 @@ Notebook: `engine/GPU.md`. Code: `engine/gpu/`. Branch `worktree-agent-a459e8864
   GOP/s, bytes read, bit-exactness of the output against the kernel's fp32 model (which
   implies exact int16 block sums) on sampled tiles; (3) `gpu-corun`: `corun.sh` = CPU alone,
   GPU alone, both, CPU alone again, with temperature / throttle / clock samples every 2 s.
-- **Status**: PC side done (generator, scheduler, emulator check bit-exact at n = 1, 2, 7, 8,
-  11); Pi runs pending (the Pi went down in the overclock test at 17:5x KST, back at stock).
-- **Measurements**: (filled in from `bench/results/gpu-*.json`)
-- **Verdict**: pending.
+- **Status**: done 22:12 KST (one Pi slot 22:06-22:12 after the diagnosis at 22:03).
+- **Measurements** (`engine/GPU.md` "Results"): GPU alone, bit-exact vs its fp32 model,
+  gate / down / qkv at n = 7: 27.2 / 27.5 / 27.0 GOP/s, at n = 64 (8 passes of 8):
+  27.8 / 28.1 / 27.5 (`bench/results/gpu-q4-alone_20261022_221029.json`). CPU alone (kbench
+  q4, 4 thr, n = 7, cold, mean of two rounds) qkv 55.2 / gate 55.4 / down 50.3 GOP/s; with
+  the GPU looping on gate n = 64: CPU 51.7 / 52.0 / 48.0 (-6 %) + GPU 26.1 = **77.8 / 78.0 /
+  74.1 = 1.41x / 1.41x / 1.47x** (`bench/results/gpu-corun_20261022_221209.json`); throttled
+  0x0, <= 63.3 C, ARM 1500 MHz in every loaded phase.
+- **Dead end on the way**: TMU loads without the `thrsw` signal hang the V3D 4.2 (two slots
+  lost: `gpu-q4-first_20261022_214808.json`, `gpu-diag_20261022_220321.json`).
+- **Verdict**: **go** (1.41-1.47x >= 1.2x). Scale-up = the DRM ioctl integration designed in
+  `engine/GPU.md`, class (b) opt-in, with a C feeder and a ~1/3 row split; first lever on the
+  kernel: more TMU words in flight (it runs at 63 % of its instruction model).
