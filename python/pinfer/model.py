@@ -1,6 +1,7 @@
 """High-level model API: load a .pq file, generate text, chat."""
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import json
 import logging
@@ -8,7 +9,7 @@ import os
 import time
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -21,6 +22,9 @@ from .sampling import Sampler, SamplingParams
 from .speculative import iter_speculative
 from .streaming import GenerationResult, StopMatcher, TextStream
 from .tokenizer import IncrementalDecoder, Tokenizer, resolve_tokenizer_path
+
+if TYPE_CHECKING:
+    from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 
@@ -120,17 +124,15 @@ class Model:
             self._lib.pinfer_free(self._ctx)
             self._ctx = None
 
-    def __enter__(self) -> Model:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *exc: object) -> None:
         self.close()
 
     def __del__(self) -> None:
-        try:
+        with contextlib.suppress(Exception):  # never raise from a finalizer
             self.close()
-        except Exception:  # noqa: BLE001 - never raise from a finalizer
-            pass
 
     # ------------------------------------------------------------------ info
     @property
@@ -217,7 +219,8 @@ class Model:
         if len(tokens) == 0:
             raise ValueError("eval needs at least one token")
         self._eval_into(list(tokens))
-        return self._logits.copy()
+        out: np.ndarray = self._logits.copy()
+        return out
 
     # ------------------------------------------------------------------ state
     def save_state(self) -> bytes:
@@ -376,18 +379,28 @@ class Model:
 
     def _text_chunks(self, tokens: Iterator[int], n_prompt: int, stops: list[str],
                      state: dict[str, Any], result: list[GenerationResult]) -> Iterator[str]:
-        """Turn generated token ids into text chunks; append the final result at the end."""
+        """Turn generated token ids into text chunks; append the final result at the end.
+
+        The token generator is closed as soon as the text is complete (stop string) or the
+        consumer closes this generator, not when it is garbage-collected: for speculative
+        decoding that ends the C call (and settles the context bookkeeping) right away.
+        """
         decoder = IncrementalDecoder(self._require_tokenizer())
         matcher = StopMatcher(stops)
         out_ids: list[int] = []
-        for t in tokens:
-            out_ids.append(t)
-            chunk = matcher.feed(decoder.push(t))
-            if chunk:
-                yield chunk
-            if matcher.stopped:
-                state["finish_reason"] = "stop"
-                break
+        try:
+            for t in tokens:
+                out_ids.append(t)
+                chunk = matcher.feed(decoder.push(t))
+                if chunk:
+                    yield chunk
+                if matcher.stopped:
+                    state["finish_reason"] = "stop"
+                    break
+        finally:
+            close = getattr(tokens, "close", None)
+            if close is not None:
+                close()
         if not matcher.stopped:  # text held back for an incomplete character / stop prefix
             tail = matcher.feed(decoder.flush())
             if matcher.stopped:

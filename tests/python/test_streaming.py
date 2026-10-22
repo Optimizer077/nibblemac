@@ -1,8 +1,10 @@
 """Streaming generation, stop strings, early stop."""
 from __future__ import annotations
 
+import threading
 from typing import Any
 
+import pytest
 from pinfer.streaming import StopMatcher
 
 
@@ -38,6 +40,26 @@ def test_early_close_keeps_model_usable(fresh: Any, golden: dict[str, Any]) -> N
     stream.close()
     r = fresh.generate(golden["prompt"], 2, reuse_prefix=False)
     assert list(r.token_ids) == golden["greedy_ids"][:2]
+
+
+def test_speculative_stream_close_settles_context(fresh: Any, golden: dict[str, Any]) -> None:
+    """Closing a speculative stream (a continuation of the context) ends the C call at once
+    and leaves context_tokens equal to what the engine holds, so the next prompt that
+    extends it continues correctly."""
+    if not fresh.supports_speculative or not fresh._lib.has("pinfer_generate_greedy_cont"):
+        pytest.skip("no speculative continuation in this library / model")
+    ids, want = golden["input_ids"], golden["greedy_ids"]
+    fresh.generate(ids[:4], 1, speculative=True)          # context = ids[:4]
+    stream = fresh.generate(ids, 12, speculative=True, stream=True)
+    assert next(stream)
+    stream.close()
+    assert not [t for t in threading.enumerate() if t.name == "pinfer-spec"]
+    ctx = list(fresh.context_tokens)
+    assert len(ctx) == fresh.n_past and ctx[:len(ids)] == ids
+    n = len(ctx) - len(ids)
+    assert ctx[len(ids):] == want[:n]
+    r = fresh.generate(ctx + [want[n]], 2, speculative=True)
+    assert r.cached_tokens == len(ctx) and list(r.token_ids) == want[n + 1:n + 3]
 
 
 def test_stop_matcher_holds_back_prefixes() -> None:
