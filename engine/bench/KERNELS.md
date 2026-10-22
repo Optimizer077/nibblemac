@@ -495,3 +495,158 @@ silu*up (86k expf per token), full attention, argmax)**. The 1.15x target (159 m
 last part down to ~6 ms per token; it lives in forward.c / forward_lin.c (engine-core).
 Prefill (27 tok/s = 2.37 s): matmuls 1.58 s (n = 64 at the n = 4 rate), recurrence 0.14 s,
 remaining scalar ~0.65 s; 30 tok/s needs ~0.25 s more from the same scalar code.
+
+---
+## Part 3 (2026-10-22): batched matmul and prefill
+
+Goal: verify passes (n = k + 1 = 2-5 vectors) as close to a plain step (n = 1) as possible and a
+faster compute-bound prefill (groups of up to 16 vectors), bit-identical to the 792676c kernels.
+Files: `engine/src/kern_quant.c`, `matvec_fast.c` (grouping), `kern_act.c`, `kern.h`,
+`engine/bench/kbench.c`. All result files in `bench/results/`; cycles per block-vector (c/bv) =
+time x 1.5 GHz x threads / (rows/4 x cols/32 x n).
+
+### How exactness was checked (new tooling)
+- **`yhash`**: every kbench RESULT now carries an FNV-1a hash of the batched output bytes. The
+  inputs are seeded, so a kbench built from other kernel sources prints the same hash for the
+  same (dtype, shape, threads, n) iff the outputs are bit-identical. A reference kbench
+  (`kbench_ref`) was built from the 792676c `kern_quant.c`, `kern_act.c`, `kern.h`,
+  `matvec_fast.c`, `kbench_util.c` + this kbench.c (a 2-line shim defines the new knobs), and every
+  variant below was compared with it under qemu first (`--check`, 84-480 configurations per run,
+  n = 1-64 incl. `--group 0`) and again on the Pi. Together with the existing memcmp of
+  pf_matmul rows vs pf_matvec (`exact`) this proves "batched == single == old build" at kernel
+  level before any end-to-end run.
+- **Caught a bug**: the first build of the duplicated-layout variant (below) chose the layout per
+  pass instead of per call, so the 1-vector remainder pass of n = 5 (4 + 1), 6 and 16 read the
+  wrong activation layout. Its own checks failed and the yhash differed from kbench_ref for
+  exactly those n; fixed before any timing.
+- `logs/verify/mm_t_scales.c`: the new Q4K scale decoder vs the scalar `D * get6` on 200 000
+  random scale lines incl. fp16 subnormals: 12.8 M values, 0 mismatches (old decoder: same).
+
+### Baseline profile (792676c, `mm0-kbench-cold4_20261022_105906.json`, cold, 4 threads)
+us per call (x = vs n = 1); last column c/bv at n = 16:
+
+| dtype | shape | n=1 | n=2 | n=3 | n=4 | n=5 | n=8 | n=16 | c/bv n=16 |
+|---|---|---|---|---|---|---|---|---|---|
+| q4k | qkv | 944 (3.75 GB/s) | 952 (1.01x) | 959 (1.02x) | 1023 (1.08x) | 1372 (1.45x) | 2136 (2.26x) | 4169 (4.42x) | 31.8 |
+| q4k | gate | 529 (3.90 GB/s) | 564 (1.07x) | 564 (1.07x) | 593 (1.12x) | 819 (1.55x) | 1249 (2.36x) | 2461 (4.66x) | 32.2 |
+| q4k | down | 536 (3.85 GB/s) | 568 (1.06x) | 574 (1.07x) | 624 (1.16x) | 936 (1.75x) | 1429 (2.66x) | 2916 (5.44x) | 38.1 |
+| q4k | out | 319 (3.70 GB/s) | 328 (1.03x) | 346 (1.08x) | 365 (1.14x) | 517 (1.62x) | 746 (2.34x) | 1639 (5.14x) | 37.5 |
+| q4k | head | 37038 (3.86 GB/s) | 37901 (1.02x) | 38450 (1.04x) | 40334 (1.09x) | 55247 (1.49x) | 86295 (2.33x) | 166429 (4.49x) | 31.4 |
+| q8 | qkv | 1674 (3.99 GB/s) | 1712 (1.02x) | 1744 (1.04x) | 1755 (1.05x) | 1792 (1.07x) | 2257 (1.35x) | 4554 (2.72x) | 34.7 |
+| q8 | head | 65469 (4.13 GB/s) | 68470 (1.05x) | 69458 (1.06x) | 70162 (1.07x) | 70671 (1.08x) | 89885 (1.37x) | 171597 (2.62x) | 32.4 |
+
+(full table incl. z, q, kv, dhead and Q8 gate/down/out in the result file). Findings:
+- Q4K n = 2-3 cost the same as n = 1 (DRAM-bound); n = 4 is compute-bound at ~31 c/bv on
+  4 threads, +4-20 % over n = 1. n = 5 is +38-75 %: the 4 + 1 split decodes every tile twice and
+  the 1-vector pass costs a whole decode step's compute (~45 c/b).
+- Q8 (8.5 bits, twice the bytes) stays DRAM-bound up to n = 5 (+5-15 %).
+- n = 16 runs at 31-32 c/bv for 1024 columns but 37.5-38 for out (2048) and down (3584):
+  16 vectors' activations (32 / 57 KB) no longer fit the 32 KB L1.
+
+### Instruction count of the n = 4 Q4K loop (objdump)
+Per block: 64 SMULL/SMLAL, 16 reduction (12 ADDP, 4 SADDLP), 4 SCVTF + 12 FMUL/FMLA/FMLS,
+8 unpack (AND/USHR), plus the superblock's scale decode (~100 ops / 8 blocks); 3 of the 4
+accumulators were kept on the stack (5 stack ops per block). ~29.5 c/bv hot (1 thread, kv)
+= ~118 cycles per block: about one cycle per NEON instruction, as the ubench model says. The
+MACs (16 per block-vector, 8 int8 MACs per cycle) are fixed; everything else is the target.
+
+### Variants (hot = 1 thread, kv shape, `--hot`; c/bv Q4K unless noted)
+| variant | idea | result | file | decision |
+|---|---|---|---|---|
+| mm1 | activations stored with each 4-column group twice + weight rows zipped in pairs, so one SMULL covers 2 rows and a lane holds 8 products (16 after one ADDP, bound 16 x 15 x 127 = 30480 < 32767): reduction 4 -> 2 ops; int32 -> float by SADALP onto the bits of 1.5 x 2^23 + FSUB (exact for abs(t) < 2^22) instead of SCVTF; "wide" path for n >= 6 (each block decoded once for 16 vectors, accumulators in L1) | n = 1 45.2 -> 56.3, n = 4 29.5 -> 32.0, n = 5 33.6 -> 31.3, n = 16 30.6 -> 36.0 | `mm1-ab-hot1_20261022_112730.json` | slower: split up |
+| vA | magic-number conversion alone | n = 4 29.3 -> 31.5, Q8 29.8 -> 32.9 | `mm-var-hot1_20261022_114557.json` | dropped (MOV + SADALP + FADD costs more than SADDLP + SCVTF in this mix) |
+| vB | + 5-vector register pass | n = 5 32.7 -> 29.4 (despite vA) | same | kept |
+| vC | + wide decode-once, groups of 4 in registers | n = 16 32.4 -> 30.9, Q4 30.0 -> 31.3 | same | no clear gain |
+| vE / vE4 | duplicated layout only for n >= 2, without magic | n = 2 37.9 -> 44.3, n = 16 30.9 -> 36.2, n = 1 45 -> 52 (both code paths in the n = 1 loop) | `mm-var2-hot1_20261022_121832.json` | dropped: two 8-deep SMLAL chains per vector schedule worse than four 4-deep ones; the saved ADDPs are eaten by 4 ZIPs + 2 more loads per vector |
+| vP5S | 5-pass + new Q4K scale decode | n = 5 32.6 -> 28.2, n = 1 45.0 -> 42.4, n = 4 29.3 -> 28.9 | same | kept |
+| vS | software pipelining (block k's integer part, then block k-1's float update) | cold 4 thr n = 4 +7-18 % (head 40.1 -> 45.1 ms) | `mm-vS-verify_20261022_131916.json` | dropped |
+| vF6 / vF7 / vF8 | register passes of up to 6 / 7 / 8, balanced split ceil(n / NV) | see below; NV = 8 spills (45 stack ops per block) | `mm-pass6-group_20261022_132936.json`, `mm-pass678_20261022_133852.json` | **7 kept** |
+| LDNP | non-temporal pair loads for the weight stream (lead's suggestion: keep the 19 MB recurrent state, activations and KV rows in L2) | kbench n = 1 +-1 % (dirty-L2 case out 616 -> 614 us); decode 7.845 / 7.850 vs 7.834 / 7.865 tok/s; k = 3 18.27 / 18.10 vs 17.80 / 17.92; lin_rule 428.8 vs 433.9 ms, attention 31.4 + 31.8 vs 32.2 + 31.1 ms per 64-token run (PF_FWD_STATS) | `mm2-ldnp_20261022_135634.json` | dropped: no effect on the non-matmul phases, -1.8 % at k = 3 |
+
+Hot single-thread runs of identical code differed by up to ~8 % between binaries (Q4 n = 4 in
+vP5 vs vP5S), so decisions below 5 % were taken from cold 4-thread runs of the real shapes.
+
+**Failed run:** `mm1-ab-hot1_20261022_112006.json` is `valid=true` but has no results:
+`harness/pi.py` joins its arguments with spaces, so the quoted binary list `"kbench_ref
+kbench_mm1"` reached the script as two words, kbench exited on `unknown option kbench_mm1`, and
+the script's `| grep | sed` pipeline returned 0. Fix: comma-separated lists and
+`set -o pipefail` in the A/B script; rerun `mm1-ab-hot1_20261022_112730.json`.
+
+### Final kernels (commit 8c4e189)
+1. **Register passes of up to 7 vectors**, split into ceil(n / 7) passes of equal size (+-1):
+   n = 5 / 6 / 7 are one pass (were 4 + 1, 3 + 3 + ... , 4 + 3), the block's codes and the
+   superblock's scales are decoded once per pass. 8 vectors spill.
+2. **Prefill groups of 7** (`kern_group_vecs`): pf_matmul splits n > 16 into balanced groups of
+   at most 7 vectors for the quantized dtypes (one register pass per tile; 7 x cols bytes of
+   activations stay in L1) instead of groups of 16 (4 passes over 16-57 KB). Float dtypes keep
+   groups of 16. Calls of <= 16 vectors are not split (n = 6-10 is cheaper with one weight
+   stream).
+3. **Q4K scale decode**: `unpack6` in 5 NEON ops (LD1R of the 8 high-bit bytes into both halves,
+   one USHL by (0, -2), two ANDs, SLI / USRA) instead of 14; `u8_scaled` widens by zipping with
+   zero and then with the halfword 0x4B00 (the words read as 2^23 + v) and scales with
+   FSUB 2^23 + FMUL (both exact) instead of ZIP + ORR + MOV + FMA.
+Unchanged: data layouts, the per-vector float operations and their order, Q8 and float
+arithmetic.
+
+### Kernel level, before -> after (`mm2-kbench-final_20261022_141346.json`, cold, 4 threads, one job, us per call)
+| Q4K shape | n=1 | n=4 | n=5 | n=7 | n=16 (3 passes) | n=64 (prefill) |
+|---|---|---|---|---|---|---|
+| qkv 6144x1024 | 930 -> 946 | 1067 -> 1023 | 1640 -> **1188** | 2112 -> **1569** | 4349 -> 4231 | 17274 -> **14744** |
+| gate 3584x1024 | 538 -> 538 | 592 -> 603 | 801 -> **693** | 1121 -> **965** | 2562 -> 2611 | 10320 -> **8804** |
+| down 1024x3584 | 538 -> 540 | 643 -> 647 | 927 -> **802** | 1301 -> **1017** | 2909 -> 2930 | 11660 -> **9574** |
+| out 1024x2048 | 315 -> 318 | 367 -> 401 | 561 -> **440** | 712 -> **545** | 1649 -> 1665 | 6582 -> **5268** |
+| head 248320x1024 | 37369 -> 37195 | 40595 -> 40606 | 57268 -> **47136** | 76355 -> **61736** | 169278 -> 171567 | 676246 -> **580916** |
+
+n = 5: -14 to -28 %, n = 7: -14 to -26 %, n = 64: -14 to -20 % (Q8: n = 5 0 to -7 %, n = 64 -2 to
+-8 %); n = 1-4 within +-2 % except one out n = 4 sample (+9 %; -1.5 % / +1.3 % in
+`mm-vF-cold4_20261022_125703.json`, `mm-vS-verify_20261022_131916.json`). In the engine
+(`mm2-kstats-k3_20261022_140749.json`, PF_KERN_STATS, prompt64 k = 3, 2 rounds) the n = 4
+matmuls of a whole run are 2517.6 -> 2545.5 ms (+1.1 %: out +3 %, q +2 %, head +1 %), the n = 64
+prefill matmuls 3093.5 -> 2457.5 ms (-21 %).
+
+### End to end (`pinfer_run_fast` 23a76242 vs `pinfer_run_mm2` bb39468b, Q4K-headq4k, 4 threads, 3 interleaved rounds, medians)
+| run | before | after | change | file |
+|---|---|---|---|---|
+| prompt64 plain decode | 7.875 tok/s | 7.877 | 0 | `mm2-e2e-decode_20261022_140420.json` |
+| prompt64 k = 2 (dv 32768) | 16.21 (verify 143.5 ms, n = 3) | 16.18 (143.8) | 0 | same |
+| prompt64 k = 3 | 18.50 (verify 152.1 ms, n = 4) | 18.15 (155.6; rounds 18.31 / 16.13 / 18.15) | -1.9 % | same |
+| prompt64 k = 4 | 16.27 (verify 206.5 ms, n = 5) | **18.64** (176.4 ms) | **+14.5 %** | same |
+| chat27 k = 2 | 10.91 | 10.98 | +0.6 % | same |
+| prefill prompt64 (-n 1) | 36.15 tok/s | **43.07** | **+19 %** | `mm2-e2e-prefill_20261022_140719.json` |
+| prefill ctx512 (-n 1) | 36.42 tok/s | **43.20** | **+19 %** | same |
+| prefill inside the decode runs (plain) | 37.0 | 42.7 | +15 % | `mm2-e2e-decode_*` |
+
+k = 4 is now the fastest fixed k on prompt64 (18.64 vs k = 3 18.15 with the same binary; 3.94
+tokens per pass vs 3.32). The k = 3 verify pass (n = 4) did not get cheaper: 155.6 ms = 1.23x a
+plain step (127 ms); the 1.12x target is **not met**. A second k = 3 sample with profiling on
+(`mm2-kstats-k3_*`): 18.38 / 18.47 -> 18.32 / 18.32 tok/s, verify 153.3 / 152.4 -> 153.8 / 153.9 ms.
+
+### Gates (final code)
+| gate | result | evidence |
+|---|---|---|
+| qemu: kbench `--check` vs kbench_ref, f32 / bf16 / q8 / q4 / q4k, n = 1-8, 9-64, `--group 0` | 738 configs, all `exact`, all yhash identical | (scratch, as below on the Pi) |
+| Pi: kbench `--check` + golden, both builds, 747 configs (dhead incl.), memcmp + yhash | all exact, all identical, golden pass | `mm2-gates_20261022_134850.json` |
+| Pi: `spec_exact.sh ./engine/pinfer_run_mm2` (this branch's script) | 20/20, md5s = baseline (703b5ff0, 3f9a4f66, 08c27da6, 3f9a4f66) | `mm2-spec-exact_20261022_140927.json` |
+| Pi: `ctx_check.sh ./engine/pinfer_run_mm2 ./engine/pinfer_run_fast` (prompt64 hidden + logits batched and -b 1, ctx512 logits) | 5/5 identical | `mm2-gates_20261022_134850.json` |
+| host: golden / spec / state, pytest (source tree) | PASS / PASS / PASS, 126 passed | `logs/verify/mm_host_gates.txt` |
+| new Q4K scale decode vs scalar | 12.8 M values, 0 mismatches | `logs/verify/mm_t_scales.c` |
+| `-Wall -Wextra`: aarch64 benches + engine (fast), host engine (ref) | no warnings | build log |
+
+(The Pi's shared `engine/spec_exact.sh` has meanwhile been extended by the speculative agent with
+`--ngram` configurations, which this branch's binary does not support; in
+`mm2-gates_20261022_134850.json` those rows print no tokens and count as mismatches, the 20
+standard and 6 adaptive rows all match. The rerun above uses this branch's script.)
+
+### Why n = 4 stays at ~1.2x, and what is left
+- At n = 4 the Q4K pass is compute-bound on 4 threads: per block-vector 16 SMULL/SMLAL (fixed),
+  4 reduction ops, SCVTF + FMUL + FMLA + FMLS (fixed by bit-exactness: the float operations
+  and their rounding order may not change), ~24 NEON instructions = ~25 cycles, plus ~4 for
+  the shared unpack and scale decode. DRAM alone would allow ~24. Every attempt to cut the
+  per-vector instructions (fewer reductions via a duplicated layout, magic-number conversion)
+  or to hide latency (software pipelining) was slower on the A72 in practice.
+- Remaining ideas (not done): a weight layout with rows interleaved per 4 columns in the file
+  (a new dtype id + converter: the 2-row reduction without the ZIPs, ~-2 ops per vector);
+  a per-256-column activation scale (one SCVTF per superblock, llama.cpp Q8_K style) — changes
+  the numerics, so opt-in with a perplexity check; 3 threads for n = 2-3 (memory-bound).
+- k = 4 verification (n = 5) and prefill now run 7-vector passes; n = 8+ verification (k >= 7)
+  splits into two passes again.

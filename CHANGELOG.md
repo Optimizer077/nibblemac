@@ -101,6 +101,38 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Pi: added `models/qwen35-2b-q4k-headq4k.pq`, `models/Qwen3.5-2B-Q4_K_M.gguf`,
   `engine/pinfer_{run,ppl}_2b1` (2.3 GB, rows in `docs/pi-state.md`); pushes of the GB files ran
   inside held lock windows; scratch (`tmp/m2b`, the Q8-MTP file) removed. Nothing shared replaced.
+### Batched matmul and prefill (kernels agent, 10:55–14:30; branch `worktree-agent-a6d5914c435068003`; notebook `engine/bench/KERNELS.md` Part 3)
+- Added (kernels, `kern_quant.c`): quantized register passes of up to 7 vectors, the batch split
+  into ceil(n / 7) passes of equal size. n = 5 (k = 4 verification) is one pass instead of 4 + 1,
+  which decoded every weight tile twice; n = 6 / 7 are one pass instead of 3 + 3 / 4 + 3.
+- Added (`matvec_fast.c`): batches of more than 16 vectors (prefill) run in balanced groups of at
+  most 7 vectors for the quantized dtypes (`kern_group_vecs`): one register pass per tile with
+  its activations in L1, instead of groups of 16 (4 passes over 16–57 KB). Float dtypes keep
+  groups of 16.
+- Added: Q4K superblock scale decode in fewer NEON ops (6-bit unpack 14 → 5 ops; widening by
+  zipping with the float exponent; FSUB + FMUL instead of ORR + MOV + FMA), exact.
+- Added (kbench): `yhash` (FNV-1a of the batched output) in every RESULT, for bit-identity
+  checks across kernel builds; `--gvecs`. `logs/verify/mm_t_scales.c`: scale decode vs scalar,
+  12.8 M values, 0 mismatches.
+- Measured (Q4K-headq4k, 4 threads, prompt64, 3 interleaved rounds vs `pinfer_run_fast`,
+  medians; `bench/results/mm2-e2e-decode_20261022_140420.json`, `mm2-e2e-prefill_20261022_140719.json`):
+  plain 7.875 → 7.877 tok/s; k=2 16.21 → 16.18; k=3 18.50 → 18.15 (n = 4 matmuls +1 %);
+  **k=4 16.27 → 18.64** (verify 206.5 → 176.4 ms, now the best fixed k on prompt64);
+  chat27 k=2 10.91 → 10.98; **prefill prompt64 36.2 → 43.1, ctx512 36.4 → 43.2 tok/s (+19 %)**.
+  kbench (cold, 4 threads, `mm2-kbench-final_20261022_141346.json`): n = 5 −14…−28 %, n = 7
+  −14…−26 %, n = 64 −14…−20 %, n = 1–4 ±2 %.
+- Measured, not kept: duplicated activation layout with row-pair zipped weights (fewer
+  reductions), magic-number int→float, decode-once "wide" passes, software-pipelined float
+  update, 8-vector passes (spill), non-temporal LDNP weight loads (lead's suggestion: no change
+  in the recurrence / attention phases, k=3 −1.8 %, `mm2-ldnp_20261022_135634.json`).
+- Not met: the k=3 verify pass (n = 4) stays at ~1.2× a plain step (target 1.12×); n = 4 is
+  compute-bound at ~29 cycles per block-vector and the instruction-cutting variants were slower.
+- Gates: kbench `--check` 747 configs, memcmp + yhash identical to the 792676c kernels; Pi
+  spec_exact 20/20 (baseline md5s), ctx_check 5/5 identical (`mm2-gates_20261022_134850.json`,
+  `mm2-spec-exact_20261022_140927.json`); host golden / spec / state PASS, pytest 126 passed
+  (`logs/verify/mm_host_gates.txt`).
+- Pi: experiment binaries and scripts under `~/pinfer/kbench/` and `engine/pinfer_run_mm2nt`
+  removed at the end; kept `engine/pinfer_run_mm2` (md5 `bb39468b`). Nothing shared replaced.
 
 ### OpenAI-compatible server (server agent, 08:55–10:05; branch `worktree-agent-a344482719d7c5ce0`)
 - Added: `pinfer serve` (`python/pinfer/server/`, standard library only): `GET /health`,
