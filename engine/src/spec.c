@@ -381,7 +381,9 @@ int pf_spec_decode(pinfer_ctx *ctx, int32_t *out, int n_max, const pinfer_spec_p
 }
 
 pinfer_spec_params pinfer_default_spec_params(void) {
-    pinfer_spec_params p = {2, 32768, 0, 0};  /* best measured on the Pi (engine/SPEC.md) */
+    /* adaptive k <= 3 with prompt-lookup drafts: within 0.98-1.06x of the best fixed k on every
+     * benchmark prompt, 7-27% faster on prose, long context and copied code (engine/DRAFT.md) */
+    pinfer_spec_params p = {3, 32768, 1, 7};
     return p;
 }
 

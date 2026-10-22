@@ -43,7 +43,7 @@ class EngineConfig:
     Attributes:
         model_name: Model id reported by ``/v1/models`` and in responses.
         speculative: Greedy requests use MTP speculative decoding (same output, faster).
-        spec_k: Draft tokens per pass (None: the library default, 2).
+        spec_k: Max draft tokens per pass (None: the library default, adaptive k <= 3 with n-gram drafts).
         reuse: Reuse token prefixes across requests (live context + snapshots).
         history: ``"generated"`` (earlier replies as generated) or ``"template"``.
         state_cache_mb: Memory budget of the snapshot LRU (0 disables snapshots).

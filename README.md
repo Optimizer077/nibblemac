@@ -188,7 +188,8 @@ step is 119 ms of weight streaming plus 10 ms of everything else — about 12% f
 
 **Speculation depends on the text.** The 18.4 tok/s above is a prose continuation, where the MTP head
 is right 3.3 times per pass. On chat answers it is right less often (1.8–2.6 tokens per pass), so the gain
-is 1.25–1.7× and **k=2 beats k=3 on every chat prompt** (k=2 is the library default):
+is 1.25–1.7× and **k=2 beats k=3 on every chat prompt**. The library default is now adaptive k ≤ 3 with
+prompt-lookup drafts, within 2% of the best fixed k on every prompt below (`engine/DRAFT.md`):
 
 | chat answer | plain | speculative k=2 | k=3 |
 |---|---|---|---|

@@ -89,7 +89,8 @@ typedef struct {
     int64_t ngram_accepted;  /* n-gram draft tokens accepted */
 } pinfer_spec_stats;
 
-pinfer_spec_params pinfer_default_spec_params(void);  /* k = 2, draft_vocab = 32768, ngram 0 */
+pinfer_spec_params pinfer_default_spec_params(void);  /* k = 3, draft_vocab = 32768, adaptive,
+                                                         ngram 7 (engine/DRAFT.md); 0.1: k = 2 */
 
 /* 1 if the loaded model has an MTP head (needed for k > 0). */
 int pinfer_has_mtp(const pinfer_ctx *ctx);

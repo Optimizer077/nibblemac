@@ -239,11 +239,12 @@ result-file paths is the "Scoreboard" in `notes.md`).
 - Decode is memory-bandwidth-bound (one Cortex-A72 core already saturates the ~4.2 GB/s DRAM);
   tok/s ≈ 4.2 GB/s ÷ bytes of weights per token, minus overheads. Speculative decoding with the
   model's MTP head gets past that ceiling by verifying several drafted tokens per weight pass.
-- `--speculative` defaults: k = 2 drafts, draft vocabulary 32768 (drafts only consider the first
-  32768 token ids; on varied text this lowers acceptance somewhat — 2.86 → 2.37 tokens per pass at k=3 —
-  but makes each draft step ~5× cheaper, which was faster overall on all three test prompts).
-  `--spec-k 3` is ~14% faster than k=2 on predictable text. At long contexts (≥ 2K tokens) the gain
-  shrinks or reverses on unpredictable text; an adaptive policy is in progress (Phase 6).
+- `--speculative` defaults (0.2): **adaptive k ≤ 3 with prompt-lookup drafts (n-gram 7)**, draft
+  vocabulary 32768. The engine continues the MTP draft chain while the draft is confident, uses
+  n-gram drafts when the text repeats the context, and falls back to plain steps when speculation
+  would be slower. Within 0.98–1.06× of the best fixed k on every benchmark prompt and 7–27% faster on
+  prose, long context and copied code (`engine/DRAFT.md`). The draft vocabulary (first 32768 ids)
+  lowers acceptance a little but makes each draft ~5× cheaper. 0.1 used fixed k = 2.
 - Exactness: speculative output is token-identical to plain greedy, with both the scalar and the
   NEON kernels (the batched verify pass is bit-identical to the single-token pass; checked by
   `engine/bench/spec_exact.sh` on the Pi, 20/20).
@@ -359,8 +360,8 @@ arrival order (FIFO); requests are parsed and tokenized in their own threads whi
 that disconnects while queued is dropped; one that disconnects during a stream stops the generation at
 the next token (with speculative decoding the C call ends at its next token callback); a non-streaming
 request whose client left is stopped at the first token after a half-second check. Greedy requests (`temperature` 0, the server
-default, or `top_k` 1) use speculative decoding with k=2, the best fixed k on chat prompts (1.25–1.7×
-plain, `notes.md` "Speculative decoding on chat prompts"); sampled requests use plain decoding.
+default, or `top_k` 1) use speculative decoding with the library default (adaptive k ≤ 3 with n-gram drafts,
+1.25–1.8× plain on chat prompts, `engine/DRAFT.md`); sampled requests use plain decoding.
 
 **Prefix reuse.** Clients resend the whole conversation every turn. Qwen3.5 is a hybrid model: its 18
 linear-attention layers carry a recurrent state that cannot be rolled back, so the engine can continue
