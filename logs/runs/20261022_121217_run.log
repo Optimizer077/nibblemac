@@ -1,0 +1,6 @@
+# 2026-10-22T12:12:17 pi@10.42.0.2
+$ for i in $(seq 3000); do [ -e tmp/m2b/LOCKHELD ] && break; sleep 1; done; echo "window $(date +%T)"
+
+window 12:52:34
+
+[exit 0]

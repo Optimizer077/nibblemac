@@ -1,0 +1,9 @@
+# 2026-10-22T13:13:43 pi@10.42.0.2
+$ date +%T; ps -eo etime,args | grep -E "^ *[0-9:]+ (flock|timeout)" | grep -v grep | cut -c1-170
+
+13:13:43
+      20:31 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for P in prompt64 chat27; do bash tmp/m2b/speed.sh ./engine/pinfer_run_2b1 $P 2 64 models/qw
+      16:36 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c for g in 16 8 4; do ./kbench/kbench_ref --variant ref-g$g --group $g --dtypes q4k --shapes d
+      03:33 timeout --kill-after=30 1200 bash -c for P in prompt64 chat27; do bash tmp/m2b/speed.sh ./engine/pinfer_run_2b1 $P 2 64 models/qwen35-2b-q4k-mtpq8.pq k2,k3; d
+
+[exit 0]

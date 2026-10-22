@@ -1,0 +1,9 @@
+# 2026-10-22T12:34:26 pi@10.42.0.2
+$ ps -eo pid,etimes,pcpu,args --sort=-pcpu | head -4
+
+    PID ELAPSED %CPU COMMAND
+  44922       7  396 ./engine/ng/pinfer_run_ng1 -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 96 --ids-file data/chat_story.ids --bench --spec 3 --draft-vocab 32768 --adaptive --ngram 7
+  44936       0 13.3 sshd-session: pi [priv]
+  44387     371  0.3 [kworker/0:1-events]
+
+[exit 0]

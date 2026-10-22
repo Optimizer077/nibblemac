@@ -1,0 +1,14 @@
+# 2026-10-22T12:11:56 pi@10.42.0.2
+$ date +%T; ps -eo etime,args | grep -E "^ *[0-9:]+ flock" | grep -v grep | cut -c1-150
+
+12:11:56
+      25:57 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/pinfer_run_fast 96 2 plain,k2,k3,ad
+      22:16 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash kbench/mm_ab.sh kbench_ref,kbench_vP5,kbench_vP5S,kbench_vE,kbench_
+      21:43 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/m2b/speed.sh ./engine/pinfer_run_2b1 chat27 3 64
+      20:58 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./engine/pinfer_ppl_2b1 -m models/qwen35-2b-q4k-headq4k.pq -f data/wikit
+      10:54 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 96 1 plain,k2,k3,
+      10:52 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 96 2 k2,k3,adapti
+      04:15 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/pinfer_run_fast 64 1 plain,k2,k3,ad
+      04:14 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 64 1 k2,k3,adapti
+
+[exit 0]

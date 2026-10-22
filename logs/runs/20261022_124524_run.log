@@ -1,0 +1,10 @@
+# 2026-10-22T12:45:24 pi@10.42.0.2
+$ ps -eo pid,etimes,pcpu,args --sort=-pcpu | head -4; ls -la /tmp/pinfer-bench.lock
+
+    PID ELAPSED %CPU COMMAND
+  46067       5  396 ./engine/pinfer_run_fast -m models/qwen35-0.8b-q4k-headq4k.pq -t 4 -n 64 --ids-file data/ctx2048.ids --bench -c 2176 --no-warmup --spec 3 --draft-vocab 32768 --adaptive
+  46089       0  100 ps -eo pid,etimes,pcpu,args --sort=-pcpu
+  46077       0 14.8 sshd-session: pi [priv]
+-rw-rw-r-- 1 pi pi 0 Oct 22 01:38 /tmp/pinfer-bench.lock
+
+[exit 0]

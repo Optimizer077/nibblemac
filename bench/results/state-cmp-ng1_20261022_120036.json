@@ -1,0 +1,56 @@
+{
+  "name": "state-cmp-ng1",
+  "command": "F=0; for p in engine/ng/golden.ids data/prompt64.ids data/chat27.ids data/chat_edit.ids; do echo \"== $p\"; ./engine/ng/state_cmp_ng1 models/qwen35-0.8b-q4k-headq4k.pq $p 24 || F=$((F+1)); done; echo \"RESULT {\\\"bench\\\":\\\"state_cmp\\\",\\\"bin\\\":\\\"state_cmp_ng1\\\",\\\"prompts\\\":4,\\\"failed_prompts\\\":$F}\"",
+  "timestamp": "2026-10-22T12:00:36",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "bench": "state_cmp",
+      "bin": "state_cmp_ng1",
+      "prompts": 4,
+      "failed_prompts": 0
+    }
+  ],
+  "unparsed": [],
+  "stdout": "== engine/ng/golden.ids\nk=1 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 21, ngram rounds 0\nk=2 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 18, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 0\nk=4 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 0\nk=3 dv=0 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 0\nk=3 dv=32768 adaptive=1 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 18, ngram rounds 0\nk=6 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 15, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 3\nk=0 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 25, ngram rounds 4\nk=3 dv=32768 adaptive=1 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 3\nk=8 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 3\nk=2 dv=32768 adaptive=0 ngram=5: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 3\nall identical\n== data/prompt64.ids\nk=1 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 18, ngram rounds 0\nk=2 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 14, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 11, ngram rounds 0\nk=4 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 9, ngram rounds 0\nk=3 dv=0 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 10, ngram rounds 0\nk=3 dv=32768 adaptive=1 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 12, ngram rounds 0\nk=6 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 9, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 11, ngram rounds 5\nk=0 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 19, ngram rounds 10\nk=3 dv=32768 adaptive=1 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 12, ngram rounds 5\nk=8 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 8, ngram rounds 2\nk=2 dv=32768 adaptive=0 ngram=5: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 14, ngram rounds 5\nall identical\n== data/chat27.ids\nk=1 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 21, ngram rounds 0\nk=2 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 18, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 17, ngram rounds 0\nk=4 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 17, ngram rounds 0\nk=3 dv=0 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 16, ngram rounds 0\nk=3 dv=32768 adaptive=1 ngram=0: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 18, ngram rounds 0\nk=6 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 17, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 16, ngram rounds 3\nk=0 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 23, ngram rounds 5\nk=3 dv=32768 adaptive=1 ngram=8: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 17, ngram rounds 3\nk=8 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 14, ngram rounds 2\nk=2 dv=32768 adaptive=0 ngram=5: tokens same (24+12), state identical (n_past 65, 21798912 B) | rounds 17, ngram rounds 3\nall identical\n== data/chat_edit.ids\nk=1 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 18, ngram rounds 0\nk=2 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 12, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 11, ngram rounds 0\nk=4 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 10, ngram rounds 0\nk=3 dv=0 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 9, ngram rounds 0\nk=3 dv=32768 adaptive=1 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 11, ngram rounds 0\nk=6 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 7, ngram rounds 0\nk=3 dv=32768 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 8, ngram rounds 5\nk=0 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 10, ngram rounds 9\nk=3 dv=32768 adaptive=1 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 9, ngram rounds 6\nk=8 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 7, ngram rounds 4\nk=2 dv=32768 adaptive=0 ngram=5: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 10, ngram rounds 6\nall identical\nRESULT {\"bench\":\"state_cmp\",\"bin\":\"state_cmp_ng1\",\"prompts\":4,\"failed_prompts\":0}\n",
+  "stderr": "",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "47.2'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3575",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 01:35:00",
+    "boot_id": "6e970849-272d-4006-bd8b-3053fa942c9d",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<pi-mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "59.4'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3532",
+    "python": "Python 3.13.5"
+  }
+}

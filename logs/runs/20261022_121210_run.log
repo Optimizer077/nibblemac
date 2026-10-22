@@ -1,0 +1,7 @@
+# 2026-10-22T12:12:10 pi@10.42.0.2
+$ mkdir -p tmp/m2b && rm -f tmp/m2b/PUSHDONE && touch tmp/m2b/LOCKHELD && echo "lock held $(date +%T)"; for i in $(seq 300); do [ -e tmp/m2b/PUSHDONE ] && break; sleep 1; done; rm -f tmp/m2b/LOCKHELD tmp/m2b/PUSHDONE; echo "lock released $(date +%T) after ${i}s"
+
+lock held 12:52:33
+lock released 12:52:58 after 26s
+
+[exit 0]

@@ -1,0 +1,7 @@
+# 2026-10-22T12:49:42 pi@10.42.0.2
+$ md5sum tmp/m2b/speed.sh; bash -n tmp/m2b/speed.sh && echo syntax-ok
+
+8951cc81b849998a4c05ce597501bd3f  tmp/m2b/speed.sh
+syntax-ok
+
+[exit 0]

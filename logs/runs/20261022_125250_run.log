@@ -1,0 +1,7 @@
+# 2026-10-22T12:52:50 pi@10.42.0.2
+$ md5sum models/qwen35-2b-q4k-mtpq8.pq; touch tmp/m2b/PUSHDONE; date +%T
+
+dc653367c32373ff79916dea1eccfcc2  models/qwen35-2b-q4k-mtpq8.pq
+12:52:58
+
+[exit 0]

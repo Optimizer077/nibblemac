@@ -1,0 +1,29 @@
+# 2026-10-22T13:12:04 pi@10.42.0.2
+$ rm -v engine/ng/chat_spec.sh engine/ng/spec_exact.sh engine/ng/draft_trace engine/ng/state_cmp_ng1 engine/ng/golden.ids data/chat_val_summ.ids data/chat_val_json.ids data/chat_val_explain.ids data/chat_val_sql.ids data/val_varied0.ids data/val_varied1.ids data/val_varied2.ids data/val_varied3.ids data/val_varied4.ids data/val_varied5.ids data/val_varied6.ids; ls -la engine/ng; md5sum engine/ng/pinfer_run_ng1 engine/pinfer_run_fast data/chat_fix.ids data/chat_edit.ids
+
+removed 'engine/ng/chat_spec.sh'
+removed 'engine/ng/spec_exact.sh'
+removed 'engine/ng/draft_trace'
+removed 'engine/ng/state_cmp_ng1'
+removed 'engine/ng/golden.ids'
+removed 'data/chat_val_summ.ids'
+removed 'data/chat_val_json.ids'
+removed 'data/chat_val_explain.ids'
+removed 'data/chat_val_sql.ids'
+removed 'data/val_varied0.ids'
+removed 'data/val_varied1.ids'
+removed 'data/val_varied2.ids'
+removed 'data/val_varied3.ids'
+removed 'data/val_varied4.ids'
+removed 'data/val_varied5.ids'
+removed 'data/val_varied6.ids'
+total 924
+drwxrwxr-x 2 pi pi   4096 Oct 22 13:12 .
+drwxrwxr-x 3 pi pi   4096 Oct 22 11:06 ..
+-rwxr-xr-x 1 pi pi 934632 Oct 22 11:43 pinfer_run_ng1
+7d701ad6f58a43bec560d3533782fd3f  engine/ng/pinfer_run_ng1
+23a7624250b8445343b2322eb0014749  engine/pinfer_run_fast
+303da6dd8d690a739f73ba94bd3a1d82  data/chat_fix.ids
+1e0b250779be5fdaf6c62466e1843746  data/chat_edit.ids
+
+[exit 0]

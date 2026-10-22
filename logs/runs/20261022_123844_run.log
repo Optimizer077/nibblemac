@@ -1,0 +1,16 @@
+# 2026-10-22T12:38:44 pi@10.42.0.2
+$ date +%T; ls tmp/m2b; ps -eo etime,args | grep -E "^ *[0-9:]+ flock" | grep -v grep | cut -c1-150
+
+12:38:45
+ctx_check.sh
+llama_rss.sh
+spec_exact_2b.sh
+speed.sh
+      37:40 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 96 2 k2,k3,adapti
+      31:04 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/pinfer_run_fast 64 1 plain,k2,k3,ad
+      31:02 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 64 1 k2,k3,adapti
+      26:34 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c mkdir -p tmp/m2b && rm -f tmp/m2b/PUSHDONE && touch tmp/m2b/LOCKHELD && 
+      15:32 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ROUNDS=2 bash kbench/mm_ab.sh kbench_ref,kbench_vF,kbench_vFW --dtypes q
+      03:04 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 96 1 k1,k2,k3,ada
+
+[exit 0]

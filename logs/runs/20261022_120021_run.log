@@ -1,0 +1,11 @@
+# 2026-10-22T12:00:21 pi@10.42.0.2
+$ ps -eo pid,etimes,pcpu,args --sort=-pcpu | head -6
+
+    PID ELAPSED %CPU COMMAND
+  42204      90  396 ./engine/ng/state_cmp_ng1 models/qwen35-0.8b-q4k-headq4k.pq data/chat_edit.ids 24
+  42252       0  100 ps -eo pid,etimes,pcpu,args --sort=-pcpu
+  42241       0 10.7 sshd-session: pi [priv]
+  41859     380  0.2 [kworker/2:3-events]
+     91   37520  0.1 [irq/40-mmc0]
+
+[exit 0]
