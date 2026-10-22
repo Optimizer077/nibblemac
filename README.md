@@ -1,11 +1,11 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-    <img src="docs/assets/logo.svg" alt="piquant logo: the letter pi with three rising quantization steps" width="112">
+    <img src="docs/assets/logo.svg" alt="nibblepi logo: the letter pi with three rising quantization steps" width="112">
   </picture>
 </p>
 
-<h1 align="center">piquant</h1>
+<h1 align="center">nibblepi</h1>
 
 <p align="center">
   <b>Qwen3.5 at 20 tokens/s on a Raspberry Pi 4</b><br>
@@ -30,7 +30,8 @@
   <a href="docs/RESULTS.md">Every number, with sources</a>
 </p>
 
-**piquant** is the project; **pinfer** is its engine and Python package. It runs the hybrid Qwen3.5
+**nibblepi** is the project — a *nibble* is 4 bits, the size of its weights, and *pi* is the board it was
+built for — and **pinfer** is its engine and Python package. It runs the hybrid Qwen3.5
 models (0.8B by default, 2B as an option) on a Raspberry Pi 4 (Cortex-A72, NEON only, 4 GB,
 ~4.2 GB/s of memory bandwidth) with its own 4-bit weight format, NEON kernels and self-speculative
 decoding whose output is token-for-token identical to plain greedy decoding.
@@ -491,3 +492,8 @@ docs/                     design, library guide, journal, pi-state, figures
   and Gemma 4.
 - Open decision: PyPI and a model asset for the release (#9).
 - Reproducing everything from a blank SD card / SSD: [docs/REPRODUCE.md](docs/REPRODUCE.md).
+
+---
+
+<sub>Raspberry Pi is a trademark of Raspberry Pi Ltd. nibblepi is an independent project, not affiliated
+with or endorsed by Raspberry Pi Ltd. Qwen is a model family by the Qwen team, Alibaba Cloud.</sub>

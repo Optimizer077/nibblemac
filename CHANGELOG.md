@@ -12,6 +12,13 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Renamed (lead, 15:35): piquant → **nibblepi**
+- Owner asked for a better name; a naming review checked meaning, collisions (GitHub, PyPI, npm, web)
+  and trademark: `nibblepi` (a nibble = 4 bits, the weight size; pi = the board) was the only candidate
+  with no collision. Repository `github.com/Optimizer077/nibblepi` (GitHub redirects the old URL); the
+  engine and package keep the name `pinfer`. README title, logo alt text, banner, release notes and
+  docs updated; README footer adds the Raspberry Pi trademark notice.
+
 ### Release 0.2.0 (lead, 15:40) — notes in `docs/release-0.2.0.md`
 - Speculative default: adaptive k ≤ 4 with prompt-lookup drafts (ngram 7); on prompt64 20.22 tok/s vs
   19.78 with k ≤ 3 and 18.42 with fixed k = 4 (`kcap-merge6_20261022_145226.json`).

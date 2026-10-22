@@ -1,4 +1,4 @@
-# Contributing to piquant / pinfer
+# Contributing to nibblepi / pinfer
 
 This project measures one physical board. The rules below keep every number reproducible, every change to
 the Pi reversible, and the engine's output exact. They are the project rules from [CLAUDE.md](CLAUDE.md),

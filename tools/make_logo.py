@@ -1,4 +1,4 @@
-"""Render the piquant logo (docs/assets/logo.svg, logo-dark.svg, logo.png) and the social banner.
+"""Render the nibblepi logo (docs/assets/logo.svg, logo-dark.svg, logo.png) and the social banner.
 
 The mark is a white pi on a rounded square with three stepped bars: "pi" + "quant" (quantization
 levels). Shapes only, no text, so the SVG renders the same everywhere; colours are the figure
@@ -74,8 +74,8 @@ def banner() -> None:
     fig.patch.set_facecolor("#fcfcfb")
     draw_mark(ax, tile, ink, accent, x0=110, y0=200, s=1.5)
     font = {"family": ["Segoe UI", "DejaVu Sans", "sans-serif"]}
-    ax.text(410, 380, "piquant", fontsize=78, fontweight="semibold", color="#0b0b0b", va="center", **font)
-    ax.text(414, 290, "Qwen3.5 at 18 tokens/s on a Raspberry Pi 4", fontsize=27, color="#0b0b0b",
+    ax.text(410, 380, "nibblepi", fontsize=78, fontweight="semibold", color="#0b0b0b", va="center", **font)
+    ax.text(414, 290, "Qwen3.5 at 20 tokens/s on a Raspberry Pi 4", fontsize=27, color="#0b0b0b",
             va="center", **font)
     ax.text(414, 240, "From-scratch C + NEON engine · exact speculative decoding · long context",
             fontsize=19, color="#52514e", va="center", **font)

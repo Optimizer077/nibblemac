@@ -21,5 +21,5 @@ dist/
 user-data
 network-config
 
-# Cerno 4B work lives in the private repo cerno-pi (owner decision 2026-10-22); its Pi results stay out of piquant
+# Cerno 4B work lives in the private repo cerno-pi (owner decision 2026-10-22); its Pi results stay out of this repository
 bench/results/cerno-*

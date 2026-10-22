@@ -1,7 +1,7 @@
 # pinfer 0.2.0
 
 The first public release of pinfer, the Raspberry-Pi-4-native inference engine of
-[piquant](https://github.com/Optimizer077/piquant), for the hybrid Qwen3.5 models. Apache-2.0.
+[nibblepi](https://github.com/Optimizer077/nibblepi) (formerly piquant), for the hybrid Qwen3.5 models. Apache-2.0.
 
 ## Highlights (Raspberry Pi 4, 4 GB, 1.5 GHz, Qwen3.5-0.8B Q4K, 4 threads)
 | | 0.1.0 | 0.2.0 |
