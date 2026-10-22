@@ -4,6 +4,8 @@
  * rotate through an 18 MB arena, as in decode) and hot state. Prints RESULT lines for
  * harness/pi.py bench.
  *   lbench [--threads 1,2,4] [--n 1,4,64] [--layers 18] [--check]
+ * Dimensions: Qwen3.5-0.8B by default (16 V heads, one per K head); the 4B layout (32 V heads
+ * over 16 K heads, 24 layers) with -DHEADS=32 -DREP=2 (lbench4 in the Makefile).
  * Timed kinds: "inplace" = plain / prefill pass; "verify" = logged pass that also applies the
  * n-1 updates the previous round deferred (the speculative round since VERIFY.md);
  * "verify0+apply" = the same work as a logged pass plus a separate commit replay (the
@@ -18,11 +20,16 @@
 
 #include "kern.h"
 
-#define HEADS 16
-#define REP 1
+#ifndef HEADS
+#define HEADS 16                         /* V heads */
+#endif
+#ifndef REP
+#define REP 1                            /* V heads per K head */
+#endif
+#define KH (HEADS / REP)                 /* K heads */
 #define DK 128
 #define DV 128
-#define C (2 * HEADS * DK + HEADS * DV) /* conv_dim: q | k | v */
+#define C (2 * KH * DK + HEADS * DV)     /* conv_dim: q | k | v */
 #define LOGW (DK + DV + 1)
 #define NMAX 64                          /* tokens per pass; inputs hold two passes */
 
@@ -65,12 +72,13 @@ static void ref_layer(float *S, const float *qkv, const float *decay, const floa
         float *Sh = S + (size_t)h * DK * DV;
         for (int t = 0; t < n; t++) {
             const float *x = qkv + (size_t)t * C;
-            delta_rule(Sh, x + h * DK, x + HEADS * DK + h * DK, x + 2 * HEADS * DK + h * DV,
+            const int kh = h / REP;
+            delta_rule(Sh, x + kh * DK, x + KH * DK + kh * DK, x + 2 * KH * DK + h * DV,
                        decay[t * HEADS + h], beta[t * HEADS + h], o + (size_t)t * HEADS * DV + h * DV,
                        tmp, DK, DV);
             if (log) {
                 float *u = log + ((size_t)t * HEADS + h) * LOGW;
-                memcpy(u, x + HEADS * DK + h * DK, DK * sizeof(float));
+                memcpy(u, x + KH * DK + kh * DK, DK * sizeof(float));
                 memcpy(u + DK, tmp, DV * sizeof(float));
                 u[DK + DV] = decay[t * HEADS + h];
             }
@@ -272,9 +280,10 @@ int main(int argc, char **argv) {
                        "(%d layers)\n", kern, kind[mode], threads[ti], n, best * 1e6,
                        best * layers * 1e3 / n, best * layers * 1e3, layers);
                 printf("RESULT {\"bench\":\"lbench\",\"kernel\":\"%s\",\"kind\":\"%s\",\"threads\":%d,"
-                       "\"n\":%d,\"layers\":%d,\"us_per_layer\":%.1f,\"ms_per_token_all_layers\":%.3f,"
-                       "\"ms_per_pass_all_layers\":%.3f}\n", kern, kind[mode], threads[ti], n, layers,
-                       best * 1e6, best * layers * 1e3 / n, best * layers * 1e3);
+                       "\"n\":%d,\"layers\":%d,\"heads\":%d,\"rep\":%d,\"us_per_layer\":%.1f,"
+                       "\"ms_per_token_all_layers\":%.3f,\"ms_per_pass_all_layers\":%.3f}\n", kern,
+                       kind[mode], threads[ti], n, layers, HEADS, REP, best * 1e6,
+                       best * layers * 1e3 / n, best * layers * 1e3);
             }
         }
         pf_pool_destroy(pool);

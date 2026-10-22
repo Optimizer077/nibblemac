@@ -15,7 +15,7 @@ HDR     := kbench.h ../src/kern.h ../src/ops.h ../src/pq_format.h ../src/pq_quan
 PYTHON  ?= python.exe  # Windows python (has numpy); WSL python3 has none
 GOLDEN  := $(ROOT)/build/kbench_golden.bin
 
-all: $(OUT)/kbench $(OUT)/lbench $(OUT)/abench
+all: $(OUT)/kbench $(OUT)/lbench $(OUT)/lbench4 $(OUT)/abench
 
 # abench: the attention core (forward_attn.c attend) on synthetic data; abench-host = the
 # scalar mirrors on x86 (same hash as the NEON build when the two bodies agree)
@@ -35,6 +35,10 @@ $(HOST_OUT)/abench: abench.c $(ASRC) $(AHDR) ../src/matvec_ref.c
 
 $(OUT)/lbench: lbench.c $(KSRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) lbench.c $(KSRC) -o $@ $(LDFLAGS)
+
+# lbench4: the same at Qwen3.5-4B head counts (32 V heads over 16 K heads; run with --layers 24)
+$(OUT)/lbench4: lbench.c $(KSRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) -DHEADS=32 -DREP=2 lbench.c $(KSRC) -o $@ $(LDFLAGS)
 
 $(OUT)/kbench: $(SRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
