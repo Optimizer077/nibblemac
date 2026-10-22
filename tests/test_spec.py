@@ -68,7 +68,7 @@ def run(binary: Path, model: Path, ids: list[int], n_gen: int, extra: list[str]
 
 
 def check_mtp(binary: Path, model: Path) -> bool:
-    print("1. MTP head vs ref/golden/qwen35-0.8b-mtp (golden prompt)")
+    print(f"1. MTP head vs {GOLDEN_MTP} (golden prompt)")
     ids = np.load(GOLDEN / "input_ids.npy").astype(np.int32).tolist()
     gold = np.concatenate([np.load(GOLDEN_MTP / "mtp_logits.npy"),
                            np.load(GOLDEN_MTP / "chain_logits.npy")])
@@ -94,13 +94,18 @@ def check_mtp(binary: Path, model: Path) -> bool:
 
 
 def main() -> int:
+    global GOLDEN, GOLDEN_MTP
     p = argparse.ArgumentParser()
     p.add_argument("--bin", type=Path,
                    default=ROOT / "build" / "host" / "engine" / "pinfer_run")
     p.add_argument("--model", type=Path, default=ROOT / "models" / "pq" / "qwen35-0.8b-bf16.pq")
     p.add_argument("--n-gen", type=int, default=40, help="tokens per run (golden: 32)")
     p.add_argument("--jobs", type=int, default=8)
+    p.add_argument("--golden", type=Path, default=GOLDEN,
+                   help="golden directory; the MTP reference is read from <golden>-mtp")
     a = p.parse_args()
+    GOLDEN, GOLDEN_MTP = a.golden, a.golden.with_name(a.golden.name + "-mtp")
+    print(f"golden: {GOLDEN}\nmodel : {a.model}")
 
     res1 = check_mtp(a.bin, a.model)
 

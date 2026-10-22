@@ -79,12 +79,14 @@ def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--bin", type=Path, default=ROOT / "build" / "host" / "engine" / "pinfer_run")
     p.add_argument("--model", type=Path, default=ROOT / "models" / "pq" / "qwen35-0.8b-bf16.pq")
+    p.add_argument("--golden", type=Path, default=GOLDEN,
+                   help="golden directory from ref/dump_reference.py (e.g. ref/golden/qwen35-2b)")
     a = p.parse_args()
 
-    ids = np.load(GOLDEN / "input_ids.npy").astype(np.int32)
-    g_hid = np.load(GOLDEN / "hidden_states.npy")
-    g_log = np.load(GOLDEN / "logits.npy")
-    g_greedy = np.load(GOLDEN / "greedy_ids.npy").tolist()
+    ids = np.load(a.golden / "input_ids.npy").astype(np.int32)
+    g_hid = np.load(a.golden / "hidden_states.npy")
+    g_log = np.load(a.golden / "logits.npy")
+    g_greedy = np.load(a.golden / "greedy_ids.npy").tolist()
     n_ent, T, H = g_hid.shape
     V = g_log.shape[1]
     with tempfile.TemporaryDirectory() as td:
@@ -96,7 +98,8 @@ def main() -> int:
     hid, hid_b = hid.reshape(n_ent, T, H), hid_b.reshape(n_ent, T, H)
     log, log_b = log.reshape(T, V), log_b.reshape(T, V)
 
-    print("\n1. hidden states vs golden (entry 0 = embeddings, 24 = final-normed)")
+    print(f"golden: {a.golden}\nmodel : {a.model}")
+    print(f"\n1. hidden states vs golden (entry 0 = embeddings, {n_ent - 1} = final-normed)")
     print(f"   {'entry':>5} {'max|gold|':>10} {'max abs err':>12} {'rel max err':>12} "
           f"{'rel rms err':>12}")
     worst = 0.0
