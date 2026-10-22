@@ -10,7 +10,7 @@
  *   kbench [--dtypes f32,bf16,q8,q4,q4k] [--shapes qkv,z,...] [--threads 1,2,3,4]
  *          [--batch 1,2,4,8] [--time 0.15] [--reps 2] [--prefetch BYTES] [--variant NAME]
  *          [--golden FILE] [--check] [--head-f32] [--hot] [--auto] [--dirty KB] [--group N]
- *          [--gvecs N] [--gfused 0|1] [--qgroup N] [--gmode 0|1]
+ *          [--gvecs N] [--gfused 0|1] [--qgroup N] [--gmode 0|1] [--q4asm 0|1]
  * --dirty KB: write a KB buffer before every timed call (as the delta-rule recurrence
  * leaves ~1 MB of dirty state in L2 right before out_proj in the engine).
  * --group N / --gvecs N: pf_matmul splits n > N vectors into groups of at most gvecs
@@ -18,6 +18,7 @@
  * --gfused 0: one job per group instead of all groups in one job (kern_group_fused);
  * --qgroup N: quantized calls of more than N vectors are split (kern_qgroup_min, 16 before
  * KERNELS.md Part 4); --gmode 0: equal group sizes instead of 7s + 5s / 4s (kern_group_mode).
+ * --q4asm 0: Q4 / Q4K batches on the C loops instead of the asm passes (kern_q4_asm, Part 5).
  * Every RESULT carries `yhash`, an FNV-1a hash of the batched output bytes: the inputs are
  * seeded, so two kbench builds with different kernels must print the same hashes for the
  * same configuration if their outputs are bit-identical (KERNELS.md Part 3).
@@ -157,6 +158,7 @@ static void parse_args(int argc, char **argv) {
         else if (!strcmp(a, "--gfused")) kern_group_fused = atoi(v), i++; /* groups in one job */
         else if (!strcmp(a, "--qgroup")) kern_qgroup_min = atoi(v), i++; /* quantized split above */
         else if (!strcmp(a, "--gmode")) kern_group_mode = atoi(v), i++; /* group sizes */
+        else if (!strcmp(a, "--q4asm")) kern_q4_asm = atoi(v), i++; /* Q4 asm passes */
         else { fprintf(stderr, "unknown option %s\n", a); exit(2); }
     }
 }
@@ -242,12 +244,12 @@ static int bench_one(const dtype_t *dt, const shape_t *sh, pf_pool **pools) {
                    "\"rows\":%d,\"cols\":%d,\"threads\":%d,\"n\":%d,\"bytes\":%zu,\"us\":%.2f,"
                    "\"gbs\":%.3f,\"rel_err_fp\":%.3e,\"rel_err_kernel\":%.3e,\"prefetch\":%d,"
                    "\"iters\":%ld,\"hot\":%d,\"auto_threads\":%d,\"dirty_kb\":%d,\"group\":%d,\"gvecs\":%d,"
-                   "\"gfused\":%d,\"qgroup\":%d,\"gmode\":%d,"
+                   "\"gfused\":%d,\"qgroup\":%d,\"gmode\":%d,\"q4asm\":%d,"
                    "\"exact\":%s,\"yhash\":\"%016llx\",\"noisy\":%s,\"foreign_cpu_s\":%.3f,\"ok\":%s}\n",
                    opt.variant, dt->name, sh->name, rows, cols, pf_pool_threads(pool), n, bytes,
                    us, gbs, e_fp, e_k, kern_prefetch, iters, opt.hot, opt.autothr, opt.dirty_kb,
                    kern_act_group, kern_group_vecs, kern_group_fused, kern_qgroup_min,
-                   kern_group_mode, exact ? "true" : "false", yhash,
+                   kern_group_mode, kern_q4_asm, exact ? "true" : "false", yhash,
                    tm.noisy ? "true" : "false", tm.foreign, ok ? "true" : "false");
             fflush(stdout);
         }

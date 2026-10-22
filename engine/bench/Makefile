@@ -15,7 +15,16 @@ HDR     := kbench.h ../src/kern.h ../src/ops.h ../src/pq_format.h ../src/pq_quan
 PYTHON  ?= python.exe  # Windows python (has numpy); WSL python3 has none
 GOLDEN  := $(ROOT)/build/kbench_golden.bin
 
-all: $(OUT)/kbench $(OUT)/lbench $(OUT)/lbench4 $(OUT)/abench
+all: $(OUT)/kbench $(OUT)/lbench $(OUT)/lbench4 $(OUT)/abench $(OUT)/ubench2
+
+# ubench2: A72 dispatch / pipe pairing rules and table lookups (KERNELS.md Part 5)
+$(OUT)/ubench2: ubench2.c | $(OUT)
+	$(CC) $(CFLAGS) ubench2.c -o $@ $(LDFLAGS)
+
+# tbench: A/B bench of Q4 / Q4K kernel variants (qvar_*.c) vs kern_quant.c, exact + timed
+TSRC    := tbench.c kbench_util.c $(wildcard qvar_*.c)
+$(OUT)/tbench: $(TSRC) qvar.h $(KSRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) $(TSRC) $(KSRC) -o $@ $(LDFLAGS)
 
 # abench: the attention core (forward_attn.c attend) on synthetic data; abench-host = the
 # scalar mirrors on x86 (same hash as the NEON build when the two bodies agree)

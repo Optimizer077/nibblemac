@@ -46,6 +46,10 @@ extern int kern_qgroup_min;
 extern int kern_group_mode;
 extern int kern_group_fused;
 
+/* 1 (default): Q4_G32 / Q4K_G32 calls of n >= 2 vectors run the dispatch-ordered asm register
+ * passes of kern_q4s.h; 0: the C loops of kern_quant.c. Bit-identical (KERNELS.md Part 5). */
+extern int kern_q4_asm;
+
 /* 1 (default): pf_matmul picks the thread count per call (per-dtype cap for n == 1, fewer
  * threads for small matrices). 0: always use every pool thread (kbench thread sweeps). */
 extern int kern_auto_threads;
