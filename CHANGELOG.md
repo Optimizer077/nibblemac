@@ -12,6 +12,18 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Optimization agents, overclock test (lead, 16:55-18:20)
+- Added: `docs/network-audit.md` (merged): a Cerno decision is ~150 ms per prompt token, 93% Q4_0 matmul;
+  ranked candidates; exact head screening for 0.8B measured as a dead end.
+- Added: `harness/pi.py` pause file (`harness/pi.pause`, exit 75) for reboot windows; `plan/board/`, a findings
+  board shared by the optimization agents.
+- Measured: 1.5 GHz baselines (`oc-1500-*`); A72 dual-issue rules (`lut-ubench2_*`): SMLAL pairs with D-form
+  float / add ops, table lookups cannot beat SMLAL.
+- Pi: overclock run 1 (2000 MHz, `over_voltage=6`, one-time tryboot) froze under load; not stable on this
+  board; `docs/pi-state.md` #5, restore pending after the owner's power cycle.
+- Decided: focus on Cerno (owner); the decode-streaming and chat-drafting agents stopped; work shut down at
+  18:20 with the agents' work in progress committed to their branches (not merged).
+
 ### Network audit (audit agent, 16:55–17:50; branch `worktree-agent-a4e27a8ffe358907e`)
 - Added `docs/network-audit.md`, Cerno 4B first (owner's focus): the network walk-through (32 layers,
   shapes, bytes, cost per prefill token, how a decision drives it); per-operation time budgets for the 4B

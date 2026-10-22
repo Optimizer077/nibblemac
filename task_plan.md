@@ -99,8 +99,9 @@ look carefully into the network and see what can be further optimized to make it
 - [x] README data-flow animations (`0d49e00`); README links to cerno-pi (`2ebc642`)
 - [ ] P0 4B prefill speed (agent, branch `worktree-agent-aff7b9e370c62872c`): last-layer tail,
       groups of 7s + 5s; gates + before/after at 1.5 GHz; 0.8B no regression → merge
-- [ ] P0 Overclock test 2.0 GHz / `over_voltage=6` (scripts `os/overclock/`, `d0d4e0c`): after the
-      4B measurements, when no agent is on the Pi (reboot drops the lock)
+- [x] P0 Overclock test 2.0 GHz / `over_voltage=6`: run 1 FROZE the Pi under load (18:04); not stable on this
+      Rev 1.1 board (`os/overclock/OVERCLOCK.md`). Next: owner power-cycles, lead restores tryboot.txt;
+      owner decides on a milder setting (e.g. 1.8 GHz)
 - [ ] P1 Network audit (agent): `docs/network-audit.md`, time budgets per workload, ranked
       candidates with exactness class; then implement the top items (new agents)
 - [ ] P0 Beyond the multiplier (agent, owner 17:10 "creative optimization, better kernels"): table-lookup
@@ -121,3 +122,5 @@ look carefully into the network and see what can be further optimized to make it
 - [ ] P1 README redesign (visual + structure) with the final numbers, after the tests above
 - [ ] P2 Owner decisions: Cerno sample set / Decision Index (7 GB, one gated dataset); PyPI name;
       Gemma 4 (llama.cpp check first); social-preview upload
+
+- 2026-10-22 18:20: owner shut the work down for now; agents committed work in progress to their branches.
