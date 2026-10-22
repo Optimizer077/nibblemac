@@ -268,14 +268,21 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
     }
     if (n <= 0) return;
     const double t0 = kern_stats_enabled() ? now_sec() : 0.0;
-    /* Large batches (prefill) run in groups of kern_act_group vectors, each group streaming
-     * the weights again: a group's int8 activations (16 x cols bytes) stay in L1 across the
-     * tiles, whereas 64 vectors x 1 KB were re-read from L2 for every 4-row tile (n = 64 ran
-     * at ~35 instead of ~27 cycles per block-vector, KERNELS.md). Per-vector arithmetic is
-     * unchanged, so results stay bit-identical to pf_matvec. */
-    const int G = kern_act_group > 0 && n > kern_act_group ? kern_act_group : n;
-    for (int g0 = 0; g0 < n; g0 += G) {
-        const int gn = n - g0 < G ? n - g0 : G;
+    /* Large batches (prefill, n > kern_act_group) run in groups of equal size (+-1), each
+     * group streaming the weights again, so that a group's int8 activations stay in L1 across
+     * the tiles (64 vectors x 1 KB re-read from L2 for every 4-row tile ran at ~35 instead of
+     * ~27 cycles per block-vector, KERNELS.md v13). Quantized dtypes use groups of at most
+     * kern_group_vecs (7) vectors, i.e. one register pass per tile with 7 KB-25 KB of
+     * activations; groups of 16 (4 passes, 16-57 KB) were 17-24% slower at n = 64
+     * (KERNELS.md Part 3). Float dtypes keep groups of kern_act_group. Per-vector arithmetic
+     * is unchanged, so results stay bit-identical to pf_matvec whatever the grouping. */
+    int ng = 1;
+    if (kern_act_group > 0 && n > kern_act_group) {
+        const int gmax = W->dtype >= PQ_Q8_G32 && kern_group_vecs > 0 ? kern_group_vecs : kern_act_group;
+        ng = (n + gmax - 1) / gmax;
+    }
+    for (int g = 0, g0 = 0; g < ng; g++) {
+        const int gn = n / ng + (g < n % ng);
         const float *Xg = X + (size_t)g0 * W->cols;
         float *Yg = Y + (size_t)g0 * W->rows;
         pf_act act, *A = NULL;
@@ -289,6 +296,7 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
         }
         job_t job = {fn, W, Xg, A, Yg, gn, (W->rows + 3) / 4, threads_for(W, gn, pool), NULL, NULL};
         dispatch(pool, &job);
+        g0 += gn;
     }
     if (kern_stats_enabled())
         kern_stats_add(W->rows, W->cols, W->dtype, n, now_sec() - t0, weight_bytes(W));

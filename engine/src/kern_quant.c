@@ -10,6 +10,13 @@
  * int16 headroom: Q8 puts 2 products (|w|,|x| <= 127 -> <= 32258) in a lane; Q4 puts 4
  * products (u4 <= 15) in a lane, and the 3 pairwise adds of the 4-row reduction keep the
  * worst case at 16 * 15 * 127 = 30480 < 32767 before widening.
+ *
+ * Batches: a 4-row tile runs register passes of up to NV_MAX vectors; a block's codes (and a
+ * Q4K superblock's scales) are decoded once per pass and feed every vector of it, so the
+ * per-vector cost falls with the pass size until the accumulators no longer fit the
+ * registers. n vectors are split into ceil(n / NV_MAX) passes of equal size (+-1): no
+ * 4 + 1 split at n = 5 (k = 4 verification), which decoded every tile twice
+ * (KERNELS.md Part 3).
  */
 #include <arm_neon.h>
 
@@ -17,6 +24,10 @@
 #include "pq_quant.h"
 
 #define INLINE static inline __attribute__((always_inline))
+
+#ifndef NV_MAX
+#define NV_MAX 7 /* vectors per register pass (8 spills accumulators; KERNELS.md Part 3) */
+#endif
 
 INLINE void prefetch_sb(const uint8_t *p, int bytes, int pf) {
     if (pf)
@@ -32,7 +43,7 @@ INLINE float32x4_t scale4(const __fp16 *line, int g) { return vcvt_f32_f16(vld1_
 
 /* The block loop is fully unrolled for single-vector passes (short dependency chains need
  * many blocks in flight) and kept rolled for multi-vector passes (where unrolling made GCC
- * spill the 8 accumulators; the vectors already provide the parallelism). */
+ * spill the accumulators; the vectors already provide the parallelism). */
 #define BLOCK_LOOP(NV, K, BODY)                                                       \
     if ((NV) == 1) {                                                                  \
         _Pragma("GCC unroll 8") for (int K = 0; K < 8; K++) BODY                      \
@@ -41,6 +52,7 @@ INLINE float32x4_t scale4(const __fp16 *line, int g) { return vcvt_f32_f16(vld1_
     }
 
 /* ---------------------------------------------------------------- Q8_G32 */
+/* One block for the vectors v0..v0+nv-1 of a pass: acc[v] += d * t. */
 INLINE void q8_block(const int8_t *q, float32x4_t d4, int blk, const pf_act *A, int v0, int nv,
                      float32x4_t *acc) {
     const size_t base = (size_t)blk * A->n + v0; /* block-major activations */
@@ -69,7 +81,7 @@ INLINE void q8_block(const int8_t *q, float32x4_t d4, int blk, const pf_act *A, 
 
 INLINE void q8_tile(const uint8_t *p, int nsb, const pf_act *A, float *Y, int rows, int r,
                     int v0, int nv, int pf) {
-    float32x4_t acc[KERN_MAX_NV];
+    float32x4_t acc[NV_MAX];
     for (int v = 0; v < nv; v++) acc[v] = vdupq_n_f32(0.0f);
     for (int sb = 0; sb < nsb; sb++, p += 1088) {
         prefetch_sb(p, 1088, pf);
@@ -116,27 +128,32 @@ INLINE void q4_block(const uint8_t *q, float32x4_t d4, float32x4_t o4, int blk,
     }
 }
 
-/* 32 packed 6-bit values (see kern_get6) -> two u8x16: values 0..15 and 16..31. */
+/* 32 packed 6-bit values (see kern_get6) -> two u8x16, values 0..15 and 16..31, in 5 NEON
+ * ops: the 8 bytes of high bit pairs are loaded into both halves and one USHL by (0, -2)
+ * lines up the pairs of values j and j + 8 (bits 0-1, 2-3 of byte j % 8) at bits 0-1 of lane
+ * j and those of j + 16 and j + 24 (bits 4-5, 6-7) at bits 4-5; SLI / USRA merge them with
+ * the low nibbles (the fields do not overlap, so the add of USRA is an or). */
 INLINE void unpack6(const uint8_t *p, uint8x16_t *a, uint8x16_t *b) {
     const uint8x16_t lo = vld1q_u8(p);
-    const uint8x8_t hb = vld1_u8(p + 16), m3 = vdup_n_u8(3);
-    const uint8x16_t h01 = vcombine_u8(vand_u8(hb, m3), vand_u8(vshr_n_u8(hb, 2), m3));
-    const uint8x16_t h23 = vcombine_u8(vand_u8(vshr_n_u8(hb, 4), m3), vshr_n_u8(hb, 6));
-    *a = vorrq_u8(vandq_u8(lo, vdupq_n_u8(15)), vshlq_n_u8(h01, 4));
-    *b = vorrq_u8(vshrq_n_u8(lo, 4), vshlq_n_u8(h23, 4));
+    const uint8x16_t hb = vreinterpretq_u8_u64(vld1q_dup_u64((const uint64_t *)(p + 16)));
+    const uint8x16_t t = vshlq_u8(hb, vcombine_s8(vdup_n_s8(0), vdup_n_s8(-2))); /* hb | hb>>2 */
+    *b = vsraq_n_u8(vandq_u8(t, vdupq_n_u8(0x30)), lo, 4); /* high pairs << 4 + lo >> 4 */
+    *a = vsliq_n_u8(lo, vandq_u8(t, vdupq_n_u8(3)), 4);    /* low pairs << 4 over lo & 15 */
 }
 
 /* 16 u8 values (4 blocks x 4 rows) times a per-row fp32 multiplier -> 16 floats, without
- * UCVTF (2.3 cycles on the A72): widen to u32, OR in the exponent of 2^23 so the word reads
- * as the float 2^23 + v, then one FMA with (mul, -2^23 * mul) leaves v * mul, exact because
- * v (6 bits) * mul (11-bit fp16 mantissa) fits a float mantissa. */
-INLINE void u8_scaled(uint8x16_t v, float32x4_t mul, float32x4_t nmul, float *out) {
-    const uint16x8_t l = vmovl_u8(vget_low_u8(v)), h = vmovl_high_u8(v);
-    const uint32x4_t w[4] = {vmovl_u16(vget_low_u16(l)), vmovl_high_u16(l),
-                             vmovl_u16(vget_low_u16(h)), vmovl_high_u16(h)};
+ * UCVTF (2.3 cycles on the A72): zipping the bytes with zero and then with the halfword
+ * 0x4B00 builds the words 0x4B0000vv, i.e. the floats 2^23 + v; subtracting 2^23 gives v
+ * exactly, and v * mul is exact (6 bits x an 11-bit fp16 mantissa fit a float mantissa), so
+ * the result equals the previous ORR + FMA form (KERNELS.md v12) bit for bit. */
+INLINE void u8_scaled(uint8x16_t v, float32x4_t mul, float *out) {
+    const uint8x16_t z = vdupq_n_u8(0);
+    const uint16x8_t e = vdupq_n_u16(0x4B00);
+    const uint16x8_t l = vreinterpretq_u16_u8(vzip1q_u8(v, z)), h = vreinterpretq_u16_u8(vzip2q_u8(v, z));
+    const uint16x8_t w[4] = {vzip1q_u16(l, e), vzip2q_u16(l, e), vzip1q_u16(h, e), vzip2q_u16(h, e)};
     for (int i = 0; i < 4; i++) {
-        const float32x4_t f = vreinterpretq_f32_u32(vorrq_u32(w[i], vdupq_n_u32(0x4B000000u)));
-        vst1q_f32(out + 4 * i, vfmaq_f32(nmul, f, mul));
+        const float32x4_t f = vsubq_f32(vreinterpretq_f32_u16(w[i]), vdupq_n_f32(8388608.0f));
+        vst1q_f32(out + 4 * i, vmulq_f32(f, mul));
     }
 }
 
@@ -144,17 +161,16 @@ INLINE void u8_scaled(uint8x16_t v, float32x4_t mul, float32x4_t nmul, float *ou
 INLINE void q4k_scales(const uint8_t *p, float *d, float *o) {
     const __fp16 *h = (const __fp16 *)p;
     const float32x4_t D4 = vcvt_f32_f16(vld1_f16(h)), M4 = vcvt_f32_f16(vld1_f16(h + 4));
-    const float32x4_t nD4 = vmulq_n_f32(D4, -8388608.0f), nM4 = vmulq_n_f32(M4, -8388608.0f);
     uint8x16_t a, b;
     unpack6(p + 16, &a, &b);
-    u8_scaled(a, D4, nD4, d), u8_scaled(b, D4, nD4, d + 16);
+    u8_scaled(a, D4, d), u8_scaled(b, D4, d + 16);
     unpack6(p + 40, &a, &b);
-    u8_scaled(a, M4, nM4, o), u8_scaled(b, M4, nM4, o + 16);
+    u8_scaled(a, M4, o), u8_scaled(b, M4, o + 16);
 }
 
 INLINE void q4_tile(const uint8_t *p, int nsb, const pf_act *A, float *Y, int rows, int r,
                     int v0, int nv, int pf, int kq) {
-    float32x4_t acc[KERN_MAX_NV];
+    float32x4_t acc[NV_MAX];
     float ds[32], os[32]; /* Q4K scales / offsets of the current superblock, [block][row] */
     for (int v = 0; v < nv; v++) acc[v] = vdupq_n_f32(0.0f);
     for (int sb = 0; sb < nsb; sb++, p += 576) {
@@ -171,15 +187,33 @@ INLINE void q4_tile(const uint8_t *p, int nsb, const pf_act *A, float *Y, int ro
     store4(acc, Y, rows, r, v0, nv);
 }
 
-/* Split n vectors into passes of 4/3/2/1 over the same tile (later passes hit L1).
- * Passes of 8 were measured slower than 2 x 4 (register spills; KERNELS.md v8). */
+/* switch cases for the pass sizes above 5 (compile-time counts up to NV_MAX) */
+#if NV_MAX >= 8
+#define BIG_PASSES(CALL) case 8: CALL(8); break; case 7: CALL(7); break; case 6: CALL(6); break;
+#elif NV_MAX == 7
+#define BIG_PASSES(CALL) case 7: CALL(7); break; case 6: CALL(6); break;
+#elif NV_MAX == 6
+#define BIG_PASSES(CALL) case 6: CALL(6); break;
+#else
+#define BIG_PASSES(CALL)
+#endif
+
+/* Passes over one tile: the n vectors split into ceil(n / NV_MAX) passes of equal size (+-1),
+ * larger first; later passes find the tile in L1. Every pass performs the same per-vector
+ * operations, so results do not depend on the split. */
 #define VECTOR_PASSES(CALL)                                                           \
     for (int v = 0; v < n;) {                                                         \
-        const int left = n - v;                                                       \
-        if (left >= 4) { CALL(4); v += 4; }                                           \
-        else if (left == 3) { CALL(3); v += 3; }                                      \
-        else if (left >= 2) { CALL(2); v += 2; }                                      \
-        else { CALL(1); v += 1; }                                                     \
+        const int left = n - v, np = (left + NV_MAX - 1) / NV_MAX;                    \
+        const int nv = (left + np - 1) / np;                                          \
+        switch (nv) {                                                                 \
+        BIG_PASSES(CALL)                                                              \
+        case 5: CALL(5); break;                                                       \
+        case 4: CALL(4); break;                                                       \
+        case 3: CALL(3); break;                                                       \
+        case 2: CALL(2); break;                                                       \
+        default: CALL(1); break;                                                      \
+        }                                                                             \
+        v += nv;                                                                      \
     }
 
 void kern_q8(const pf_mat *W, const float *X, const pf_act *A, float *Y, int n, int r0, int r1) {
