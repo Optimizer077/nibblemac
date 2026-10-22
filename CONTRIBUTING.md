@@ -28,6 +28,10 @@ with the incidents that produced them. Setup and commands: [docs/REPRODUCE.md](d
 - Quote only `valid=true` results and add them to the tables in `notes.md` with the result-file path.
   `valid` covers exit code, throttling and output parsing, not correctness: read `match`, `exact` or
   `identical` for that (`docs/REPRODUCE.md` §9).
+- **Reboot windows:** while `harness/pi.pause` exists (gitignored; first lines say why and until when),
+  `pi.py` refuses `push`, `run`, `bench` and `snapshot` with exit code 75 for everyone but its holder
+  (`PINFER_PAUSE_TOKEN` equal to the file's `token=` line). The holder uses it for reboots such as the
+  overclock test, so no agent measures across a reboot or a clock change.
 - Give experimental binaries their own names on the Pi (`engine/pinfer_run_<topic>`).
   `engine/pinfer_run_fast` is the shared binary that everyone's comparisons use.
 

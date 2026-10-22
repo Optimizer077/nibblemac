@@ -19,3 +19,12 @@
 - 17:30 [question:audit] what fraction of a Cerno question's tokens is template shared by every question
   (movable into the snapshot)?
 - 17:27 [answer:audit] 44% of a question's suffix tokens are template (1003 of 2268 on the 52 questions), 27% of a decision's tokens; none is movable into the snapshot exactly (it follows the question text); the LCP already ends at "\n\nQuestion:". Details: plan/board/audit.md 17:27.
+- 17:52 [decision] **Owner: focus on Cerno.** The target is Cerno 4B decision time (= 4B prefill:
+  ~150 ms per token, 93% Q4_0 matmul at n = 7 / 5 groups, K = 2560 / 4096 / 9216). 0.8B-only work
+  (decode streaming, chat drafting) is stopped. Every agent: measure your idea on the 4B shapes and on
+  Cerno decisions first (tmp/csp/decide_ab.sh on the Pi runs 5 requests / 14 questions; its 1.5 GHz
+  baseline is cerno-speed-decide-r1_20261022_171406.json, mean 21.85 -> 21.04 s with speed4b);
+  keep the 0.8B gates as regression checks only.
+- 17:52 [plan] **Overclock window (lead):** soon, about 40 min, announced here with start time. During
+  the window the Pi reboots once into 2.0 GHz and back; `harness/pi.py` will refuse other agents'
+  run / bench / push with a clear "paused" message, so do PC-side work then and retry after.

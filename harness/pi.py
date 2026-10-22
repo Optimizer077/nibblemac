@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -255,6 +256,23 @@ def cmd_snapshot(cfg: PiConfig, args: argparse.Namespace, extra: dict) -> int:
     return 0
 
 
+PAUSE_FILE = Path(__file__).resolve().parent / "pi.pause"
+
+
+def pause_message() -> str | None:
+    """While harness/pi.pause exists (a reboot window, e.g. the overclock test), every command but
+    `check` is refused, except for the holder, whose PINFER_PAUSE_TOKEN matches the file's token= line.
+    The file's other lines say why and until when."""
+    if not PAUSE_FILE.is_file():
+        return None
+    lines = PAUSE_FILE.read_text(encoding="utf-8").splitlines()
+    token = next((ln.split("=", 1)[1].strip() for ln in lines if ln.startswith("token=")), "")
+    if token and os.environ.get("PINFER_PAUSE_TOKEN") == token:
+        return None
+    why = " ".join(ln for ln in lines if not ln.startswith("token=")).strip() or "no reason given"
+    return f"[pi.py] the Pi is PAUSED ({why}); do PC-side work and retry later (exit 75)"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -282,6 +300,11 @@ def main() -> int:
     t0 = time.monotonic()
     code = 1
     try:
+        if args.cmd != "check" and (msg := pause_message()):
+            print(msg, file=sys.stderr)
+            extra["paused"] = True
+            code = 75  # EX_TEMPFAIL: retry later
+            return code
         code = handlers[args.cmd](cfg, args, extra)
         return code
     finally:
