@@ -222,6 +222,44 @@ class Model:
         out: np.ndarray = self._logits.copy()
         return out
 
+    def eval_select(self, tokens: Sequence[int], ids: Sequence[int]) -> np.ndarray:
+        """Append tokens to the context and return the last token's logits of the vocabulary
+        ``ids`` only (float32 [len(ids)]), equal bit for bit to ``eval(tokens)[ids]``. Only the
+        head rows that hold ``ids`` are computed (``pinfer_eval_select``); with an older
+        library this falls back to :meth:`eval`. ``ids`` may be empty (feed only).
+
+        Raises:
+            ContextOverflowError: The context would exceed ``max_ctx`` (state unchanged).
+            PinferError: Invalid token id or vocabulary id (state unchanged).
+        """
+        toks = [int(t) for t in tokens]
+        sel = [int(i) for i in ids]
+        if not toks:
+            raise ValueError("eval_select needs at least one token")
+        fn = self._lib.pinfer_eval_select
+        if fn is None:
+            if any(i < 0 or i >= self.n_vocab for i in sel):
+                raise PinferError(f"vocabulary id outside [0, {self.n_vocab})", errors.E_ARG)
+            if not sel:
+                self._eval_into(toks)
+                return np.zeros(0, dtype=np.float32)
+            picked: np.ndarray = self.eval(toks)[sel]
+            return picked
+        if self.n_past + len(toks) > self.max_ctx:
+            raise ContextOverflowError(
+                f"{self.n_past} tokens in context + {len(toks)} new > max_ctx {self.max_ctx}",
+                errors.E_CTX_FULL)
+        out = np.zeros(len(sel), dtype=np.float32)
+        arr = (ctypes.c_int32 * len(toks))(*toks)
+        sel_arr = (ctypes.c_int32 * max(len(sel), 1))(*sel)
+        rc = fn(self._handle(), arr, len(toks), sel_arr, len(sel),
+                out.ctypes.data_as(ctypes.POINTER(ctypes.c_float)))
+        if rc != errors.OK:
+            raise errors.from_code(rc, "pinfer_eval_select")
+        self._tokens.extend(toks)
+        self._logits_valid = False        # the full logits buffer is not the last token's
+        return out
+
     # ------------------------------------------------------------------ state
     def save_state(self) -> bytes:
         """Snapshot the context (recurrent + conv states, KV cache, MTP cache, the tokens in
