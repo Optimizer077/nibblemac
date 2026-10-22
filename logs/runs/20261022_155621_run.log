@@ -1,0 +1,7 @@
+# 2026-10-22T15:56:21 pi@10.42.0.2
+$ md5sum ~/pinfer/engine/pinfer_run_cerno2 ~/pinfer/engine/pinfer_run_fast
+
+537fb9a3baa8e949cbe6fe6618bc82c9  /home/pi/pinfer/engine/pinfer_run_cerno2
+d48ffda1a5999d071358c80041b9c591  /home/pi/pinfer/engine/pinfer_run_fast
+
+[exit 0]

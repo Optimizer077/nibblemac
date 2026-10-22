@@ -1,0 +1,6 @@
+# 2026-10-22T15:41:43 pi@10.42.0.2
+$ for i in $(seq 1100); do [ -e tmp/cerno/LOCKHELD ] && break; sleep 1; done; echo "window $(date +%T) after ${i}s"
+
+window 15:41:43 after 1s
+
+[exit 0]

@@ -1,0 +1,10 @@
+# 2026-10-22T15:04:20 pi@10.42.0.2
+$ rm -rf tmp/cerno/py tmp/cerno/lib tmp/cerno/cerno_pi tmp/cerno/bench tmp/cerno/requests; md5sum engine/spec_exact.sh engine/bench/spec_exact.sh engine/ctx_check.sh engine/bench/ctx_check.sh engine/pinfer_run_fast 2>&1
+
+2d0668b18325a7696188d38370216579  engine/spec_exact.sh
+md5sum: engine/bench/spec_exact.sh: No such file or directory
+07561f150c64cd4079fdecf3e7dab1bd  engine/ctx_check.sh
+md5sum: engine/bench/ctx_check.sh: No such file or directory
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+
+[exit 1]

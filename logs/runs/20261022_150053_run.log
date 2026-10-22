@@ -1,0 +1,16 @@
+# 2026-10-22T15:00:53 pi@10.42.0.2
+$ cd ~/pinfer && rm -rf tmp/rel020/site && ~/pinfer/venvs/pinfer/bin/python -m pip install -q --no-deps --target tmp/rel020/site tmp/rel020/pinfer-0.2.0-py3-none-manylinux_2_34_aarch64.whl && PYTHONPATH=tmp/rel020/site ~/pinfer/venvs/pinfer/bin/python -c "
+import pinfer, time
+from pinfer import Model
+print(\"version\", pinfer.__version__)
+m = Model.load(\"models/qwen35-0.8b-q4k-headq4k.pq\", \"models/qwen35-0.8b-tokenizer\")
+r = m.generate(\"The capital of France is\", max_new_tokens=16, speculative=True)
+p = m.generate(\"The capital of France is\", max_new_tokens=16, reuse_prefix=False)
+print(\"spec:\", repr(r.text)); print(\"identical to plain:\", r.token_ids == p.token_ids, \"| spec stats:\", r.spec_stats)
+"; rm -rf tmp/rel020
+
+version 0.2.0
+spec: ' the capital of the United Kingdom.\nThe capital of France is the capital of'
+identical to plain: True | spec stats: {'k': 4, 'rounds': 7, 'drafted': 10, 'accepted': 8, 'adaptive': True, 'ngram': 7, 'ngram_rounds': 0, 'ngram_drafted': 0, 'ngram_accepted': 0}
+
+[exit 0]

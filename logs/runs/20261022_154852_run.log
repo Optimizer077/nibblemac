@@ -1,0 +1,14 @@
+# 2026-10-22T15:48:52 pi@10.42.0.2
+$ cp tmp/cerno/ids/p64.ids tmp/cerno/ids/p256.ids tmp/csp/ && cp data/ctx512.ids tmp/csp/p512.ids && md5sum engine/pinfer_run_csp0 tmp/csp/* && grep -c $'\r' tmp/csp/profile.sh; tr ',' '\n' < tmp/csp/p512.ids | wc -l; tr ',' '\n' < tmp/csp/p256.ids | wc -l; tr ',' '\n' < tmp/csp/p64.ids | wc -l
+
+537fb9a3baa8e949cbe6fe6618bc82c9  engine/pinfer_run_csp0
+81850129c40efc4472eb8cc10ee1941b  tmp/csp/p256.ids
+92c15a179c577ed00ba27f6b5353b30d  tmp/csp/p512.ids
+ff738ff7406ca17db077e463a4f1d3ef  tmp/csp/p64.ids
+666576fc774ff0f77002d5d21eac5e61  tmp/csp/profile.sh
+0
+511
+255
+63
+
+[exit 0]

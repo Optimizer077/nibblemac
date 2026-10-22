@@ -1,0 +1,8 @@
+# 2026-10-22T15:28:27 pi@10.42.0.2
+$ cd ~/pinfer/engine && keep="pinfer_run_fast pinfer_ppl_fast pinfer_run_fast.pre-0.2.0 pinfer_ppl_fast.pre-0.2.0 pinfer_run_cerno1 pinfer_run_cerno2"; n=0; for f in pinfer_run* pinfer_ppl* exptest_pi; do case " $keep " in *" $f "*) continue;; esac; rm -f -- "$f" && n=$((n+1)); done; rm -rf ng; echo "removed $n binaries + ng/"; ls | paste -sd" " -; du -sh .
+
+removed 57 binaries + ng/
+chat_spec.sh core2_check.sh ctx_check.sh f16_check.sh pinfer_ppl_fast pinfer_ppl_fast.pre-0.2.0 pinfer_run_cerno1 pinfer_run_cerno2 pinfer_run_fast pinfer_run_fast.pre-0.2.0 pv_ab.sh spec_exact.sh state_check.sh
+5.4M	.
+
+[exit 0]

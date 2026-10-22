@@ -1,0 +1,23 @@
+# 2026-10-22T15:04:29 pi@10.42.0.2
+$ md5sum engine/pinfer_run_cerno2 tmp/cerno/lib/libpinfer.so tmp/cerno/requests/correctness.json; grep -c paypa1-support.example tmp/cerno/requests/correctness.json; ls tmp/cerno tmp/cerno/ids
+
+537fb9a3baa8e949cbe6fe6618bc82c9  engine/pinfer_run_cerno2
+bc3004daf6b5ae82db88a9a99ca60fa1  tmp/cerno/lib/libpinfer.so
+d26aba457b5d80b98af183c40aa26547  tmp/cerno/requests/correctness.json
+1
+tmp/cerno:
+bench
+cerno_pi
+ids
+lib
+py
+requests
+
+tmp/cerno/ids:
+p256.ids
+p64.ids
+p_long.ids
+p_mid.ids
+p_short.ids
+
+[exit 0]

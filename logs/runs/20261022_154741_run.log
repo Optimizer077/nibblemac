@@ -1,0 +1,76 @@
+# 2026-10-22T15:47:41 pi@10.42.0.2
+$ ls -la tmp/cerno/ids tmp/cerno/ data/ | head -60; head -c 300 tmp/cerno/ids/p64.ids; echo; md5sum data/ctx512.ids data/prompt64.ids tmp/cerno/ids/*; ls ~/pinfer
+
+data/:
+total 280
+drwxrwxr-x  2 pi pi   4096 Oct 22 13:12 .
+drwxrwxr-x 16 pi pi   4096 Oct 22 01:38 ..
+-rw-rw-r--  1 pi pi    137 Oct 22 00:30 chat27.ids
+-rwxr-xr-x  1 pi pi    151 Oct 22 07:48 chat_code_c.ids
+-rwxr-xr-x  1 pi pi    173 Oct 22 07:48 chat_code_py.ids
+-rwxr-xr-x  1 pi pi    906 Oct 22 11:02 chat_edit.ids
+-rwxr-xr-x  1 pi pi    687 Oct 22 11:02 chat_fix.ids
+-rwxr-xr-x  1 pi pi    149 Oct 22 07:48 chat_list.ids
+-rwxr-xr-x  1 pi pi    242 Oct 22 07:48 chat_math.ids
+-rwxr-xr-x  1 pi pi    121 Oct 22 07:48 chat_story.ids
+-rwxr-xr-x  1 pi pi   9531 Oct 22 02:11 ctx2048.ids
+-rwxr-xr-x  1 pi pi   9831 Oct 22 04:52 ctx2112.ids
+-rwxr-xr-x  1 pi pi  18999 Oct 22 02:11 ctx4096.ids
+-rwxr-xr-x  1 pi pi   2335 Oct 22 02:11 ctx512.ids
+-rwxr-xr-x  1 pi pi    292 Oct 22 02:52 ctx64.ids
+-rwxr-xr-x  1 pi pi  38310 Oct 22 02:23 ctx8192.ids
+-rwxr-xr-x  1 pi pi      5 Oct 22 06:52 next2048.ids
+-rwxr-xr-x  1 pi pi      6 Oct 22 05:19 next4096.ids
+-rwxr-xr-x  1 pi pi      4 Oct 22 05:19 next8192.ids
+-rwxr-xr-x  1 pi pi    276 Oct 21 23:48 prompt64.ids
+-rwxr-xr-x  1 pi pi    299 Oct 22 04:52 tail2048_64.ids
+-rwxr-xr-x  1 pi pi 131072 Oct 21 23:39 wikitext2-qwen35.tokens.bin
+
+tmp/cerno/:
+total 16828
+drwxr-xr-x 9 pi pi     4096 Oct 22 15:42 .
+drwxrwxr-x 6 pi pi     4096 Oct 22 15:11 ..
+drwxr-xr-x 2 pi pi     4096 Oct 22 15:41 bench
+drwxr-xr-x 3 pi pi     4096 Oct 22 15:16 cerno_pi
+drwxr-xr-x 2 pi pi     4096 Oct 22 14:29 ids
+drwxr-xr-x 2 pi pi     4096 Oct 22 15:04 lib
+-rwxr-xr-x 1 pi pi 17191672 Oct 22 15:41 llama-server
+drwxr-xr-x 3 pi pi     4096 Oct 22 15:04 py
+drwxr-xr-x 2 pi pi     4096 Oct 22 15:04 requests
+drwxr-xr-x 2 pi pi     4096 Oct 22 15:41 results
+
+tmp/cerno/ids:
+total 28
+drwxr-xr-x 2 pi pi 4096 Oct 22 14:29 .
+drwxr-xr-x 9 pi pi 4096 Oct 22 15:42 ..
+-rwxr-xr-x 1 pi pi 1021 Oct 22 14:29 p256.ids
+-rwxr-xr-x 1 pi pi  241 Oct 22 14:29 p64.ids
+-rwxr-xr-x 1 pi pi 1852 Oct 22 14:29 p_long.ids
+-rwxr-xr-x 1 pi pi  701 Oct 22 14:29 p_mid.ids
+-rwxr-xr-x 1 pi pi  366 Oct 22 14:29 p_short.ids
+1905,25,198,37947,1653,1433,11,13767,23157,11,220,17,15,17,21,12,16,15,12,16,19,13,198,15,23,25,20,17,26516,10204,220,17,15,17,21,13,16,15,13,16,19,12,18,21748,680,310,15098,36358,318,4660,640,220,16,15,50322,198,15,24,25,15,18,1412,4238,383
+92c15a179c577ed00ba27f6b5353b30d  data/ctx512.ids
+1d0e5df230a7d6b0d004ed990e8e6ffe  data/prompt64.ids
+81850129c40efc4472eb8cc10ee1941b  tmp/cerno/ids/p256.ids
+ff738ff7406ca17db077e463a4f1d3ef  tmp/cerno/ids/p64.ids
+ec3909e6a589323e495db99da2593c35  tmp/cerno/ids/p_long.ids
+04aa463f8533e09f471ee06f2a377ad7  tmp/cerno/ids/p_mid.ids
+2306b4eaaef44645b0f359d8535ab7bc  tmp/cerno/ids/p_short.ids
+baselines
+data
+engine
+examples
+gmon.out
+golden
+kbench
+kernel
+llama
+llama_bench.sh
+memband
+models
+tests
+tmp
+venvs
+wheels
+
+[exit 0]
