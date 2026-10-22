@@ -123,6 +123,7 @@ A complete script is in `examples/python/generate.py`.
 | `model.generate(prompt, max_new_tokens=128, *, temperature=0, top_p=1, top_k=0, seed=None, stop=None, stop_token_ids=None, stream=False, reuse_prefix=True, speculative=False, spec_k=None, draft_vocab=None, spec_adaptive=None, spec_ngram=None)` | `prompt` is text or token ids. Returns a `GenerationResult`, or a `TextStream` when `stream=True`. `spec_adaptive=True` lets the engine lower `spec_k` when that is faster (§9). `spec_ngram=N` (0..8) adds prompt-lookup drafts of up to N tokens where the answer repeats the context (§9, `engine/DRAFT.md`). |
 | `model.save_state()` / `model.load_state(data)` | Snapshot / restore the whole context (recurrent + conv states, KV cache, MTP cache, tokens, last logits) as `bytes`; continuation is bit-exact. ~20 MB + 24 KB per token. A state loads only into a model of the same `.pq` file and `kv_dtype`: otherwise `ModelFormatError`, naming what differs (`pinfer.state`). §9. |
 | `model.context_tokens` / `model.supports_state` | Token ids currently in the engine's context / library has the state API. |
+| `model.checkpoint()` / `model.rewind()` / `model.clear_checkpoint()` | In-context rewind point (C `pinfer_checkpoint` / `pinfer_rewind`): `checkpoint()` copies only the recurrent + conv states (0.8B 20 MB, 4B 53 MB, whatever the context length) and the tokens / last logits; `rewind()` returns to it bit-exactly, any number of times; the KV cache stays in place. For many continuations of one prefix (questions about one document). One per model; dropped by `reset()`, `load_state()` and a generation that resets the context; kept by `eval`, `eval_select` and generations that extend the context. `supports_checkpoint`, `checkpoint_n_past` (None without one). §9. |
 | `model.chat(messages, max_new_tokens=512, *, enable_thinking=False, tools=None, **generate_kwargs)` | Applies the chat template, then calls `generate`. |
 | `model.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False, tools=None, use_jinja=None)` | Returns the prompt text. |
 | `model.iter_tokens(prompt_ids, max_new_tokens=128, sampling=None, stop_token_ids=None, reuse_prefix=True)` | Token-level generator. |
@@ -190,6 +191,7 @@ cc app.c -I/opt/pinfer/include /opt/pinfer/lib/libpinfer.a -lm -pthread   # stat
 | `pinfer_has_mtp`, `pinfer_default_spec_params`, `pinfer_generate_greedy`, `pinfer_generate_greedy_ex` | Speculative greedy decoding with the MTP head (see `engine/src/spec.c`). `pinfer_spec_params.adaptive = 1`: k is an upper bound, the engine picks the fastest k per round (§9). `pinfer_spec_params.ngram = N`: prompt-lookup drafts of up to N tokens; `pinfer_spec_stats.ngram_*` count them. |
 | `pinfer_generate_greedy_cont(...)` | `pinfer_generate_greedy_ex` without the reset: the prompt is appended to the context (after `pinfer_eval`, `pinfer_state_load` or an earlier generation, whose last returned token is not yet in context and should lead the prompt). |
 | `pinfer_state_size(ctx)`, `pinfer_state_save(ctx, buf, cap)`, `pinfer_state_load(ctx, buf, len)` | Snapshot / restore the context (recurrent + conv states, KV rows, MTP rows). The blob (state format 2) carries a 64-bit fingerprint of the model file (its header, tensor directory and sampled weights) and is tied to it and to `kv_dtype`: `E_FORMAT` for another file, KV format or format version (0.1 blobs included), `E_CTX_FULL` if it holds more tokens than `max_ctx`. |
+| `pinfer_checkpoint(ctx)`, `pinfer_rewind(ctx)`, `pinfer_checkpoint_clear(ctx)`, `pinfer_checkpoint_n_past(ctx)` | One rewind point inside the context (added after 0.2.0, additive): `checkpoint` copies the recurrent + conv states of the linear layers (20 MB for the 0.8B, 53 MB for the 4B, independent of the context length) and remembers the position; `rewind` copies them back and returns to that position (`E_ARG` if there is none; the context is then unchanged). The KV rows below the checkpoint are never rewritten while it is valid and rows above are overwritten before they are read, so feeding tokens after a rewind is bit-identical to feeding them at the checkpoint. One slot; `pinfer_reset`, `pinfer_state_load` and the generate calls that reset drop it; `pinfer_eval`, `pinfer_eval_select`, `pinfer_generate_greedy_cont` keep it; `clear` frees its memory (otherwise kept until `pinfer_free`). Not a persistence format (`pinfer_state_*` is). `engine/CONTEXT.md` §10. |
 | `pinfer_params.kv_dtype` | `PINFER_KV_F32` (0, default), `PINFER_KV_F16`, `PINFER_KV_I8`: KV-cache storage (§9). |
 
 Error codes: `PINFER_OK` 0, `E_IO` −1, `E_FORMAT` −2, `E_NOMEM` −3, `E_ARG` −4, `E_CTX_FULL` −5.
@@ -291,6 +293,13 @@ costs is the attention's pass over the cache. Pi 4, Q4K model, 4 threads, 32 gen
   bit-exact. A 2048-token state is 70.5 MB and restores in 0.1 s (prefilling it takes 63 s).
   `pinfer chat` keeps the state between turns and only prefills the new turn (second turn of a
   short chat: 0.7 s instead of 2.1 s before the first token).
+- **In-context checkpoint** (`checkpoint()` / `rewind()`, C `pinfer_checkpoint` /
+  `pinfer_rewind`; added after 0.2.0): for many continuations of one prefix inside one process,
+  e.g. a decision model scoring several questions about one document. Only the recurrent state
+  is copied (no blob, no KV rows: 0.8B 20 MB, 4B 53 MB whatever the context length), the rewind
+  is one memcpy, and the result is bit-identical to a `save_state` / `load_state` round trip or
+  a fresh prefill. `save_state` stays the way to keep a state beyond the process or move it
+  between contexts. `engine/CONTEXT.md` §10 has the measurements.
 - **Adaptive speculation** (`spec_adaptive=True`, `--adaptive`): `spec_k` becomes an upper
   bound; the MTP head keeps drafting while its newest draft is confident (top-1 probability
   ≥ 0.6), and the engine falls back to plain steps when its measured rate is below plain

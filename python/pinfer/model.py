@@ -205,12 +205,12 @@ class Model:
         """Clear the context (KV cache and recurrent state) and drop the checkpoint."""
         self._lib.pinfer_reset(self._handle())
         self._forget_state()
-        self._ck = None
 
     def _forget_state(self) -> None:
         """Python-side bookkeeping no longer describes the engine state (forces a reset)."""
         self._tokens = []
         self._logits_valid = False
+        self._ck = None   # a later rewind() (if the engine still has one) restores no tokens
 
     def _eval_into(self, tokens: Sequence[int]) -> None:
         n = len(tokens)
