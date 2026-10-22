@@ -39,6 +39,10 @@ static const shape_t SHAPES[] = {
     {"qkv", 6144, 1024}, {"z", 2048, 1024},   {"out", 1024, 2048},  {"q", 4096, 1024},
     {"kv", 512, 1024},   {"gate", 3584, 1024}, {"down", 1024, 3584}, {"ab", 16, 1024},
     {"head", 248320, 1024}, {"dhead", 32768, 1024}, /* draft-vocab head */
+    /* Qwen3.5-4B (Cerno 4B, KERNELS.md Part 4): in_proj_qkv = gated q_proj, in_proj_z,
+     * out_proj = o_proj, gate = up, down, k = v, in_proj_a / _b; selected by name only */
+    {"c4qkv", 8192, 2560}, {"c4z", 4096, 2560}, {"c4out", 2560, 4096}, {"c4gate", 9216, 2560},
+    {"c4down", 2560, 9216}, {"c4kv", 1024, 2560}, {"c4ab", 32, 2560},
 };
 typedef struct { const char *name; uint32_t id; } dtype_t;
 static const dtype_t DTYPES[] = {{"f32", PQ_F32}, {"bf16", PQ_BF16}, {"q8", PQ_Q8_G32},

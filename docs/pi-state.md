@@ -50,6 +50,8 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | `~/pinfer/models/qwen35-2b-q4k-headq4k.pq` (1.09 GB, md5 `6441a5bd…`) | Qwen3.5-2B @ `15852e8c`, default Q4K recipe (2B agent, 2026-10-22 11:05; `engine/MODEL2B.md`). Undo: `rm ~/pinfer/models/qwen35-2b-q4k-headq4k.pq` |
 | `~/pinfer/models/Qwen3.5-2B-Q4_K_M.gguf` (1.31 GB, sha256 `727ffd79…`) | llama.cpp v0.7.0 GGUF of Qwen3.5-2B (11:27). Undo: `rm ~/pinfer/models/Qwen3.5-2B-Q4_K_M.gguf` |
 | `~/pinfer/engine/pinfer_run_2b1`, `pinfer_ppl_2b1` (md5 `b18a5157…`, `7b616ead…`) | NEON build of the 2B branch (`worktree-agent-a24ea2f8313af7f40`). Undo: `rm ~/pinfer/engine/pinfer_{run,ppl}_2b1` |
+| `~/pinfer/venvs/gpu/` + `~/pinfer/venvs/gpu.freeze.txt` (GPU agent, 2026-10-22 17:37, `logs/runs/20261022_173707_run.log`) | user-level venv (`python3 -m venv`) for the V3D GPU experiments (`engine/GPU.md`): numpy 2.5.4 (from `~/pinfer/wheels/pinfer`) + ioctl-opt 1.3.1, installed offline. numpy 2.5 breaks py-videocore6; the planned downgrade to numpy 2.3.1 (wheel sha256 `18703df6…`, = py-videocore6's uv.lock) was refused by the 17:53 pause and is pending (see the row below when done). Undo: `rm -rf ~/pinfer/venvs/gpu ~/pinfer/venvs/gpu.freeze.txt` |
+| `~/pinfer/tmp/gpu/` (GPU agent, 2026-10-22 17:36–17:38, pushes in `logs/harness.jsonl`) | py-videocore6 @ `175741a` source tree `pyvc6/` (GPL-2.0-or-later driver / MIT assembler, run-time dependency only, not vendored), `ioctl_opt-1.3.1-py3-none-any.whl`, `gpurun.sh`, `hello.py`. Undo: `rm -rf ~/pinfer/tmp/gpu` |
 
 ## Baseline runtimes placed by the baselines agent (2026-10-21/22, user-level only, no apt)
 Full table with versions and per-item undo: `bench/BASELINES.md` → "Pi changes made by this agent".
