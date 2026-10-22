@@ -3,9 +3,10 @@
  * Per block of up to PF_ATTN_TB tokens, three parallel passes:
  *   1. scores (score_task), threads over (KV group, half of the rows 0..pos_last): each K row
  *      is read once and dotted with the 4 query heads of its group (pf_scores4) for every
- *      token of the block; a single token reads the rows in place, the two threads of a group
- *      taking alternate blocks of SC_ALT rows (side by side in DRAM: 3.95 instead of 3.75 GB/s,
- *      CONTEXT.md §9), a batch in L1 blocks of PV_ROWS rows shared by its tokens;
+ *      token of the block, the 4 queries interleaved (one stream); a single token reads the
+ *      rows in place, the two threads of a group taking alternate blocks of SC_ALT rows (side
+ *      by side in DRAM: 3.95 instead of 3.75 GB/s, CONTEXT.md §9), a batch in L1 blocks of
+ *      PV_ROWS rows shared by its tokens;
  *   2. softmax (softmax_task), threads over (token, head): exactly as before (running max,
  *      pf_softmax_exp, * 1/sum);
  *   3. P.V + gate (pv_task), threads over (KV group, column range of the head dimension):
@@ -27,6 +28,7 @@
 
 #define PV_ROWS 8   /* K / V rows per L1 block (8 KB at hd = 256) */
 #define SC_ALT 16   /* single-token scores: rows per alternate block of a group's two threads */
+#define QI_MAX_HD 256   /* interleaved queries (32 KB on the stack for a batch) up to this hd */
 
 typedef struct {
     pinfer_ctx *ctx;
@@ -86,19 +88,22 @@ static void prefetch_rows(const pinfer_ctx *ctx, const void *cache, int g, int p
     }
 }
 
-/* att[t][h][p] = (q . K[p]) * scale for the unit's rows and every token / head of group g. */
+/* att[t][h][p] = (q . K[p]) * scale for the unit's rows and every token / head of group g.
+ * The queries are read interleaved by 4 (pf_q4_interleave, one base pointer in the dots: 4
+ * query streams next to the K rows cost up to 50% more, §9) when head_dim <= QI_MAX_HD; a
+ * batch needs one quad per group for that (its tokens' queries are interleaved up front). */
 static void score_task(void *arg, int tid, int nthr) {
     const attn_job *j = arg;
     const pinfer_ctx *ctx = j->ctx;
     const int hd = ctx->hd, grp = ctx->n_heads / ctx->n_kv, np = j->pos0 + j->n;
     const int units = 2 * ctx->n_kv, half = (np + 1) / 2;
+    const int iq = hd <= QI_MAX_HD, iqb = iq && grp <= 4;   /* single token / batch */
     const float scale = 1.0f / sqrtf((float)hd);
-    float buf[PV_ROWS * PF_KV_MAX_HD], pad[PV_ROWS], qi[4 * PF_KV_MAX_HD];
+    float buf[PV_ROWS * PF_KV_MAX_HD], pad[PV_ROWS], qi[PF_ATTN_TB * 4 * QI_MAX_HD];
     for (int u = units * tid / nthr; u < units * (tid + 1) / nthr; u++) {
         const int g = u >> 1, h1 = (g + 1) * grp, p1 = (u & 1) ? np : half;
         if (j->n == 1 && in_place(j)) {
-            /* single token: alternate blocks of SC_ALT rows per query quad, the queries
-             * interleaved once (one base pointer in the dots) */
+            /* single token: alternate blocks of SC_ALT rows per query quad */
             float *sink = att_row(ctx, 1, g);   /* missing heads' scores: a row token 1 owns */
             for (int h = g * grp; h < h1; h += 4) {
                 const float *q[4];
@@ -107,15 +112,23 @@ static void score_task(void *arg, int tid, int nthr) {
                     q[i] = h + i < h1 ? q_vec(ctx, j->t0, h + i) : zeros;
                     att[i] = h + i < h1 ? att_row(ctx, 0, h + i) : sink;
                 }
-                pf_q4_interleave(q, hd, qi);
+                if (iq) pf_q4_interleave(q, hd, qi);
                 for (int b = (u & 1) * SC_ALT; b < np; b += 2 * SC_ALT) {
                     float *ab[4] = {att[0] + b, att[1] + b, att[2] + b, att[3] + b};
-                    pf_scores4(qi, q, pf_kv_row(ctx, j->kc, g, b), ctx->kv_dtype == PF_KV_F16,
+                    pf_scores4(iq ? qi : NULL, q, pf_kv_row(ctx, j->kc, g, b),
+                               ctx->kv_dtype == PF_KV_F16,
                                (b + SC_ALT < np ? b + SC_ALT : np) - b, hd, scale, ab);
                 }
             }
             continue;
         }
+        if (iqb)   /* one quad: h = g * grp below */
+            for (int t = 0; t < j->n; t++) {
+                const float *q[4];
+                for (int i = 0; i < 4; i++)
+                    q[i] = g * grp + i < h1 ? q_vec(ctx, j->t0 + t, g * grp + i) : zeros;
+                pf_q4_interleave(q, hd, qi + (size_t)t * 4 * hd);
+            }
         for (int pb = (u & 1) * half; pb < p1; pb += PV_ROWS) {
             const int pe = pb + PV_ROWS < p1 ? pb + PV_ROWS : p1;
             int f16;
@@ -129,7 +142,8 @@ static void score_task(void *arg, int tid, int nthr) {
                         q[i] = h + i < h1 ? q_vec(ctx, j->t0 + t, h + i) : zeros;
                         att[i] = h + i < h1 ? att_row(ctx, t, h + i) + pb : pad;
                     }
-                    pf_scores4(NULL, q, rows, f16, cnt, hd, scale, att);
+                    pf_scores4(iqb ? qi + (size_t)t * 4 * hd : NULL, q, rows, f16, cnt, hd, scale,
+                               att);
                 }
             }
         }
