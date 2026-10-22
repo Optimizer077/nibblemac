@@ -1,19 +1,23 @@
 /* kbench: microbenchmark + unit test of the pinfer matrix kernels (ops.h, MATVEC=fast).
  *
- * For every dtype x real Qwen3.5-0.8B shape x thread count x batch size it reports time per
- * call, effective weight GB/s and the max error against a scalar fp32 reference (both with
- * the fp32 inputs, and with the int8-quantized inputs the quantized kernels actually use).
+ * For every dtype x real Qwen3.5-0.8B shape (Qwen3.5-4B shapes c4*: on request) x thread
+ * count x batch size it reports time per call, effective weight GB/s and the max error
+ * against a scalar fp32 reference (both with the fp32 inputs, and with the int8-quantized
+ * inputs the quantized kernels actually use).
  * Weights are cold: each call reads a different copy of the matrix from a >= 64 MB arena,
  * so like in decode every byte comes from DRAM (the L2 is 1 MB).
  *
  *   kbench [--dtypes f32,bf16,q8,q4,q4k] [--shapes qkv,z,...] [--threads 1,2,3,4]
  *          [--batch 1,2,4,8] [--time 0.15] [--reps 2] [--prefetch BYTES] [--variant NAME]
  *          [--golden FILE] [--check] [--head-f32] [--hot] [--auto] [--dirty KB] [--group N]
- *          [--gvecs N]
+ *          [--gvecs N] [--gfused 0|1] [--qgroup N] [--gmode 0|1]
  * --dirty KB: write a KB buffer before every timed call (as the delta-rule recurrence
  * leaves ~1 MB of dirty state in L2 right before out_proj in the engine).
  * --group N / --gvecs N: pf_matmul splits n > N vectors into groups of at most gvecs
- * vectors for the quantized dtypes (kern_act_group / kern_group_vecs; --group 0: never).
+ * vectors for the quantized dtypes (kern_act_group / kern_group_vecs; --group 0: never);
+ * --gfused 0: one job per group instead of all groups in one job (kern_group_fused);
+ * --qgroup N: quantized calls of more than N vectors are split (kern_qgroup_min, 16 before
+ * KERNELS.md Part 4); --gmode 0: equal group sizes instead of 7s + 5s / 4s (kern_group_mode).
  * Every RESULT carries `yhash`, an FNV-1a hash of the batched output bytes: the inputs are
  * seeded, so two kbench builds with different kernels must print the same hashes for the
  * same configuration if their outputs are bit-identical (KERNELS.md Part 3).
@@ -39,6 +43,10 @@ static const shape_t SHAPES[] = {
     {"qkv", 6144, 1024}, {"z", 2048, 1024},   {"out", 1024, 2048},  {"q", 4096, 1024},
     {"kv", 512, 1024},   {"gate", 3584, 1024}, {"down", 1024, 3584}, {"ab", 16, 1024},
     {"head", 248320, 1024}, {"dhead", 32768, 1024}, /* draft-vocab head */
+    /* Qwen3.5-4B (Cerno 4B, KERNELS.md Part 4): in_proj_qkv = gated q_proj, in_proj_z,
+     * out_proj = o_proj, gate = up, down, k = v, in_proj_a / _b; selected by name only */
+    {"c4qkv", 8192, 2560}, {"c4z", 4096, 2560}, {"c4out", 2560, 4096}, {"c4gate", 9216, 2560},
+    {"c4down", 2560, 9216}, {"c4kv", 1024, 2560}, {"c4ab", 32, 2560},
 };
 typedef struct { const char *name; uint32_t id; } dtype_t;
 static const dtype_t DTYPES[] = {{"f32", PQ_F32}, {"bf16", PQ_BF16}, {"q8", PQ_Q8_G32},
@@ -146,6 +154,9 @@ static void parse_args(int argc, char **argv) {
         else if (!strcmp(a, "--dirty")) opt.dirty_kb = atoi(v), i++; /* dirty L2 before calls */
         else if (!strcmp(a, "--group")) kern_act_group = atoi(v), i++; /* 0 = no grouping */
         else if (!strcmp(a, "--gvecs")) kern_group_vecs = atoi(v), i++; /* quantized group size */
+        else if (!strcmp(a, "--gfused")) kern_group_fused = atoi(v), i++; /* groups in one job */
+        else if (!strcmp(a, "--qgroup")) kern_qgroup_min = atoi(v), i++; /* quantized split above */
+        else if (!strcmp(a, "--gmode")) kern_group_mode = atoi(v), i++; /* group sizes */
         else { fprintf(stderr, "unknown option %s\n", a); exit(2); }
     }
 }
@@ -231,10 +242,12 @@ static int bench_one(const dtype_t *dt, const shape_t *sh, pf_pool **pools) {
                    "\"rows\":%d,\"cols\":%d,\"threads\":%d,\"n\":%d,\"bytes\":%zu,\"us\":%.2f,"
                    "\"gbs\":%.3f,\"rel_err_fp\":%.3e,\"rel_err_kernel\":%.3e,\"prefetch\":%d,"
                    "\"iters\":%ld,\"hot\":%d,\"auto_threads\":%d,\"dirty_kb\":%d,\"group\":%d,\"gvecs\":%d,"
+                   "\"gfused\":%d,\"qgroup\":%d,\"gmode\":%d,"
                    "\"exact\":%s,\"yhash\":\"%016llx\",\"noisy\":%s,\"foreign_cpu_s\":%.3f,\"ok\":%s}\n",
                    opt.variant, dt->name, sh->name, rows, cols, pf_pool_threads(pool), n, bytes,
                    us, gbs, e_fp, e_k, kern_prefetch, iters, opt.hot, opt.autothr, opt.dirty_kb,
-                   kern_act_group, kern_group_vecs, exact ? "true" : "false", yhash,
+                   kern_act_group, kern_group_vecs, kern_group_fused, kern_qgroup_min,
+                   kern_group_mode, exact ? "true" : "false", yhash,
                    tm.noisy ? "true" : "false", tm.foreign, ok ? "true" : "false");
             fflush(stdout);
         }

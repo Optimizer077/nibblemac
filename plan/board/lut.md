@@ -66,3 +66,6 @@
   qemu gate: 388 kbench configs (q4 / q4k / q8; kv, out, ab, c4kv, c4ab, c4down, down; n = 1-17, 64,
   `--group 0`) all exact, yhash identical to a 69b31a3 build. for:speed4b: this sits under your 69b31a3
   group plan; nothing of yours changes.
+- 21:10 [integrating] WIP committed on branch `worktree-agent-aa5998fa1cda1365d` as d43cc18 (asm passes in
+  kern_quant.c via `engine/src/kern_q4s.h`, knob `kern_q4_asm`; tbench / ubench2). **Not timed on the Pi
+  yet** (Pi offline). Host: golden, state, dims PASS, malformed 43/43 (ASan + UBSan); pytest / spec running.

@@ -228,12 +228,15 @@ static void attend(pinfer_ctx *ctx, const float *kc, const float *vc, int n, int
     }
 }
 
-void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0) {
+void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0,
+                  int q0) {
     const int hd = ctx->hd, kvw = ctx->n_kv * hd, h2 = ctx->rot / 2, nq = ctx->n_heads;
+    const int nw = n - q0;   /* rows q0.. want an output; their queries are rows 0.. of ta */
     const float eps = ctx->model.hdr->rms_eps;
     float krow[PF_KV_MAX_HD];
 
-    pf_matmul(ctx->pool, &L->q, ctx->xn, ctx->ta, n);   /* per head: [query hd | gate hd] */
+    if (nw > 0)   /* per head: [query hd | gate hd] */
+        pf_matmul(ctx->pool, &L->q, ctx->xn + (size_t)q0 * ctx->H, ctx->ta, nw);
     pf_matmul(ctx->pool, &L->k, ctx->xn, ctx->tb, n);
     pf_matmul(ctx->pool, &L->v, ctx->xn, ctx->tc, n);
 
@@ -248,12 +251,16 @@ void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int 
             pf_kv_store(ctx, kc, g, pos0 + t, krow);
             pf_kv_store(ctx, vc, g, pos0 + t, ctx->tc + (size_t)t * kvw + g * hd);
         }
-        for (int h = 0; h < nq; h++) {
-            float *q = q_vec(ctx, t, h);
+        for (int h = 0; t >= q0 && h < nq; h++) {
+            float *q = q_vec(ctx, t - q0, h);
             pf_rmsnorm(q, q, L->q_norm, hd, eps);
             pf_rope(q, cs, sn, ctx->rot);
         }
     }
-    attend(ctx, kc, vc, n, pos0, ts);
-    pf_matmul(ctx->pool, &L->o, ctx->to, ctx->out, n);
+    if (nw <= 0) {
+        pf_stats_add(PFS_ATTN, PFS_KIND(ctx, n), ts);
+        return;
+    }
+    attend(ctx, kc, vc, nw, pos0 + q0, ts);
+    pf_matmul(ctx->pool, &L->o, ctx->to, ctx->out + (size_t)q0 * ctx->H, nw);
 }

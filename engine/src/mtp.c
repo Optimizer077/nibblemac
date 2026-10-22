@@ -81,7 +81,7 @@ int pf_mtp_forward(pinfer_ctx *ctx, const float *h, const int32_t *tok, int n, i
     const pf_layer *L = &t->layer;
     pf_rope_tables(ctx, pos0, n);
     pf_norm_rows(ctx, ctx->xn, L->in_norm, n);
-    pf_full_attn(ctx, L, t->kc, t->vc, n, pos0);
+    pf_full_attn(ctx, L, t->kc, t->vc, n, pos0, 0);
     pf_add_rows(ctx, n);
     pf_norm_rows(ctx, ctx->xn, L->post_norm, n);
     pf_mlp(ctx, L, n);

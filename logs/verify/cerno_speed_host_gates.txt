@@ -1,0 +1,63 @@
+# host gates 2026-10-22T17:02:08+09:00 in /mnt/e/Personal_tries/Raspberry_Pi/.claude/worktrees/agent-aff7b9e370c62872c at gitdir: E:/Personal_tries/Raspberry_Pi/.git/worktrees/agent-aff7b9e370c62872c
+## build host (ref)
+build host exit 0
+## test_golden
+   hidden rel max err 0.000e+00, logits rel max err 0.000e+00 (limit 1e-05) -> PASS
+
+4. greedy generation
+   ours: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   gold: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   32/32 match -> PASS
+
+OVERALL: PASS
+## test_spec
+           g8    259     184      123       0.668       1.475           58
+         a3g8    252     179      130       0.726       1.516           16
+         k8g8    121     829      261       0.315       3.157           22
+       k2g5b2    153     339      229       0.676       2.497           27
+
+OVERALL: PASS
+## test_state
+    bench64 split 40 adaptive: state 21348424 B, save 12.0 ms load 0.0 ms size 21348424 bytes | ok
+     long74 split 64    plain: state 21774408 B, save 13.7 ms load 0.0 ms size 21774408 bytes | ok
+     long74 split 64    spec3: state 22036552 B, save 11.5 ms load 0.0 ms size 22036552 bytes | ok
+     long74 split 64 adaptive: state 22036552 B, save 11.4 ms load 0.0 ms size 22036552 bytes | ok
+
+OVERALL: PASS
+## test_prefill_tail
+  b=16  tail --dump-last == full --dump-last             ok
+  b=16  same generated tokens                            ok
+  b=16  full: load 0.004 s | warm-up 0.000 s | prefill 64 tok in 27.323 s = 2.342 tok/s | decode 7 tok in 2.513 s = 2.786 tok/s | peak RSS 1521.4 MB | matvec=ref threads=4
+  b=16  tail: load 0.003 s | warm-up 0.000 s | prefill 64 tok in 21.043 s = 3.041 tok/s | decode 7 tok in 2.301 s = 3.043 tok/s | peak RSS 1461.1 MB | matvec=ref threads=4
+  b=7   full --dump-last == last row of --dump-logits    ok
+  b=7   tail --dump-last == full --dump-last             ok
+  b=7   same generated tokens                            ok
+  b=7   full: load 0.006 s | warm-up 0.000 s | prefill 64 tok in 47.560 s = 1.346 tok/s | decode 7 tok in 2.418 s = 2.895 tok/s | peak RSS 1520.6 MB | matvec=ref threads=4
+  b=7   tail: load 0.003 s | warm-up 0.000 s | prefill 64 tok in 21.330 s = 3.000 tok/s | decode 7 tok in 2.342 s = 2.989 tok/s | peak RSS 1460.8 MB | matvec=ref threads=4
+  b=1   full --dump-last == last row of --dump-logits    ok
+  b=1   tail --dump-last == full --dump-last             ok
+  b=1   same generated tokens                            ok
+  b=1   full: load 0.003 s | warm-up 0.000 s | prefill 64 tok in 28.268 s = 2.264 tok/s | decode 7 tok in 2.364 s = 2.961 tok/s | peak RSS 1520.8 MB | matvec=ref threads=4
+  b=1   tail: load 0.003 s | warm-up 0.000 s | prefill 64 tok in 21.000 s = 3.048 tok/s | decode 7 tok in 2.551 s = 2.744 tok/s | peak RSS 1460.3 MB | matvec=ref threads=4
+
+OVERALL: PASS
+## build host-lib
+build host-lib exit 0
+## pytest
+........................................................................ [ 55%]
+..........................................................               [100%]
+130 passed in 435.42s (0:07:15)
+## build host SAN
+build san exit 0
+## test_dims (san)
+ qwen-like H=256 ffn=768 heads=8/2x32 lin=4/4x32/32: plain:ok k1:ok k2:ok k3:ok
+  mtp-wide H=512 ffn=64 heads=1/1x32 lin=1/1x32/32: plain:ok k1:ok k2:ok k3:ok
+ odd-heads H=192 ffn=384 heads=6/1x48 lin=2/4x32/64: plain:ok k1:ok k2:ok k3:ok
+
+OVERALL: PASS
+## test_malformed
+PASS  ppl-odd-size           cannot read /tmp/pinfer-malformed-n2bn27z6/odd.bin or too few tokens
+
+43/43 passed
+OVERALL: PASS
+## done 2026-10-22T17:29:02+09:00

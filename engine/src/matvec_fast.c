@@ -260,6 +260,86 @@ static void *scratch_get(size_t bytes) {
     return scratch.buf;
 }
 
+/* Groups (KERNELS.md v13, Part 3, Part 4). A batch of n vectors runs in groups, each group
+ * streaming the weights again, so that a group's int8 activations stay in L1 across the tiles
+ * (64 vectors x 1 KB re-read from L2 for every 4-row tile ran at ~35 instead of ~27 cycles per
+ * block-vector, v13). Quantized dtypes: calls of more than kern_qgroup_min vectors run in
+ * groups of at most kern_group_vecs (7), i.e. one register pass per tile. With
+ * kern_group_mode 1 the groups are 7s and the remainder goes into groups of 5 or 4 (a 6-vector
+ * pass costs ~8-10 % more per vector than a 7 or 5 on the A72, 2-3 vectors are memory-bound,
+ * Part 4); mode 0 = equal sizes (+-1) as in Part 3. Float dtypes keep equal groups of
+ * kern_act_group. Per-vector arithmetic is unchanged, so results stay bit-identical to
+ * pf_matvec whatever the grouping. */
+#define MAX_GROUPS 96
+
+int kern_qgroup_min = 7;
+int kern_group_mode = 1;
+int kern_group_fused = 1;
+
+/* Group starts st[0] = 0 < st[1] < ... < st[ng] = n of a call; returns ng. */
+static int plan_groups(int n, int gmax, int mode, int *st) {
+    int ng = 0;
+    st[0] = 0;
+    if (mode == 1 && gmax == 7 && n > 7 && n / 7 + 3 <= MAX_GROUPS) {
+        /* remainder r of n / 7 -> its groups, taking borrow[r] 7s with it */
+        static const int tail[7][4] = {{0},    {5, 5, 5, 0}, {5, 4, 0}, {5, 5, 0},
+                                       {4, 0}, {5, 0},       {6, 0}};
+        static const int borrow[7] = {0, 2, 1, 1, 0, 0, 0};
+        const int r = n % 7, a = n / 7 - borrow[r];
+        if (a >= 0) {
+            for (int i = 0; i < a; i++, ng++) st[ng + 1] = st[ng] + 7;
+            for (int i = 0; tail[r][i]; i++, ng++) st[ng + 1] = st[ng] + tail[r][i];
+            return ng;
+        }
+    }
+    ng = (n + gmax - 1) / gmax;
+    if (ng > MAX_GROUPS) ng = MAX_GROUPS;
+    for (int g = 0; g < ng; g++) st[g + 1] = st[g] + n / ng + (g < n % ng);
+    return ng;
+}
+
+/* kern_group_fused: all groups of a quantized call in two jobs. The activations of every group
+ * are quantized first, in parallel (group g's block-major arrays at offsets st[g] * cols and
+ * st[g] * cols / 32 of one buffer), then each thread runs every group over its own slab of
+ * tiles: two barriers per call instead of one per group, and no serial quantization between
+ * the groups. Same kernel on the same rows and activations: bit-identical. */
+typedef struct {
+    kern_fn fn;
+    const pf_mat *W;
+    const float *X;
+    float *Y;
+    int ng, units;
+    int8_t *q;
+    float *d, *fs;
+    int st[MAX_GROUPS + 1];
+} group_job;
+
+static void quant_task(void *arg, int tid, int nthr) {
+    const group_job *j = arg;
+    const int cols = j->W->cols, nb = cols / KERN_ACT_BLOCK;
+    for (int g = tid; g < j->ng; g += nthr) {
+        const int g0 = j->st[g], gn = j->st[g + 1] - g0;
+        kern_quant_act(j->X + (size_t)g0 * cols, gn, cols, j->q + (size_t)g0 * cols,
+                       j->d + (size_t)g0 * nb, j->fs + (size_t)g0 * nb);
+    }
+}
+
+static void groups_task(void *arg, int tid, int nthr) {
+    const group_job *j = arg;
+    const int u0 = (int)((long)j->units * tid / nthr);
+    const int u1 = (int)((long)j->units * (tid + 1) / nthr);
+    int r1 = u1 * 4;
+    if (r1 > j->W->rows) r1 = j->W->rows;
+    if (u0 * 4 >= r1) return;
+    const int cols = j->W->cols, nb = cols / KERN_ACT_BLOCK;
+    for (int g = 0; g < j->ng; g++) {
+        const int g0 = j->st[g], gn = j->st[g + 1] - g0;
+        const pf_act a = {cols, gn, j->q + (size_t)g0 * cols, j->d + (size_t)g0 * nb,
+                          j->fs + (size_t)g0 * nb};
+        j->fn(j->W, NULL, &a, j->Y + (size_t)g0 * j->W->rows, gn, u0 * 4, r1);
+    }
+}
+
 void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) {
     const kern_fn fn = pick(W->dtype);
     if (!fn) {
@@ -268,35 +348,37 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
     }
     if (n <= 0) return;
     const double t0 = kern_stats_enabled() ? now_sec() : 0.0;
-    /* Large batches (prefill, n > kern_act_group) run in groups of equal size (+-1), each
-     * group streaming the weights again, so that a group's int8 activations stay in L1 across
-     * the tiles (64 vectors x 1 KB re-read from L2 for every 4-row tile ran at ~35 instead of
-     * ~27 cycles per block-vector, KERNELS.md v13). Quantized dtypes use groups of at most
-     * kern_group_vecs (7) vectors, i.e. one register pass per tile with 7 KB-25 KB of
-     * activations; groups of 16 (4 passes, 16-57 KB) were 17-24% slower at n = 64
-     * (KERNELS.md Part 3). Float dtypes keep groups of kern_act_group. Per-vector arithmetic
-     * is unchanged, so results stay bit-identical to pf_matvec whatever the grouping. */
-    int ng = 1;
-    if (kern_act_group > 0 && n > kern_act_group) {
-        const int gmax = W->dtype >= PQ_Q8_G32 && kern_group_vecs > 0 ? kern_group_vecs : kern_act_group;
-        ng = (n + gmax - 1) / gmax;
-    }
-    for (int g = 0, g0 = 0; g < ng; g++) {
-        const int gn = n / ng + (g < n % ng);
-        const float *Xg = X + (size_t)g0 * W->cols;
-        float *Yg = Y + (size_t)g0 * W->rows;
-        pf_act act, *A = NULL;
-        if (W->dtype >= PQ_Q8_G32) {
-            const int cols = W->cols, nb = cols / KERN_ACT_BLOCK;
-            const size_t qb = ((size_t)gn * cols + 63) & ~(size_t)63, fb = (size_t)gn * nb * 4;
-            uint8_t *s = scratch_get(qb + 2 * fb);
-            act = (pf_act){cols, gn, (int8_t *)s, (float *)(s + qb), (float *)(s + qb + fb)};
-            kern_quant_act(Xg, gn, cols, (int8_t *)act.q, (float *)act.d, (float *)act.fsum);
-            A = &act;
+    const int quant = W->dtype >= PQ_Q8_G32, cols = W->cols, nb = cols / KERN_ACT_BLOCK;
+    group_job gj; /* only st[0..ng] are set (no zeroing of the whole array per call) */
+    gj.fn = fn, gj.W = W, gj.X = X, gj.Y = Y, gj.ng = 1, gj.units = (W->rows + 3) / 4;
+    gj.st[0] = 0, gj.st[1] = n;
+    if (kern_act_group > 0 && quant && kern_group_vecs > 0 && n > kern_qgroup_min)
+        gj.ng = plan_groups(n, kern_group_vecs, kern_group_mode, gj.st);
+    else if (kern_act_group > 0 && !quant && n > kern_act_group)
+        gj.ng = plan_groups(n, kern_act_group, 0, gj.st);
+    if (quant && kern_group_fused && gj.ng > 1) {
+        const size_t qb = ((size_t)n * cols + 63) & ~(size_t)63;
+        const size_t fb = ((size_t)n * nb * 4 + 63) & ~(size_t)63;
+        uint8_t *s = scratch_get(qb + 2 * fb);
+        gj.q = (int8_t *)s, gj.d = (float *)(s + qb), gj.fs = (float *)(s + qb + fb);
+        kern_pool_run(pool, quant_task, &gj, gj.ng);
+        kern_pool_run(pool, groups_task, &gj, threads_for(W, gj.st[1], pool));
+    } else {
+        for (int g = 0; g < gj.ng; g++) {
+            const int g0 = gj.st[g], gn = gj.st[g + 1] - g0;
+            const float *Xg = X + (size_t)g0 * cols;
+            float *Yg = Y + (size_t)g0 * W->rows;
+            pf_act act, *A = NULL;
+            if (quant) {
+                const size_t qb = ((size_t)gn * cols + 63) & ~(size_t)63, fb = (size_t)gn * nb * 4;
+                uint8_t *s = scratch_get(qb + 2 * fb);
+                act = (pf_act){cols, gn, (int8_t *)s, (float *)(s + qb), (float *)(s + qb + fb)};
+                kern_quant_act(Xg, gn, cols, (int8_t *)act.q, (float *)act.d, (float *)act.fsum);
+                A = &act;
+            }
+            job_t job = {fn, W, Xg, A, Yg, gn, gj.units, threads_for(W, gn, pool), NULL, NULL};
+            dispatch(pool, &job);
         }
-        job_t job = {fn, W, Xg, A, Yg, gn, (W->rows + 3) / 4, threads_for(W, gn, pool), NULL, NULL};
-        dispatch(pool, &job);
-        g0 += gn;
     }
     if (kern_stats_enabled())
         kern_stats_add(W->rows, W->cols, W->dtype, n, now_sec() - t0, weight_bytes(W));

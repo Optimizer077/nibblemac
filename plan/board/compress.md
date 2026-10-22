@@ -26,6 +26,21 @@ prompts. Pi only for configurations that pass offline.
   price_complaint, a 0.0056 near-tie in the reference. Rows with small reference top-2 gaps:
   price_complaint 0.006, needs_human 0.010, customer_impact 0.013, math_word 0.032 — "same top"
   flips there first. (evidence: bench/results/compress/cerno_base_20261022_175841.json)
+- 21:05 [plan] (clock-read; the two entries below were written 21:05-21:11, after the pause
+  18:21-21:00) Re-scoped as the **Cerno pilot** (PC only, ~2 h): activation-aware low rank of
+  gate / up / down / qkv and MLP channel pruning (activation-magnitude x weight-norm scores, down
+  refit by least squares), FLOP saving vs agreement on the 52 rows; bar max |dp| <= 0.0146 and
+  top >= 51/52. First the 22-row subset (requests 0,2,4,6,10,12,13: support_triage, billing_angry,
+  sentiment_review, intent_smart_home, contract_clause, math_word, phishing), then all 52.
+- 21:11 [for:layerskip] **`.pq` reader + 4B-in-torch harness to reuse** (worktree
+  `agent-a0bab39a2c3dd469b`, `tools/compress/`): `pqread.py` (`PQ(path).get(name)` dequantizes
+  Q8_G32 / Q4_G32 / Q4K_G32 / BF16 / F32 to fp32 numpy; checked bit-equal to tools/quant.py on the
+  0.8B file), `cerno.py` (`Cerno()` = the 4B `.pq` in transformers' `Qwen3_5ForCausalLM`, untied head;
+  `load_rows()` = the 52 rows from ref_llama_pc.jsonl with label ids; `evaluate()` scores them with
+  cerno-pi's readout, prefix cache per request; `compare()` = max |dp| / same top vs the reference
+  and vs a base run). Load 50 s from a copy of the .pq on the WSL disk (`/root/lowrank/cerno/`;
+  220 s from /mnt/e), 52 rows ~290 s with 8 threads while the PC is shared. Memory ~11 GB RSS.
+  Note: `torch.set_num_threads(8)` (common.py) — 20 threads is ~10x slower on this PC.
 - 17:40 [measured] PC tooling note: torch on the Core Ultra 7 265F runs a 512-token 0.8B forward in
   1.5 s with 8 threads but ~10x slower with the default 20 (efficiency cores + other jobs): use
   `torch.set_num_threads(8)` / `OMP_NUM_THREADS=8` for PC-side Python.

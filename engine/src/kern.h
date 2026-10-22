@@ -33,12 +33,18 @@ typedef void (*kern_fn)(const pf_mat *W, const float *X, const pf_act *A, float 
  * for kbench; the default is the best value measured on the Pi (see KERNELS.md). */
 extern int kern_prefetch;
 
-/* pf_matmul splits batches larger than kern_act_group vectors (prefill; 0 = never) into groups
- * of equal size that stream the weights again: at most kern_group_vecs vectors for the
- * quantized dtypes (one register pass per tile, activations in L1), at most kern_act_group
- * for F32 / BF16. Defaults 16 and 7 (KERNELS.md v13, Part 3). */
+/* pf_matmul splits batches into groups that stream the weights again (matvec_fast.c): F32 /
+ * BF16 calls of more than kern_act_group vectors into equal groups of at most kern_act_group;
+ * quantized calls of more than kern_qgroup_min vectors into groups of at most kern_group_vecs
+ * (one register pass per tile, activations in L1), sized by kern_group_mode (0: equal sizes,
+ * 1: 7s with the remainder in 5s / 4s). kern_act_group = 0: never split. kern_group_fused 1:
+ * all groups of a quantized call in one job after a parallel activation quantization; 0: one
+ * job per group. Defaults 16, 7, 7, 1, 1 (KERNELS.md v13, Part 3, Part 4). */
 extern int kern_act_group;
 extern int kern_group_vecs;
+extern int kern_qgroup_min;
+extern int kern_group_mode;
+extern int kern_group_fused;
 
 /* 1 (default): pf_matmul picks the thread count per call (per-dtype cap for n == 1, fewer
  * threads for small matrices). 0: always use every pool thread (kbench thread sweeps). */
