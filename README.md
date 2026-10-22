@@ -1,13 +1,50 @@
-# piquant — Qwen3.5-0.8B at 18 tokens/s on a Raspberry Pi 4
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo.svg" alt="piquant logo: the letter pi with three rising quantization steps" width="112">
+  </picture>
+</p>
 
-**pinfer** is a C inference engine and Python package written for one board: the Raspberry Pi 4
-(Cortex-A72, NEON only, 4 GB, ~4.2 GB/s of memory bandwidth). It runs the hybrid Qwen3.5-0.8B
-model with its own 4-bit weight format and *exact* self-speculative decoding, and it is measured
-on the real board against llama.cpp, MNN and ONNX Runtime, with every run's temperature and
-throttle state recorded.
+<h1 align="center">piquant</h1>
 
-Repository: [github.com/Optimizer077/piquant](https://github.com/Optimizer077/piquant) · license: [Apache-2.0](LICENSE) ·
-engine and package: `pinfer`.
+<p align="center">
+  <b>Qwen3.5 at 18 tokens/s on a Raspberry Pi 4</b><br>
+  A from-scratch C + NEON inference engine with exact speculative decoding, long context and an
+  OpenAI-compatible server — measured on the real board against llama.cpp, MNN and ONNX Runtime.
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-2a78d6"></a>
+  <img alt="Hardware: Raspberry Pi 4, Cortex-A72" src="https://img.shields.io/badge/hardware-Raspberry%20Pi%204%20%C2%B7%20Cortex--A72-c51a4a">
+  <img alt="Model: Qwen3.5 0.8B and 2B" src="https://img.shields.io/badge/model-Qwen3.5%200.8B%20%C2%B7%202B-6d28d9">
+  <img alt="Engine: C11 with ARM NEON" src="https://img.shields.io/badge/engine-C11%20%2B%20NEON-555555">
+  <img alt="Python 3.10 or newer" src="https://img.shields.io/badge/python-3.10%2B-3776ab">
+</p>
+
+<p align="center">
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#3-results">Results</a> ·
+  <a href="#2-how-pinfer-works">How it works</a> ·
+  <a href="#the-hardware">The hardware</a> ·
+  <a href="docs/library.md">Library guide</a> ·
+  <a href="docs/RESULTS.md">Every number, with sources</a>
+</p>
+
+**piquant** is the project; **pinfer** is its engine and Python package. It runs the hybrid Qwen3.5
+models (0.8B by default, 2B as an option) on a Raspberry Pi 4 (Cortex-A72, NEON only, 4 GB,
+~4.2 GB/s of memory bandwidth) with its own 4-bit weight format, NEON kernels and self-speculative
+decoding whose output is token-for-token identical to plain greedy decoding.
+
+- **Fast:** 18.4 tok/s with speculative decoding and 7.9 tok/s plain on a 4 GB Pi 4 — llama.cpp
+  reaches 5.4 tok/s at the same quality (perplexity 18.50 vs 18.59).
+- **Exact:** every build is checked token-for-token against plain greedy decoding and layer-by-layer
+  against the fp32 reference model.
+- **Long context:** 6.9 tok/s after a 4096-token context with an fp16 KV cache (88% of short-context
+  speed); a saved conversation restores in 0.1 s instead of re-reading it.
+- **Ready to use:** a C library, a pip package, `pinfer chat`, and `pinfer serve`, an OpenAI-compatible
+  server where each chat turn reads only the new message.
+- **Measured honestly:** every number has a result file with the board's temperature and throttle state;
+  the journal records every change, problem and fix.
 
 | | pinfer (Q4K) | llama.cpp Q4_K_M | MNN int4 |
 |---|---|---|---|
@@ -29,6 +66,20 @@ engine and package: `pinfer`.
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/decode_speed-dark.png">
   <img alt="On a Raspberry Pi 4, pinfer Q4K decodes 7.9 tokens/s plain and 18.4 tokens/s with exact speculative decoding, ahead of MNN int4 (6.7), llama.cpp (4.1–5.6) and ONNX Runtime GenAI int4 (3.1)." src="docs/figures/decode_speed.png">
 </picture>
+
+### Quickstart
+
+```bash
+# PC (WSL): build the engine for the Pi (NEON kernels) and convert the model
+make -C engine pi MATVEC=fast
+python tools/convert.py models/Qwen3.5-0.8B models/pq/qwen35-0.8b-q4k-headq4k.pq --quant q4k
+
+# Pi: chat with the Python package (wheel in build/dist/, install per docs/library.md)
+pinfer chat -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer     -p "Why is the sky blue?" --speculative --stats
+```
+
+Everything from a blank SD card or SSD, step by step: [docs/REPRODUCE.md](docs/REPRODUCE.md). More usage
+(C API, Python, server) in [§6](#6-using-the-library).
 
 ## Contents
 1. [Why the Pi 4 is hard, and what follows from it](#1-why-the-pi-4-is-hard-and-what-follows-from-it)

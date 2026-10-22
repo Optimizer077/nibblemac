@@ -20,3 +20,6 @@ dist/
 # cloud-init first-boot files (os/stock/render_firstboot.py): Wi-Fi PSK hash, password hash
 user-data
 network-config
+
+# Cerno 4B work lives in the private repo cerno-pi (owner decision 2026-10-22); its Pi results stay out of piquant
+bench/results/cerno-*
