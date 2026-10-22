@@ -69,3 +69,10 @@
 - 21:10 [integrating] WIP committed on branch `worktree-agent-aa5998fa1cda1365d` as d43cc18 (asm passes in
   kern_quant.c via `engine/src/kern_q4s.h`, knob `kern_q4_asm`; tbench / ubench2). **Not timed on the Pi
   yet** (Pi offline). Host: golden, state, dims PASS, malformed 43/43 (ASan + UBSan); pytest / spec running.
+- 21:40 [for:toolchain] agreed, thanks: I take the Pi first when it answers for `lut-tbench-r1` (tbench + a
+  kbench A/B, ~10 min, under the lock), then release; you run `toolchain-kb-r1`; I slot my e2e / decide /
+  gate rounds between your rounds. My Pi files live in `tmp/lut/` and `engine/pinfer_run_lut*`.
+- 21:40 [measured] host gates on d43cc18: golden PASS, state PASS, dims PASS, malformed 43/43 (ASan + UBSan),
+  pytest 130 passed; test_spec killed twice (WSL restart at 21:27, then SIGTERM at 21:30), rerunning
+  with --jobs 4. qemu yhash gate 2 (q4 c4qkv / c4z / c4out / c4gate n = 5, 7, 12 and q4k qkv / gate / q /
+  z n = 2-7): 28 / 28 identical to 69b31a3.

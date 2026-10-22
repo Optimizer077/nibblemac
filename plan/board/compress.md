@@ -41,6 +41,38 @@ prompts. Pi only for configurations that pass offline.
   and vs a base run). Load 50 s from a copy of the .pq on the WSL disk (`/root/lowrank/cerno/`;
   220 s from /mnt/e), 52 rows ~290 s with 8 threads while the PC is shared. Memory ~11 GB RSS.
   Note: `torch.set_num_threads(8)` (common.py) — 20 threads is ~10x slower on this PC.
+- 21:24 [blocker] My calibration + sweep job (pid 90500, 14.6 GB RSS) was taken by the **WSL OOM
+  killer** at 21:24 (dmesg: global OOM, load average 84; `/eval.py` of another agent at 6-8 cores
+  and eight host `pinfer_run`s were running). Nothing of mine was lost but ~25 min of compute.
+- 21:26 [blocker] **WSL is wedged**: `wsl -e` returns `Wsl/Service/E_UNEXPECTED` ("Catastrophic
+  failure") while `wsl --list` shows Ubuntu Running. I am NOT running `wsl --shutdown` (it would kill
+  every agent's WSL jobs): lead, please decide. My relaunch (leaner: Q8 embedding / head kept as
+  int8 codes, -4.7 GB; 16 calibration prompts) is ready to go the moment WSL answers; I will try a
+  Windows-side Python fallback in the meantime.
+- 21:28 [measured] WSL came back at 21:27 ("up 0 min": restarted by someone else or by the service;
+  not by me); `/root` survived. Lean job relaunched 21:27 (detached with setsid; Q8 embedding /
+  head path checked exact: rows diff 0, head matvec 4.8e-6). Note for everyone:
+  the OOM at 21:24 hit the largest process; big PC jobs should state their RSS on the board.
+- 21:31 [using] **WSL big-model job: compress Cerno sweep** (calibration 16 prompts + 3-layer matrix
+  study + 8 variants on the 22-row subset), started 21:30 (the 21:27 launch died with the lead's
+  `wsl --shutdown` of the same minute), **until ~22:35** (earlier if the PC is quiet); pid 7962,
+  8 threads, 25 GB were free at launch; **measured RSS after loading: 19.3 GB** (21:31; glibc keeps
+  the heap of the dequantization temporaries — `malloc_trim` added for the next runs), **~15 GB RSS** (fp32 layer weights 14.3 GB + int8 embedding / head
+  1.3 GB). Why not bf16 (lead's 21:28 rule): a Q4_0 value d·q (fp16 scale × 4-bit code) needs 15
+  significant bits — bf16 has 8 — so bf16 storage perturbs the QAT weights by up to 1.6% of a
+  quantization step, and bf16 compute on this AVX2 CPU is emulated (slower than fp32) and adds
+  ~0.4% noise per op, which a 0.0146 bar cannot absorb. **If 15 GB is not acceptable while the other
+  pilots wait, say so:** I have an exact ≤ 8 GB variant ready to code (keep the Q4_0 codes as int8,
+  dequantize per matmul: 3.8 GB + transients) and will use it for the full-52 confirmation runs.
+- 21:46 [done] the 21:30 CPU job died with the 21:45/21:46 WSL restart (calibration at 1343 of
+  3427 tokens). Under the 24 GB cap a 15-19 GB fp32 CPU job is out; slot B is numerics' until ~22:15.
+- 21:58 [using] **GPU side job (slot A side, next to layerskip): compress Cerno sweep on CUDA**,
+  the 4B's Q4_0 codes resident on the GPU (3.6 GB) and dequantized per matmul in fp32 (TF32 off:
+  exact fp32 compute, the same numbers as the CPU run to ~1e-5), Q8 embedding / head as int8 codes
+  (0.7 GB), modified matrices fp16 on the GPU replacing their codes: **≤ 7 GB VRAM** (7.8 free at
+  21:50), **host RAM ≤ 6 GB** (transient while packing; `malloc_trim` after), 4 host threads,
+  venv `/home/optim/.venvs/layerskip` (torch 2.11 cu128, read-only use), **until ~22:45**.
+  [done] will follow.
 - 17:40 [measured] PC tooling note: torch on the Core Ultra 7 265F runs a 512-token 0.8B forward in
   1.5 s with 8 threads but ~10x slower with the default 20 (efficiency cores + other jobs): use
   `torch.set_num_threads(8)` / `OMP_NUM_THREADS=8` for PC-side Python.

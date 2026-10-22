@@ -17,6 +17,26 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   7s + 5s with one fused job per call; bit-identical. Cerno decisions -4.4%, 4B prefill +4-5%, 0.8B prefill 43.8 -> 45.1,
   decode unchanged. `engine/bench/KERNELS.md` Part 4; `tests/test_prefill_tail.py`.
 
+
+### Prompt economy pilot (prompt agent, 21:08–; branch `worktree-agent-ae99d2e23cc77288a`)
+- Added `engine/PILOTS.md` ("Prompt economy") and `tools/pilot/prompt/` (`variants.py`: the prompt
+  layouts and their token counts, the base rows checked equal to the reference's ids 52/52; `run.py`:
+  fp32 torch emulation of the 4B from its `.pq`, GPU/CPU split; `report.py`: the table), results in
+  `bench/results/pilot/prompt/` (PC emulation, no Pi numbers).
+- Found: the upstream decider defines a multi-question state-first row and a schema-first layout
+  (question blocks first, then the state, then the answer slots); Cerno's engine uses one row per question.
+- Measured (tokens, 18 requests / 52 questions): compact templates save 4–11%, option sharing 1%,
+  multi-question rows cost 8–10% more, schema-first 8% more per isolated decision and 52% less with the
+  question block cached across decisions.
+- Measured (PC fp32 emulation vs the llama.cpp reference, max |dp| / same top of 52): base 0.0094 / 51
+  (anchor); compact templates 0.145–0.262 / 48–51; multi-question rows 0.149–0.153 / 50–51; schema-first
+  0.593 / 47. **No-go for every variant**: no layout change stays inside the identical bar (0.0146), and
+  the only large saving (schema-first, −52% with the question block cached) changes answers. The 4B's
+  calibration is specific to the one-question state-first row.
+- Process: a first WSL CPU run was OOM-killed (three pilots loading the 4B in the 31 GB VM); rerun on the
+  Windows side with the GPU holding 24 fp32 layers; the run was stopped at 21:45 before two zero-value
+  variants when the lead asked for the PC's model slot.
+
 ### Pi: overclock test reverted (21:01)
 - Boot partition edited on the PC (F:): `tryboot.txt` back to the custom-kernel test file, overclock files removed; `config.txt` / `cmdline.txt` unchanged; standard 1.5 GHz profile. `docs/pi-state.md` #5.
 
