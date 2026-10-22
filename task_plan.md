@@ -81,10 +81,10 @@ that is 192 MB/token — comparable to the 437 MB of weights).
 - None. Pi Wi-Fi drops every few minutes (reason=7) — affects only Pi-side downloads.
 
 ## Phase 7 — finalize piquant / pinfer 0.2.0 (owner: "complete Qwen and finalize it, then move to Cerno"; 2026-10-22 15:05)
-- [ ] Kernels round (prefill +19%, k=4 one pass): Pi gates on `pinfer_run_merge6`; adaptive cap 3 vs 4 decided from `kcap-merge6`; merge + push
-- [ ] Install the final build as the Pi's `engine/pinfer_run_fast` (keep the previous as `*.pre-<tag>`)
-- [ ] Overclock test, 2.0 GHz / `over_voltage=6` (approved): snapshot, `config.txt` backup, stability under a sustained 4-core load (throttled = 0x0, temperature), plain / speculative / prefill / 4096-context A/B vs 1.5 GHz; owner decides whether it stays
-- [ ] Final numbers everywhere: README headline + highlights, figures (decode, prefill, progress), RESULTS.md, notes scoreboard, issue #10
-- [ ] Release 0.2.0: release notes (`docs/release-0.2.0.md`), wheels (aarch64 NEON, x86-64), tag, GitHub release; model asset only if the owner wants it (issue #9)
+- [x] Kernels round (prefill +19%, k=4 one pass): Pi gates on `pinfer_run_merge6`; adaptive cap 3 vs 4 decided from `kcap-merge6`; merge + push
+- [x] Install the final build as the Pi's `engine/pinfer_run_fast` (keep the previous as `*.pre-<tag>`)
+- [ ] (moved after Cerno) Overclock test, 2.0 GHz / `over_voltage=6` (approved): snapshot, `config.txt` backup, stability under a sustained 4-core load (throttled = 0x0, temperature), plain / speculative / prefill / 4096-context A/B vs 1.5 GHz; owner decides whether it stays
+- [x] Final numbers everywhere: README headline + highlights, figures (decode, prefill, progress), RESULTS.md, notes scoreboard, issue #10
+- [x] Release 0.2.0 (github.com/Optimizer077/piquant/releases/tag/v0.2.0): release notes (`docs/release-0.2.0.md`), wheels (aarch64 NEON, x86-64), tag, GitHub release; model asset only if the owner wants it (issue #9)
 - [ ] Clean-up: Pi scratch binaries and data, finished agent worktrees and local branches, stale scratch files
 - [ ] Then: resume the Cerno agent (repo `cerno-pi`), and later Gemma 4 (llama.cpp check first)
