@@ -1,0 +1,23 @@
+# 2026-10-22T22:15:00 pi@10.42.0.2
+$ ~/pinfer/venvs/gpu/bin/python -c 'import videocore6.driver, videocore6.assembler; print(1)' && ~/pinfer/venvs/gpu/bin/pip freeze > ~/pinfer/venvs/gpu.freeze.txt && cat ~/pinfer/venvs/gpu.freeze.txt && ls ~/pinfer/venvs/gpu/py-videocore6-licence/ ~/pinfer/venvs/gpu/lib/python3.13/site-packages/ | grep -i -E 'videocore|LICENSE|NOTE|COMMIT' && rm -rf ~/pinfer/tmp/gpu && ls ~/pinfer/tmp/ && du -sh ~/pinfer/venvs/gpu
+
+1
+ioctl-opt @ file:///home/pi/pinfer/tmp/gpu/ioctl_opt-1.3.1-py3-none-any.whl#sha256=7617a734e7083fd0ff5607c821ca67f75f4dd009c55b3f96db5c55621e64ee9a
+numpy @ file:///home/pi/pinfer/tmp/gpu/numpy-2.3.1-cp313-cp313-manylinux_2_28_aarch64.whl#sha256=18703df6c4a4fee55fd3d6e5a253d01c5d33a295409b03fda0c86b3ca2ff41a1
+_videocore6
+videocore6
+/home/pi/pinfer/venvs/gpu/py-videocore6-licence/:
+COMMIT
+LICENSE.GPL2
+NOTE.txt
+ab
+audit
+cerno
+ck
+csp
+num
+pyctx
+tools
+76M	/home/pi/pinfer/venvs/gpu
+
+[exit 0]

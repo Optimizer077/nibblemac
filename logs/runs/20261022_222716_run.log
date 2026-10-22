@@ -1,0 +1,5 @@
+# 2026-10-22T22:27:16 pi@10.42.0.2
+$ pkill -f 'flock /tmp/pinfer-bench' ; pkill -f 'pinfer_run|kbench|tbench|decide_bench|python' ; sleep 2; pgrep -af 'pinfer|kbench|decide' | grep -v pgrep || echo 'Pi idle'; vcgencmd measure_temp
+
+
+[exit 255]

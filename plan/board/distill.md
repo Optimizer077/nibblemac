@@ -32,6 +32,19 @@ outside git (`/root/distill/` in WSL, listed in `tools/pilot/distill/README.md`)
   (about 5 GB VRAM, under 4 GB WSL RAM, 1 process), then the student evals (0.8B / 2B, under 6 GB VRAM).
   The Windows-side teacher `llama-server.exe` (CUDA, 3 GB VRAM, ~1 GB Windows RAM + file cache) stays
   loaded for the set-2 labels; GPU total stays under 9 GB. No CPU model jobs. [done] will follow here.
+- 21:56 [measured] GPU at 15.9 / 16.3 GB at 21:55 (my trainer ~8 GB incl. the caching allocator, my idle
+  teacher 3 GB, layerskip 2.6 GB, the compress CUDA sweep). I stopped my Windows teacher server (restart
+  ~22:25 for the set-2 labels); used memory only fell to 15.65 GB, so the others grew into it. If the GPU
+  OOMs, my trainer dies at a known step and restarts from scratch (40 min).
+- 21:55 [using] slot A extended to ~23:40: after the first student (ETA 22:33), a scale-up run is queued
+  (set 2: 1009 requests / 2765 questions labelled on the Windows GPU teacher in ~6 min, then 1 epoch on
+  sets 1+2, ~460 updates of 8 rows, same memory as above), then its eval. [done] follows at the end.
+- 21:53 [measured] student training: 940 train rows / 50 dev rows (5% of requests), 354 updates of 8 rows,
+  6.8 s per update (0.85 s per row, one row per step, fla kernels), GPU 8.4 GB for the trainer; KL 0.39 at
+  update 20; ETA 22:31 + eval. Slot A stays claimed until then (then possibly a set-2 run, announced here).
+- 21:50 [measured] zero-shot Qwen3.5-2B (base) on the 52: top answer 35/52 (67.3%), mean |dp| 0.160 over
+  options, mean per-row max 0.311, max 0.651; choice/score 18/31, yes-no 17/21 (evidence:
+  `/root/distill/results/zs-2b.json`). Training of the 0.8B student started 21:50:45 (slot A).
 - 21:47 [measured] GPU teacher check: the Windows CUDA `llama-server` (b11818) on the 18 reference requests
   vs `ref_llama_pc.jsonl` (x86 CPU v0.7.0): max |dp| 0.0147, mean per-row max 0.0036, mean over the 213
   options 0.0019, top answer 51/52 (the 0.497/0.503 tie). Same noise as ARM-vs-x86 (0.0146): the labels

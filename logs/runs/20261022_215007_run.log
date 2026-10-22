@@ -1,0 +1,71 @@
+# 2026-10-22T21:50:07 pi@10.42.0.2
+$ cd tmp/lut && chmod +x tbench_v4 kbench_lut1 kbench_ref && md5sum tbench_v4 kbench_lut1 kbench_ref lib_lut0/libpinfer.so lib_lut1/libpinfer.so ../../engine/pinfer_run_lut0 ../../engine/pinfer_run_lut1 && ls ../csp/ | head -40 && ls ../../data | head -30
+
+954afaf573c646606eb51840f49ba198  tbench_v4
+143fbf42c184779b667f9f2efbf9763a  kbench_lut1
+6454499e470a3e6a567242148b77fb3d  kbench_ref
+ba600f512f97351c31b6bb0acc35c1eb  lib_lut0/libpinfer.so
+40cccaf8bd825aedc3dd540cd18f6ee5  lib_lut1/libpinfer.so
+508f1d742e0168282fb94b3c3cd0afc7  ../../engine/pinfer_run_lut0
+e6d73aa359a4f993ba718cae473a4cac  ../../engine/pinfer_run_lut1
+cerno
+cerno_check.sh
+decide_ab.sh
+e2e08.sh
+e2e4b.sh
+kb4.sh
+kbab2.sh
+kbab.sh
+kbench_c1
+kbench_c2
+kbench_c3
+kbench_c4
+kbench_c5
+kbench_csp1
+kbench_ns
+kbench_ref
+kbgate.sh
+kbsweep.sh
+kbvar.sh
+lbab.sh
+lbench4_csp1
+lbench4_f
+lbench4_ref
+lbench_ref
+lib_base
+lib_new
+p256.ids
+p512.ids
+p64.ids
+pinfer_run_csp1_noneon
+profile.sh
+py
+test_prefill_tail.py
+var2.txt
+var3.txt
+var5.txt
+var6.txt
+var7.txt
+cerno
+chat27.ids
+chat_code_c.ids
+chat_code_py.ids
+chat_edit.ids
+chat_fix.ids
+chat_list.ids
+chat_math.ids
+chat_story.ids
+ctx2048.ids
+ctx2112.ids
+ctx4096.ids
+ctx512.ids
+ctx64.ids
+ctx8192.ids
+next2048.ids
+next4096.ids
+next8192.ids
+prompt64.ids
+tail2048_64.ids
+wikitext2-qwen35.tokens.bin
+
+[exit 0]

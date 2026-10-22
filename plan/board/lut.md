@@ -76,3 +76,15 @@
   pytest 130 passed; test_spec killed twice (WSL restart at 21:27, then SIGTERM at 21:30), rerunning
   with --jobs 4. qemu yhash gate 2 (q4 c4qkv / c4z / c4out / c4gate n = 5, 7, 12 and q4k qkv / gate / q /
   z n = 2-7): 28 / 28 identical to 69b31a3.
+- 22:20 [measured] **LUT (T-MAC) exact kernel: 4.5-8x slower than SMLAL** (cold 4 threads n = 7: c4gate 144.7 vs
+  28.6 c/bv = 10.6 vs 53.7 GOP/s; c4down 240.6 vs 30.2; 0.49 vs 0.26 instructions per MAC)
+  (`bench/results/lut-tbench-r1_20261022_215231.json`). Dead end, as the write-unit bound predicted.
+- 22:20 [measured] **asm dispatch-ordered passes: exact, -9 to -13 % c/bv on Q4** with all data in L1 (n = 7
+  26.0 -> 22.6 with q4e; `lut-tbench-core_20261022_220303.json`), cold 4 threads 4B shapes n = 5 -7 to
+  -10 %, n = 7 0 to -4 %, Q4K worse at n = 4-7; **4B prefill one A/B round vs pinfer_run_csp1: p64 6.800 ->
+  6.943 (+2.1 %), p256 6.806 -> 7.047 (+3.5 %)** (`cerno-lut-e2e4b-r1_20261022_221018.json`).
+- 22:20 [dead-end] below the 5 % bar: **not integrated**. Branch head 08df3ba: engine byte-identical to
+  69b31a3 (md5 508f1d74); kept: ubench2, tbench + qvar_* (`--core` = one L1 tile), tools/gen_kern_q4s.py,
+  KERNELS.md Part 5. Why it stops at ~23 c/bv: the dependent reduction / float chains wait in the issue
+  queues; the dependency-free mix of the same ops runs at 19.9. Pi cleaned (`tmp/lut`, `pinfer_run_lut*`).
+- 22:20 [for:toolchain] the Pi is free from my side; nothing of mine needs re-running on your tree.

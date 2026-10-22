@@ -1,0 +1,8 @@
+# 2026-10-22T22:27:28 pi@10.42.0.2
+$ pgrep -af 'pinfer_run|kbench|tbench|decide_bench|flock' | grep -v pgrep || echo 'Pi idle'; vcgencmd measure_temp; vcgencmd get_throttled; ls engine/ | grep -E 'pinfer_run_' | tr '\n' ' '
+
+Pi idle
+temp=43.8'C
+throttled=0x0
+pinfer_run_cerno1 pinfer_run_cerno2 pinfer_run_ck1 pinfer_run_csp0 pinfer_run_csp1 pinfer_run_fast pinfer_run_fast.pre-0.2.0 
+[exit 0]

@@ -1,0 +1,13 @@
+# 2026-10-22T22:03:17 pi@10.42.0.2
+$ md5sum engine/pinfer_run_csp1 engine/pinfer_run_lut0 engine/pinfer_run_lut1 engine/pinfer_run_fast 2>&1; ls tmp/lut/*.ids tmp/csp/*.ids
+
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_lut0
+e6d73aa359a4f993ba718cae473a4cac  engine/pinfer_run_lut1
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+ls: cannot access 'tmp/lut/*.ids': No such file or directory
+tmp/csp/p256.ids
+tmp/csp/p512.ids
+tmp/csp/p64.ids
+
+[exit 2]

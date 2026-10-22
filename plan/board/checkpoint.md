@@ -40,3 +40,14 @@ the lead syncs it to the main board. Not committed.
   kept). Host gate chain relaunched 21:49 on the 24 GB / 12-core WSL (one `pinfer_run` at a time, 4 threads; the
   chain's own Pi build comes last); the Pi artifacts (`engine/pinfer_run_ck1`, `tmp/ck/lib/libpinfer.so`,
   NEON, from the merged tree) are being cross-compiled now, serial make. Waiting for "[Pi ready]" before any push.
+- 22:04 [dead-end] first Pi gate run (`ckpt-spec-exact_20261022_220047`, 9 min of Pi time) produced no RESULT rows:
+  the scripts I pushed from the Windows worktree had CRLF endings (the worktree checkout converts; the Pi's bash
+  then runs nothing useful). Fixed with `sed -i 's/\r$//'` on `tmp/ck/*.sh` and the id files, re-pushed as LF.
+  Lesson for the board: push scripts from WSL or check `grep -c $'\r'` before `pi.py push`.
+- 22:04 [plan] per the owner (reduce consumption): only `spec_exact`, `ctx_check`, `cerno_check` and ONE
+  decision round (state r1, ckpt r1, 5 requests) on the Pi; the PC decision A/B, the 3x2 rounds, the 18-request
+  and long-state runs are dropped. Then commit, delete `tmp/ck` on the Pi, final report.
+- 22:12 [dead-end] the empty gate runs were NOT (only) the CRLF: `pi.py bench NAME -- bash -c "bash x.sh args"` joins
+  the words with spaces, so the Pi ran `bash -c bash x.sh args` = an empty bash (exit 0, no output, `valid=true`).
+  Give the command words directly after `--` (`-- bash tmp/ck/x.sh args`). Result files `ckpt-spec-exact{,2}`,
+  `ckpt-ctx-check{,2}`, `ckpt-cerno-check` (22:00-22:11) are empty for that reason; the `*3` runs are the real ones.

@@ -1,0 +1,10 @@
+# 2026-10-22T21:49:22 pi@10.42.0.2
+$ set -e; NC=/boot/firmware/network-config; SSID=$(python3 -c "import yaml,sys; d=yaml.safe_load(open('$1'))['network']['wifis']['wlan0']['access-points']; print(next(iter(d)))" $NC); PW=$(python3 -c "import yaml,sys; d=yaml.safe_load(open('$1'))['network']['wifis']['wlan0']['access-points']; print(next(iter(d.values()))['password'])" $NC); sudo nmcli con delete "netplan-wlan0-$SSID" >/dev/null 2>&1 || true; sudo nmcli con add type wifi ifname wlan0 con-name "netplan-wlan0-$SSID" ssid "$SSID" wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$PW" 802-11-wireless.powersave 2 ipv4.method auto ipv6.method auto connection.autoconnect yes >/dev/null && echo 'wifi profile created'; sudo nmcli con up "netplan-wlan0-$SSID" >/dev/null && echo 'wifi up'; sudo rm -f /etc/netplan/90-NM-75a1216a-9d1a-30cd-8aca-ace5526ec021.yaml /etc/netplan/90-NM-bf199e0c-9ec5-345d-953c-8c08eddacf51.yaml; sleep 8; ip -br a show wlan0 | sed -E 's/([0-9a-f]{2}:){5}[0-9a-f]{2}/<mac>/g'; sudo systemctl restart systemd-timesyncd; sleep 5; timedatectl show -p NTPSynchronized -p TimeUSec; ping -c 2 -W 3 deb.debian.org >/dev/null && echo 'internet ok' || echo 'no internet yet'
+
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import yaml,sys; d=yaml.safe_load(open(''))['network']['wifis']['wlan0']['access-points']; print(next(iter(d)))
+                                      ~~~~^^^^
+FileNotFoundError: [Errno 2] No such file or directory: ''
+
+[exit 1]

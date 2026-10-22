@@ -12,6 +12,12 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Pilots closed (22:28): no-go for prompt economy, compilers, table-lookup / asm kernels, numeric approximations
+- Cerno 4B is calibrated to its exact prompt and its Q4_0 numerics: every output-changing shortcut measured today exceeds the
+  agreement bar; the exact kernel routes give <= 3.5% end to end. Verified full host gate on main (speed4b merge) all PASS.
+- Interrupted by the API session limit (work saved on branches): layer skipping, low-rank, GPU co-processing, in-engine
+  checkpoint, distilled 0.8B decider (epoch 0: 41% -> 67% dev agreement).
+
 ### Merged (21:25): 4B prefill tuning (speed4b agent) — note: landed as commit `dcc2219`, whose message says "docs(pi)"
 - Prefill tail (the last layer computes only the last token's rows when only its logits are read) and prefill groups of
   7s + 5s with one fused job per call; bit-identical. Cerno decisions -4.4%, 4B prefill +4-5%, 0.8B prefill 43.8 -> 45.1,

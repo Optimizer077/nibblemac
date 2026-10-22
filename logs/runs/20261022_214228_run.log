@@ -1,0 +1,6 @@
+# 2026-10-22T21:42:28 pi@fe80::1798:bb58:cef8:8688%13
+$ sudo nmcli con add type ethernet ifname eth0 con-name netplan-eth0 ipv4.method manual ipv4.addresses 10.42.0.2/24 ipv4.never-default yes ipv6.method link-local connection.autoconnect yes connection.autoconnect-priority 10 && sudo nmcli con up netplan-eth0 && sudo nmcli con delete 'Wired connection 1'; sleep 2; ip -br a show eth0 | sed -E 's/([0-9a-f]{2}:){5}[0-9a-f]{2}/<mac>/g'; nmcli -t -f NAME,DEVICE,STATE con show
+
+ssh: connect to host fe80::1798:bb58:cef8:8688%13 port 22: Connection timed out
+
+[exit 255]

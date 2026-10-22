@@ -1,0 +1,10 @@
+# 2026-10-22T21:52:27 pi@10.42.0.2
+$ ps -eo pid,etimes,args --sort=start_time | grep -E 'flock /tmp/pinfer-bench' | grep -v grep | sed 's/timeout --kill-after=30 1200 bash -c //' | cut -c1-120; free -m | sed -n 2p; vcgencmd measure_temp
+
+   2518     131 flock /tmp/pinfer-bench.lock bash tmp/lut/tbab.sh tmp/lut/tbench_v4 tmp/lut/kbench_lut1 ref,eng,q4e,q4m,
+   2645     119 flock /tmp/pinfer-bench.lock bash tmp/num/num_e2e4b.sh ./tmp/num/pinfer_run_num1 3 0,1 p64,p256
+   2878      37 flock /tmp/pinfer-bench.lock bash -c bash tmp/ck/spec_exact.sh ./engine/pinfer_run_ck1
+Mem:            3794         294         844           9        2727        3499
+temp=48.2'C
+
+[exit 0]

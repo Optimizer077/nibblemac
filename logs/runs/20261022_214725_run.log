@@ -1,0 +1,35 @@
+# 2026-10-22T21:47:25 pi@10.42.0.2
+$ sha256sum tmp/gpu/numpy-2.3.1-cp313-cp313-manylinux_2_28_aarch64.whl; ~/pinfer/venvs/gpu/bin/pip install --no-index tmp/gpu/numpy-2.3.1-cp313-cp313-manylinux_2_28_aarch64.whl 2>&1 | tail -1; ~/pinfer/venvs/gpu/bin/pip freeze > ~/pinfer/venvs/gpu.freeze.txt; cat ~/pinfer/venvs/gpu.freeze.txt; ls -la tmp/gpu/; vcgencmd measure_clock v3d; ls -la /dev/dri/; lsmod | grep -i v3d; vcgencmd get_throttled
+
+18703df6c4a4fee55fd3d6e5a253d01c5d33a295409b03fda0c86b3ca2ff41a1  tmp/gpu/numpy-2.3.1-cp313-cp313-manylinux_2_28_aarch64.whl
+Successfully installed numpy-2.3.1
+ioctl-opt @ file:///home/pi/pinfer/tmp/gpu/ioctl_opt-1.3.1-py3-none-any.whl#sha256=7617a734e7083fd0ff5607c821ca67f75f4dd009c55b3f96db5c55621e64ee9a
+numpy @ file:///home/pi/pinfer/tmp/gpu/numpy-2.3.1-cp313-cp313-manylinux_2_28_aarch64.whl#sha256=18703df6c4a4fee55fd3d6e5a253d01c5d33a295409b03fda0c86b3ca2ff41a1
+total 14916
+drwxrwxr-x  3 pi pi     4096 Oct 22 21:14 .
+drwxrwxr-x 11 pi pi     4096 Oct 22 17:37 ..
+-rwxr-xr-x  1 pi pi     7369 Oct 22 21:13 bench_q4.py
+-rwxr-xr-x  1 pi pi     1904 Oct 22 21:11 corun.sh
+-rwxr-xr-x  1 pi pi      289 Oct 22 21:11 gpurun.sh
+-rwxr-xr-x  1 pi pi     1967 Oct 22 21:11 hello.py
+-rwxr-xr-x  1 pi pi    21001 Oct 22 17:36 ioctl_opt-1.3.1-py3-none-any.whl
+-rwxr-xr-x  1 pi pi   931776 Oct 22 18:00 kbench_gpu1
+-rwxr-xr-x  1 pi pi 14257630 Oct 22 17:53 numpy-2.3.1-cp313-cp313-manylinux_2_28_aarch64.whl
+drwxr-xr-x  6 pi pi     4096 Oct 22 17:36 pyvc6
+-rwxr-xr-x  1 pi pi    14501 Oct 22  2026 q4gpu.py
+-rwxr-xr-x  1 pi pi     7819 Oct 22 21:11 qsched.py
+frequency(46)=500000992
+total 0
+drwxr-xr-x  3 root root        120 Oct 22 21:04 .
+drwxr-xr-x 17 root root       4020 Oct 22 21:04 ..
+drwxr-xr-x  2 root root        100 Oct 22 21:04 by-path
+crw-rw----  1 root video  226,   0 Oct 22 21:04 card0
+crw-rw----  1 root video  226,   1 Oct 22 21:09 card1
+crw-rw----  1 root render 226, 128 Oct 22 21:04 renderD128
+v3d                   188416  0
+gpu_sched              61440  1 v3d
+drm_shmem_helper       32768  1 v3d
+drm                   716800  10 gpu_sched,drm_kms_helper,drm_exec,drm_dma_helper,v3d,vc4,drm_shmem_helper,drm_display_helper,drm_client_lib
+throttled=0x0
+
+[exit 0]

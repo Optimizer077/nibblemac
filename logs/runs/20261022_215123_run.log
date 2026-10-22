@@ -1,0 +1,23 @@
+# 2026-10-22T21:51:23 pi@10.42.0.2
+$ md5sum tmp/tc/kbench_tc0 tmp/tc/kbench_tc15 tmp/tc/kbench_tc13 tmp/tc/kbench_tc2 tmp/tc/kbench_tc3 | cut -c1-8,33-; ls tmp/tc/; ls -la /tmp/pinfer-bench.lock 2>&1; date +%H:%M:%S
+
+6454499e  tmp/tc/kbench_tc0
+b090836f  tmp/tc/kbench_tc15
+9545da91  tmp/tc/kbench_tc13
+3e47ca1f  tmp/tc/kbench_tc2
+f9a73bdd  tmp/tc/kbench_tc3
+kbench_tc0
+kbench_tc13
+kbench_tc15
+kbench_tc2
+kbench_tc3
+tc_cerno_check.sh
+tc_e2e08.sh
+tc_e2e4b.sh
+tc_gate.sh
+tc_kb.sh
+tc_load.sh
+-rw-rw-r-- 1 pi pi 0 Oct 22 21:14 /tmp/pinfer-bench.lock
+21:51:23
+
+[exit 0]

@@ -1,0 +1,6 @@
+# 2026-10-22T21:37:34 pi@10.42.0.2
+$ bash os/overclock/oc_tryboot.sh status; uptime; ip -br a | sed -E 's/([0-9a-f]{2}:){5}[0-9a-f]{2}/<mac>/g'
+
+ssh: connect to host 10.42.0.2 port 22: Connection refused
+
+[exit 255]

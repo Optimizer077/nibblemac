@@ -73,6 +73,25 @@ prompts. Pi only for configurations that pass offline.
   21:50), **host RAM ≤ 6 GB** (transient while packing; `malloc_trim` after), 4 host threads,
   venv `/home/optim/.venvs/layerskip` (torch 2.11 cu128, read-only use), **until ~22:45**.
   [done] will follow.
+- 21:55 [measured] **GPU path verified and running** (launched 21:54): 4B load 12 s, 8 decision
+  rows in 9 s (the CPU fp32 path: ~45 s per row under load), max |Δp| vs the CPU fp32 base
+  **9.8e-7** over 8 rows (fp32 compute with TF32 off; the Q4_0 codes dequantized per matmul),
+  **5.5 GB VRAM**, host ~3 GB. For:layerskip, for:prompt: `tools/compress/cerno.py` `Cerno()` now
+  does this by default when CUDA is available (`PackedLinear` / `Q8Rows` buffers, `set_weights`
+  takes dense tensors or `(A, B)` factor pairs; `reset()` reloads the codes) — a 4B emulation that
+  fits next to another GPU job (evidence: `/root/lowrank/cerno/smoke_gpu.log`).
+- 21:59 [measured] **Cerno 4B per-matrix low-rank budget** (whitened SVD, calibration metric,
+  3 layers): at 75% of a matrix's MACs the output error is 2–13% per MLP matrix (layer 15 `down`
+  13.1%, `up` 10.2%; layer 0 / 31: 2–5%), 0.2–3% for `qkv`; at 50%: 8–24% (evidence:
+  `bench/results/compress/cerno_matrix_20261022_215927.json`).
+- 22:11 [dead-end] **Training-free low rank on Cerno's MLPs**: `lr_mlp:0.75` (−16.8% of the matmul
+  MACs, fp16 factors) → max |Δp| **0.438** vs the reference (bar 0.0146), 17/22 top answers on
+  the subset. 30× outside the bar; finer ranks pointless (the bar needs ~0.1% per-matrix error).
+  (evidence: `cerno_sweep_partial_20261022_221119.json`). Verdict: no-go without fine-tuning
+  (for:distill: a LoRA / distillation pass after pruning is the only route to ≥ 20% MACs).
+- 22:1x [measured] `prune:6912` (−15.9%): PRUNE_BOARD.
+- 22:1x [done] GPU side job ended (sweep stopped after two points on the owner's request;
+  nine planned points not run). Final write-up: `engine/COMPRESS.md` §1, `engine/PILOTS.md`.
 - 17:40 [measured] PC tooling note: torch on the Core Ultra 7 265F runs a 512-token 0.8B forward in
   1.5 s with 8 threads but ~10x slower with the default 20 (efficiency cores + other jobs): use
   `torch.set_num_threads(8)` / `OMP_NUM_THREADS=8` for PC-side Python.

@@ -118,3 +118,12 @@ Path: `.claude/worktrees/agent-ab578c0376849057a/plan/board/numerics.md`.)
   restarted at 21:46:27 did survive the 21:47 restart and finished all 16 remaining requests at 21:48.)
 - 21:54 [using] slot B: act_quant = 2 rerun (the first attempt stopped at `Model.load`: my Python check only
   allowed 0 / 1; fixed to 0..3), same limits, until ~21:58; then act 0.
+- 21:58 [measured] **act_quant = 2 (int7 per 32) on the 52 questions**: max |dp| 0.0291 (json_tickets.outage),
+  mean 0.0061, top answer 50/52, ids identical. Outside the bar on both counts => int7 activations are out,
+  and with them every scheme that needs them (Winograd pairing, 8-products-per-lane). [done] act 2.
+  [using] slot B: act_quant = 0 (the emu's own control; expected 0.0108 / 51 of 52 like the Pi), until ~22:02.
+  for:compress: int7 activations cost ~0.02 of max |dp| on Cerno; per-256 int8 ~0.01 (board 21:50).
+- 22:00 [done] slot B released; all my Pi jobs killed and tmp/num deleted (owner: stop measuring). Pilot
+  verdict **no-go** for act_quant 1 / 2 (0.0211 / 0.0291 max |dp| vs the 0.0146 bar). Records committed on
+  branch worktree-agent-ab578c0376849057a (engine/NUMERICS.md, engine/PILOTS.md, CHANGELOG, journal).
+  for:lut, for:compress: the x86 emu engine (`make -C engine host MATVEC=emu`) is yours to reuse.

@@ -49,3 +49,12 @@ Plan (budget ~2 h, started 21:07 KST):
   CPU emulation). **Early exit is dead**: exit after layer 24..30 gives max |dp| 0.47-0.69, mean 0.17-0.22
   (top answer often survives: 52/52 at k = 25, 30; the calibration does not). L0 skip: 14/52; L1 skip:
   max |dp| 0.36, 45/52. (evidence: bench/results/layerskip/base_20261022_214806.json, all.log)
+- 22:09 [dead-end] **No single layer of Cerno 4B can be skipped within the bar** (32 whole-layer skips,
+  every token, 52 rows): best L25 max |dp| 0.0214 (top 52/52), then L26 0.0324, L29 0.0358, L21 0.0453,
+  L20 0.0595, L28 0.0761; all others > 0.10; layers 0-15 > 0.30 (L0: 14/52, L11: 0.61, L31: 0.51 with
+  the top answer kept 52/52 - the last layer sets the calibration). Each skip saves only 3.0-3.2% of the
+  MACs, so the >= 20% target would need 6-7 layers; even the single best breaks 0.0146 by 1.5x.
+  (evidence: single_fromlog_*.json, all.log 21:48-22:08)
+- 22:09 [using] GPU side job: layerskip ranked accumulation (L25, +L26, +L29: 3 evaluations, ~2.5 min,
+  2.6 GB VRAM), then [done]. Per the lead 22:05: the MLP-only / mixer-only / question-only follow-ups
+  are cancelled (the singles show no go); the `all` run was killed at 22:09.

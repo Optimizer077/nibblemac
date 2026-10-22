@@ -124,3 +124,7 @@ look carefully into the network and see what can be further optimized to make it
       Gemma 4 (llama.cpp check first); social-preview upload
 
 - 2026-10-22 18:20: owner shut the work down for now; agents committed work in progress to their branches.
+
+- 2026-10-22 22:28: pilots closed / stop all (owner). Merged: prompt (no-go), compilers (no-go), lut (not integrated).
+  Pending decisions: resume the interrupted pilots after 00:10 KST (distill is the most promising: 67% after one epoch);
+  swap the Pi's pinfer_run_fast to the gated speed4b build 508f1d74; gated merge of numerics' x86 emu engine; README redesign.

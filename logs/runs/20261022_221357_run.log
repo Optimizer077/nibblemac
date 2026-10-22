@@ -1,0 +1,10 @@
+# 2026-10-22T22:13:57 pi@10.42.0.2
+$ rm -rf tmp/lut engine/pinfer_run_lut0 engine/pinfer_run_lut1; ls tmp/lut engine/pinfer_run_lut0 engine/pinfer_run_lut1 2>&1; md5sum engine/pinfer_run_fast engine/pinfer_run_csp1
+
+ls: cannot access 'tmp/lut': No such file or directory
+ls: cannot access 'engine/pinfer_run_lut0': No such file or directory
+ls: cannot access 'engine/pinfer_run_lut1': No such file or directory
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+
+[exit 0]

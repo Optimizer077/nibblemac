@@ -1,0 +1,22 @@
+# 2026-10-22T21:48:59 pi@10.42.0.2
+$ bash os/overclock/oc_tryboot.sh status | head -5; ip -br a | sed -E 's/([0-9a-f]{2}:){5}[0-9a-f]{2}/<mac>/g'; nmcli -t -f NAME,DEVICE,STATE con show; date; ls -la /etc/netplan/ | grep -v total; ls /etc/NetworkManager/conf.d/
+
+model:    Raspberry Pi 4 Model B Rev 1.1
+revision: c03111   kernel: 6.18.50+rpt-rpi-v8
+tryboot:  0
+config:   arm_freq=1500 over_voltage=0 force_turbo=0
+now:      frequency(48)=1500345728 volt=0.8688V temp=37.0'C throttled=0x0
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             UP             10.42.0.2/24 fe80::33f2:4b91:9ecb:75bc/64 
+wlan0            DOWN           
+netplan-eth0:eth0:activated
+lo:lo:activated
+Thu 22 Oct 21:16:15 KST 2026
+drwxr-xr-x  2 root root 4096 Oct 22 21:14 .
+drwxr-xr-x 93 root root 4096 Oct 22 18:02 ..
+-rw-------  1 root root  573 Oct 22 21:14 90-NM-4dfa10bd-7591-447f-a7f9-9d2951b6b264.yaml
+-rw-------  1 root root    0 Oct 22 18:02 90-NM-75a1216a-9d1a-30cd-8aca-ace5526ec021.yaml
+-rw-------  1 root root    0 Oct 22 18:02 90-NM-bf199e0c-9ec5-345d-953c-8c08eddacf51.yaml
+90-pinfer-wifi-powersave-off.conf
+
+[exit 0]

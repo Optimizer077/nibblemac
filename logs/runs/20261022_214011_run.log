@@ -1,0 +1,42 @@
+# 2026-10-22T21:40:11 pi@fe80::1798:bb58:cef8:8688%13
+$ hostname; uptime; cat /proc/device-tree/chosen/bootloader/tryboot | od -An -tu4 --endian=big; vcgencmd measure_clock arm; vcgencmd get_throttled; echo '== ip:'; ip -br a | sed -E 's/([0-9a-f]{2}:){5}[0-9a-f]{2}/<mac>/g'; echo '== nm:'; systemctl is-active NetworkManager; nmcli -t -f NAME,TYPE,DEVICE,STATE con show 2>&1 | sed 's/<wifi>//'; echo '== netplan files:'; ls -la /etc/netplan/; echo '== cloud-init:'; cloud-init status 2>&1 | head -3; cat /var/lib/cloud/data/instance-id 2>/dev/null; echo; echo '== NM eth0 log:'; journalctl -u NetworkManager -b --no-pager 2>/dev/null | grep -iE 'eth0|netplan-eth0|error|fail' | tail -12
+
+Warning: Permanently added 'fe80::1798:bb58:cef8:8688%13' (ED25519) to the list of known hosts.
+pi4
+ 21:07:27 up 3 min,  1 user,  load average: 0.17, 0.10, 0.03
+          0
+frequency(48)=1500345728
+throttled=0x0
+== ip:
+lo               UNKNOWN        127.0.0.1/8 ::1/128 
+eth0             UP             fe80::1798:bb58:cef8:8688/64 
+wlan0            DOWN           
+== nm:
+active
+Wired connection 1:802-3-ethernet:eth0:activating
+lo:loopback:lo:activated
+== netplan files:
+total 8
+drwxr-xr-x  2 root root 4096 Oct 22 18:02 .
+drwxr-xr-x 93 root root 4096 Oct 22 18:02 ..
+-rw-------  1 root root    0 Oct 22 18:02 90-NM-75a1216a-9d1a-30cd-8aca-ace5526ec021.yaml
+-rw-------  1 root root    0 Oct 22 18:02 90-NM-bf199e0c-9ec5-345d-953c-8c08eddacf51.yaml
+== cloud-init:
+status: done
+nocloud
+
+== NM eth0 log:
+Oct 22 21:06:02 pi4 NetworkManager[623]: <info>  [1792670762.5384] dhcp4 (eth0): activation: beginning transaction (timeout in 45 seconds)
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5058] device (eth0): state change: ip-config -> failed (reason 'ip-config-unavailable', managed-type: 'full')
+Oct 22 21:06:47 pi4 NetworkManager[623]: <warn>  [1792670807.5080] device (eth0): Activation: failed for connection 'Wired connection 1'
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5088] device (eth0): state change: failed -> disconnected (reason 'none', managed-type: 'full')
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5297] dhcp4 (eth0): canceled DHCP transaction
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5298] dhcp4 (eth0): activation: beginning transaction (timeout in 45 seconds)
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5298] dhcp4 (eth0): state changed no lease
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5365] device (eth0): Activation: starting connection 'Wired connection 1' (0821692a-93f7-30a7-97a1-963b1b0f4a45)
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5368] device (eth0): state change: disconnected -> prepare (reason 'none', managed-type: 'full')
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5387] device (eth0): state change: prepare -> config (reason 'none', managed-type: 'full')
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5406] device (eth0): state change: config -> ip-config (reason 'none', managed-type: 'full')
+Oct 22 21:06:47 pi4 NetworkManager[623]: <info>  [1792670807.5424] dhcp4 (eth0): activation: beginning transaction (timeout in 45 seconds)
+
+[exit 0]
