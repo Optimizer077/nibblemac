@@ -1,0 +1,12 @@
+# 2026-10-22T11:44:00 pi@10.42.0.2
+$ md5sum engine/ng/* engine/pinfer_run_fast; ls data | grep -c ids
+
+ecd32eaabbe68c91a0e89f2107a4ca58  engine/ng/chat_spec.sh
+ff66287b9cc42096f9dcded77d718f24  engine/ng/draft_trace
+7d701ad6f58a43bec560d3533782fd3f  engine/ng/pinfer_run_ng1
+2d0668b18325a7696188d38370216579  engine/ng/spec_exact.sh
+22485c1c6493486efb6a86effb361b3d  engine/ng/state_cmp_ng1
+23a7624250b8445343b2322eb0014749  engine/pinfer_run_fast
+30
+
+[exit 0]

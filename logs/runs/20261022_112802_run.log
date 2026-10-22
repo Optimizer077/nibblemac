@@ -1,0 +1,11 @@
+# 2026-10-22T11:28:02 pi@10.42.0.2
+$ rm -f tmp/m2b/spec_exact.sh; sha256sum models/Qwen3.5-2B-Q4_K_M.gguf; md5sum tmp/m2b/*.sh; touch tmp/m2b/PUSHDONE; date +%T
+
+727ffd79558b8177cec566431b599a2aec03886cb923dbc8465aece6310eb5a0  models/Qwen3.5-2B-Q4_K_M.gguf
+07561f150c64cd4079fdecf3e7dab1bd  tmp/m2b/ctx_check.sh
+9267c673b15a6ffc2b017b490994c414  tmp/m2b/llama_rss.sh
+8e75afe0f6fad7ce895721029ffa5af7  tmp/m2b/spec_exact_2b.sh
+3ef41437b5dec312b22184ba1d77b081  tmp/m2b/speed.sh
+11:28:14
+
+[exit 0]

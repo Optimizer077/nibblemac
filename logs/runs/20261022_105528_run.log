@@ -1,0 +1,97 @@
+# 2026-10-22T10:55:28 pi@10.42.0.2
+$ df -h ~ | tail -1; free -m; ls -la ~/pinfer/models/ ~/pinfer/engine/ | head -60; md5sum ~/pinfer/engine/pinfer_run_fast; ls ~/pinfer/llama ~/pinfer/data; uptime
+
+/dev/sda2       917G   16G  864G   2% /
+               total        used        free      shared  buff/cache   available
+Mem:            3794         218        1228          11        2420        3576
+Swap:           2047          68        1979
+/home/pi/pinfer/engine/:
+total 46752
+drwxrwxr-x  2 pi pi   4096 Oct 22 10:46 .
+drwxrwxr-x 16 pi pi   4096 Oct 22 01:38 ..
+-rwxr-xr-x  1 pi pi   1302 Oct 22 08:03 chat_spec.sh
+-rwxr-xr-x  1 pi pi   1679 Oct 22 01:33 core2_check.sh
+-rwxr-xr-x  1 pi pi   1270 Oct 22 02:52 ctx_check.sh
+-rwxr-xr-x  1 pi pi 708424 Oct 22 01:37 exptest_pi
+-rwxr-xr-x  1 pi pi   1384 Oct 22 10:18 f16_check.sh
+-rwxr-xr-x  1 pi pi 934560 Oct 22 02:51 pinfer_ppl_ctx
+-rwxr-xr-x  1 pi pi 935240 Oct 22 03:05 pinfer_ppl_ctx2
+-rwxr-xr-x  1 pi pi 935240 Oct 22 03:12 pinfer_ppl_ctx3
+-rwxr-xr-x  1 pi pi 935184 Oct 22 03:34 pinfer_ppl_ctx4
+-rwxr-xr-x  1 pi pi 935424 Oct 22 05:57 pinfer_ppl_ctx7
+-rwxr-xr-x  1 pi pi 935800 Oct 22 10:46 pinfer_ppl_fast
+-rwxr-xr-x  1 pi pi 934120 Oct 22 02:19 pinfer_ppl_fast.pre-ctx
+-rwxr-xr-x  1 pi pi 935424 Oct 22 06:38 pinfer_ppl_fast.pre-merge4
+-rwxr-xr-x  1 pi pi 935824 Oct 22 07:52 pinfer_ppl_hard2
+-rwxr-xr-x  1 pi pi 935424 Oct 22 06:33 pinfer_ppl_merge
+-rwxr-xr-x  1 pi pi 935784 Oct 22 09:10 pinfer_ppl_merge3
+-rwxr-xr-x  1 pi pi 935800 Oct 22 10:29 pinfer_ppl_merge4
+-rwxr-xr-x  1 pi pi 779792 Oct 21 21:47 pinfer_run
+-rwxr-xr-x  1 pi pi 933880 Oct 22 09:07 pinfer_run_att4
+-rwxr-xr-x  1 pi pi 932632 Oct 22 02:07 pinfer_run_core2
+-rwxr-xr-x  1 pi pi 932568 Oct 22 02:07 pinfer_run_core2_noneon
+-rwxr-xr-x  1 pi pi 932984 Oct 22 02:51 pinfer_run_ctx
+-rwxr-xr-x  1 pi pi 933688 Oct 22 03:05 pinfer_run_ctx2
+-rwxr-xr-x  1 pi pi 933704 Oct 22 03:34 pinfer_run_ctx4
+-rwxr-xr-x  1 pi pi 933680 Oct 22 03:41 pinfer_run_ctx5
+-rwxr-xr-x  1 pi pi 933728 Oct 22 03:55 pinfer_run_ctx6
+-rwxr-xr-x  1 pi pi 933816 Oct 22 05:57 pinfer_run_ctx7
+-rwxr-xr-x  1 pi pi 934216 Oct 22 10:46 pinfer_run_fast
+-rwxr-xr-x  1 pi pi 932632 Oct 22 02:19 pinfer_run_fast.pre-ctx
+-rwxr-xr-x  1 pi pi 933816 Oct 22 06:38 pinfer_run_fast.pre-merge4
+-rwxr-xr-x  1 pi pi 934144 Oct 22 07:52 pinfer_run_hard2
+-rwxr-xr-x  1 pi pi 930952 Oct 22 00:05 pinfer_run_kern
+-rwxr-xr-x  1 pi pi 865344 Oct 22 00:15 pinfer_run_kern2
+-rwxr-xr-x  1 pi pi 930904 Oct 22 00:35 pinfer_run_kern3
+-rwxr-xr-x  1 pi pi 865824 Oct 22 00:46 pinfer_run_kern4
+-rwxr-xr-x  1 pi pi 931304 Oct 22 00:41 pinfer_run_lin
+-rwxr-xr-x  1 pi pi 931360 Oct 22 00:46 pinfer_run_lin2
+-rwxr-xr-x  1 pi pi 931336 Oct 22 00:49 pinfer_run_lin3
+-rwxr-xr-x  1 pi pi 931384 Oct 22 00:59 pinfer_run_lin4
+-rwxr-xr-x  1 pi pi 933880 Oct 22 05:34 pinfer_run_m0p0
+-rwxr-xr-x  1 pi pi 933856 Oct 22 05:34 pinfer_run_m0p16
+-rwxr-xr-x  1 pi pi 933784 Oct 22 05:34 pinfer_run_m1p0
+-rwxr-xr-x  1 pi pi 933808 Oct 22 05:34 pinfer_run_m1p16
+-rwxr-xr-x  1 pi pi 933808 Oct 22 05:35 pinfer_run_m2p0
+-rwxr-xr-x  1 pi pi 933856 Oct 22 05:35 pinfer_run_m2p16
+-rwxr-xr-x  1 pi pi 933816 Oct 22 06:33 pinfer_run_merge
+-rwxr-xr-x  1 pi pi 934080 Oct 22 09:10 pinfer_run_merge3
+-rwxr-xr-x  1 pi pi 934216 Oct 22 10:29 pinfer_run_merge4
+-rwxr-xr-x  1 pi pi 932680 Oct 22 00:15 pinfer_run_pg
+-rwxr-xr-x  1 pi pi 933680 Oct 22 05:19 pinfer_run_pv1
+-rwxr-xr-x  1 pi pi 933728 Oct 22 05:19 pinfer_run_pv2
+-rwxr-xr-x  1 pi pi 780952 Oct 21 22:11 pinfer_run_spec
+-rwxr-xr-x  1 pi pi 864832 Oct 21 22:43 pinfer_run_spec_fast
+-rwxr-xr-x  1 pi pi 864856 Oct 21 23:36 pinfer_run_spec_fast2
+-rwxr-xr-x  1 pi pi 931472 Oct 22 01:32 pinfer_run_thp
+-rwxr-xr-x  1 pi pi 933704 Oct 22 07:49 pinfer_run_ver3
+23a7624250b8445343b2322eb0014749  /home/pi/pinfer/engine/pinfer_run_fast
+/home/pi/pinfer/data:
+chat27.ids
+chat_code_c.ids
+chat_code_py.ids
+chat_list.ids
+chat_math.ids
+chat_story.ids
+ctx2048.ids
+ctx2112.ids
+ctx4096.ids
+ctx512.ids
+ctx64.ids
+ctx8192.ids
+next2048.ids
+next4096.ids
+next8192.ids
+prompt64.ids
+tail2048_64.ids
+wikitext2-qwen35.tokens.bin
+
+/home/pi/pinfer/llama:
+BUILD_INFO.txt
+llama-bench
+llama-completion
+llama-perplexity
+llama-simple
+ 10:55:28 up  9:20,  1 user,  load average: 0.17, 0.66, 1.64
+
+[exit 0]

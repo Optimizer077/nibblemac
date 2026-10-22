@@ -1,0 +1,18 @@
+# 2026-10-22T11:00:12 pi@10.42.0.2
+$ ls -la /usr/bin/time 2>&1; ./llama/llama-simple --help 2>&1 | head -5; ./llama/llama-completion --help 2>&1 | grep -iE "no-mmap|mlock|perf|-n,|n-predict" | head
+
+ls: cannot access '/usr/bin/time': No such file or directory
+
+example usage:
+
+    ./llama/llama-simple -m model.gguf [-n n_predict] [-ngl n_gpu_layers] [prompt]
+
+-n,    --predict, --n-predict N         number of tokens to predict (default: -1, -1 = infinity, -2 = until
+--perf, --no-perf                       whether to enable internal libllama performance timings (default:
+                                        (env: LLAMA_ARG_PERF)
+                                        pageouts if not using mlock)
+                                        - mlock: force system to keep model in RAM rather than swapping or
+                                        - mmap+mlock: mmap + force system to keep model in RAM rather than
+--warmup, --no-warmup                   whether to perform warmup with an empty run (default: enabled)
+
+[exit 0]

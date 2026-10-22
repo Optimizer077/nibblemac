@@ -1,0 +1,13 @@
+# 2026-10-22T11:42:21 pi@10.42.0.2
+$ ps -eo pid,etimes,pcpu,args --sort=-pcpu | head -8
+
+    PID ELAPSED %CPU COMMAND
+  40701       0  100 ps -eo pid,etimes,pcpu,args --sort=-pcpu
+  40686      19 99.6 ./kbench/kbench_vA --variant kbench_vA --dtypes q8,q4,q4k --shapes kv --threads 1 --batch 1,2,3,4,5,8,16 --hot --reps 3
+  40690       0 18.1 sshd-session: pi [priv]
+  39812     932  0.2 [kworker/0:2-mm_percpu_wq]
+  40162     767  0.2 [kworker/0:3-events]
+     91   36439  0.1 [irq/40-mmc0]
+  37375    2552  0.1 [kworker/2:2-events]
+
+[exit 0]

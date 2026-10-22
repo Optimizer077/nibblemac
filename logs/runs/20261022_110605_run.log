@@ -1,0 +1,11 @@
+# 2026-10-22T11:06:05 pi@10.42.0.2
+$ md5sum models/qwen35-2b-q4k-headq4k.pq engine/pinfer_run_2b1 engine/pinfer_ppl_2b1 engine/pinfer_run_fast; ls -la models/qwen35-2b-q4k-headq4k.pq; touch tmp/m2b/PUSHDONE; date +%T
+
+6441a5bd368ec24418d2a26db5006f7b  models/qwen35-2b-q4k-headq4k.pq
+b18a51570a496b1b7a133a77cf7d8064  engine/pinfer_run_2b1
+7b616eadc057203c9f36e43c77e3813b  engine/pinfer_ppl_2b1
+23a7624250b8445343b2322eb0014749  engine/pinfer_run_fast
+-rwxr-xr-x 1 pi pi 1094714624 Oct 22 11:03 models/qwen35-2b-q4k-headq4k.pq
+11:06:10
+
+[exit 0]

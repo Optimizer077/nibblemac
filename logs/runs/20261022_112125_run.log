@@ -1,0 +1,15 @@
+# 2026-10-22T11:21:25 pi@10.42.0.2
+$ ls tmp/m2b/; date +%T; ps -eo etime,args | grep -E "flock|pinfer_run|llama|kbench" | grep -v grep | head -5
+
+ctx_check.sh
+llama_rss.sh
+spec_exact.sh
+speed.sh
+11:21:25
+      01:50 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/pinfer_run_fast 96 1 plain,k1,k2,k3,adaptive
+      01:19 timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/pinfer_run_fast 96 1 plain,k1,k2,k3,adaptive
+      01:19 bash engine/ng/chat_spec.sh ./engine/pinfer_run_fast 96 1 plain,k1,k2,k3,adaptive
+      00:48 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash kbench/mm_ab.sh kbench_ref,kbench_mm1 --dtypes q8,q4,q4k --shapes kv --threads 1 --batch 1,2,3,4,5,8,16 --hot --reps 3
+      00:25 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c mkdir -p tmp/m2b && rm -f tmp/m2b/PUSHDONE && touch tmp/m2b/LOCKHELD && echo "lock held $(date +%T)"; for i in $(seq 300); do [ -e tmp/m2b/PUSHDONE ] && break; sleep 1; done; rm -f tmp/m2b/LOCKHELD tmp/m2b/PUSHDONE; echo "lock released $(date +%T) after ${i}s"
+
+[exit 0]

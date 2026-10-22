@@ -1,0 +1,39 @@
+# 2026-10-22T10:55:35 pi@10.42.0.2
+$ ls -la ~/pinfer/models/; cat ~/pinfer/llama/BUILD_INFO.txt | head; ls ~/pinfer/venvs ~/pinfer/golden 2>&1
+
+total 6419364
+drwxrwxr-x  3 pi pi       4096 Oct 22 00:10 .
+drwxrwxr-x 16 pi pi       4096 Oct 22 01:38 ..
+-rwxr-xr-x  1 pi pi 1546749184 Oct 21 21:36 qwen35-0.8b-bf16.pq
+-rwxr-xr-x  1 pi pi  439391488 Oct 21 23:46 qwen35-0.8b-mix-headq4k.pq
+-rwxr-xr-x  1 pi pi  566531328 Oct 21 23:47 qwen35-0.8b-mix-headq8.pq
+-rwxr-xr-x  1 pi pi  512977920 Oct 21 21:26 Qwen3.5-0.8B-Q4_0.gguf
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:09 qwen35-0.8b-q4-headq4k.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 21 23:37 qwen35-0.8b-q4-headq4.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:08 qwen35-0.8b-q4k-headq4k.pq
+-rwxr-xr-x  1 pi pi  541903872 Oct 21 21:26 Qwen3.5-0.8B-Q4_K_M.gguf
+-rwxr-xr-x  1 pi pi  833592320 Oct 21 21:25 Qwen3.5-0.8B-Q8_0.gguf
+-rwxr-xr-x  1 pi pi  822678784 Oct 21 23:33 qwen35-0.8b-q8-headq8.pq
+-rwxr-xr-x  1 pi pi        358 Oct 21 21:26 Qwen3.5-0.8B.SHA256SUMS
+drwxrwxr-x  2 pi pi       4096 Oct 21 22:15 qwen35-0.8b-tokenizer
+llama.cpp tag: v0.7.0
+commit: 620d2225cc436ab0b001e3200e590e3b286ef9ab
+built: 2026-10-21T21:25:05+09:00
+pi flags: -mcpu=cortex-a72, static, GGML_NATIVE=OFF, GGML_CPU_ARM_ARCH=armv8-a, OpenMP
+cross compiler: aarch64-linux-gnu-gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+host compiler: gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+e8ba7404cd38d757ef6892a74454dde370405f1c25b6b437598e136f56630560  llama-bench
+2a15156f8fafc4d460657742b3d5152635c050b8e14c17ff3e27e7a10fcbe82b  llama-completion
+ea67c8c8b598bcdfbe715ac9f89cd651df9d0c6898c19099978a0f00198382df  llama-perplexity
+3e66d81731d4a88593680fbb7783c9bd72f20bc3f58f488e2faa852d6e6d59bc  llama-simple
+/home/pi/pinfer/golden:
+qwen35-0.8b
+
+/home/pi/pinfer/venvs:
+litert
+ort
+pinfer
+pinfer.freeze.txt
+torch
+
+[exit 0]

@@ -1,0 +1,11 @@
+# 2026-10-22T11:05:32 pi@10.42.0.2
+$ ls -la tmp/m2b/; ls -la /tmp/pinfer-bench.lock; date +%T
+
+total 8
+drwxrwxr-x 2 pi pi 4096 Oct 22 11:05 .
+drwxrwxr-x 6 pi pi 4096 Oct 22 11:05 ..
+-rw-rw-r-- 1 pi pi    0 Oct 22 11:05 LOCKHELD
+-rw-rw-r-- 1 pi pi 0 Oct 22 01:38 /tmp/pinfer-bench.lock
+11:05:32
+
+[exit 0]

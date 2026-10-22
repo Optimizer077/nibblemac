@@ -1,0 +1,10 @@
+# 2026-10-22T11:21:03 pi@10.42.0.2
+$ ls tmp/m2b/; date +%T
+
+ctx_check.sh
+llama_rss.sh
+spec_exact.sh
+speed.sh
+11:21:03
+
+[exit 0]

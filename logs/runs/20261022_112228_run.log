@@ -1,0 +1,6 @@
+# 2026-10-22T11:22:28 pi@10.42.0.2
+$ for i in $(seq 1500); do [ -e tmp/m2b/LOCKHELD ] && break; sleep 1; done; ls tmp/m2b | tr "\n" " "; date +%T
+
+ctx_check.sh llama_rss.sh LOCKHELD spec_exact.sh speed.sh 11:27:31
+
+[exit 0]

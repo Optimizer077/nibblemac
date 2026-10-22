@@ -1,0 +1,13 @@
+# 2026-10-22T11:06:25 pi@10.42.0.2
+$ cat tmp/m2b/bench_done 2>/dev/null; ls tmp/m2b; md5sum tmp/m2b/spec_exact.sh kbench/spec_exact.sh engine/ctx_check.sh tmp/m2b/ctx_check.sh 2>&1
+
+ctx_check.sh
+llama_rss.sh
+spec_exact.sh
+speed.sh
+2d530c84ff61f5db065ea89411634306  tmp/m2b/spec_exact.sh
+fb1e433576125bc19a25799e8e6e376f  kbench/spec_exact.sh
+07561f150c64cd4079fdecf3e7dab1bd  engine/ctx_check.sh
+07561f150c64cd4079fdecf3e7dab1bd  tmp/m2b/ctx_check.sh
+
+[exit 0]

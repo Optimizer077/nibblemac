@@ -1,0 +1,20 @@
+# 2026-10-22T11:48:18 pi@10.42.0.2
+$ date +%T; ps -eo pid,etimes,pcpu,args --sort=-pcpu | grep -v ' ps ' | head -8; ps -eo pid,etimes,args | grep flock | grep -v grep | cut -c1-150
+
+11:48:18
+    PID ELAPSED %CPU COMMAND
+  41162       9  396 ./engine/pinfer_run_2b1 -m models/qwen35-2b-q4k-headq4k.pq -t 4 -n 64 --ids-file data/prompt64.ids --bench --spec 3 --draft-vocab 32768
+  41167       0 12.1 sshd-session: pi [priv]
+     91   36796  0.1 [irq/40-mmc0]
+  39812    1289  0.1 [kworker/0:2-events]
+  37375    2909  0.1 [kworker/2:2-events_power_efficient]
+  38294    2138  0.0 [kworker/u16:4-kvfree_rcu_reclaim]
+      1   36798  0.0 /sbin/init
+  40582     524 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/m2b/speed.sh ./engine/pinfer_run_2b1 prompt64 3 64
+  40801     251 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/spec_exact.sh ./engine/ng/pinfer_run_ng1
+  40871     228 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c F=0; for p in engine/ng/golden.ids data/prompt64.ids data/chat27.ids
+  40961     175 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 96 1 plain,k2
+  41075     140 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/ng/pinfer_run_ng1 64 3 plain,k2
+  41133     139 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/ng/chat_spec.sh ./engine/pinfer_run_fast 96 2 plain,k2,k
+
+[exit 0]
