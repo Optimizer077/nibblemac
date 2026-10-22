@@ -12,6 +12,21 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### README animations (figures agent, 15:08–16:25; branch `worktree-agent-a1fae4999a86b0632`)
+- Added: `tools/make_animations.py` (helpers in `tools/animkit.py`) and two looping GIFs in four variants
+  each (desktop 1676 px / phone 1080 px × light / dark, 12.5 frames/s, 0.45–0.92 MB each):
+  `anim_decode`, one plain decode step (424.9 MB of weights stream from DRAM through the 1 MB L2 into
+  the four cores, layer after layer, 126.7 ms per token), and `anim_speculative`, one k = 4 round (three
+  chained drafts at ~8 ms, one 176 ms verify sweep over 5 positions = 1.39× a plain step, 3 drafts + 1
+  token of the model's own kept: ≈ 211 ms against 508 ms for 4 plain steps; a prompt-lookup inset).
+  Numbers from `mm2-e2e-decode_20261022_140420.json` and the lab notebooks, cited in the script; no
+  project name in the images.
+- README: `anim_decode` replaces `pi4_hardware` in §1 "The hardware" (the static diagram stays in
+  `docs/ARCHITECTURE.md` §9) and `anim_speculative` replaces the k = 3-era `speculative_schematic` in
+  §2.3 (its PNGs stay in `docs/figures/`); captions and alt texts describe each sequence. Title and
+  header unchanged. `docs/RESULTS.md` §13 lists both.
+- Existing figures unchanged: `make_figures*.py` re-render all 64 PNGs byte-identically.
+
 ### Merged (lead, 16:00): GGUF import pieces from the Cerno work
 - `2a7fae1`: untied output head (`lm_head.weight`), `linear_attn.A`, `pinfer_eval_select` /
   `Model.eval_select`, `tools/gguf_to_pq.py` (lossless GGUF Q4_0 / Q8_0 → `.pq`). Host gates on the

@@ -99,11 +99,15 @@ Everything from a blank SD card or SSD, step by step: [docs/REPRODUCE.md](docs/R
 ### The hardware
 
 <picture>
-  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/pi4_hardware-mobile-dark.png">
-  <source media="(max-width: 600px)" srcset="docs/figures/pi4_hardware-mobile.png">
-  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/pi4_hardware-dark.png">
-  <img alt="The Pi 4's BCM2711: four Cortex-A72 cores at 1.5 GHz with 32 KB L1 data caches, a shared 1 MB L2 and 4 GB of LPDDR4 DRAM read at a measured 4.20 GB/s. Every generated token streams 424.9 MB of weights, 405 times the L2, plus the 18.9 MB recurrent state from DRAM; what stays in L1 is a 16 KB chunk of the recurrent state and the int8 activations being multiplied. Decode is therefore at most 9.9 tokens/s; pinfer reaches 7.89." src="docs/figures/pi4_hardware.png">
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/anim_decode-mobile-dark.gif">
+  <source media="(max-width: 600px)" srcset="docs/figures/anim_decode-mobile.gif">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/anim_decode-dark.gif">
+  <img alt="Looping animation of one decode step on the Pi 4, drawn as three boxes: four Cortex-A72 cores at 1.5 GHz at the top, the shared 1 MB L2 cache in the middle and 4 GB of LPDDR4 DRAM at the bottom. In DRAM a cursor sweeps the model's 424.9 MB of weights in reading order, 24 layer blocks and then the 143 MB output head, while small weight blocks rise from DRAM, read at a measured 4.20 GB/s, through the L2 into the four cores. Each core's L1 keeps a 16 KB chunk of the recurrent state and the int8 activations. Counters show the layer being read, the megabytes read and the elapsed time; after the head an argmax emits one token at 126.7 ms, and the next token reads all the weights again. Speed is bandwidth divided by bytes per token: at most 9.9 tokens/s; pinfer reaches 7.89." src="docs/figures/anim_decode.gif">
 </picture>
+
+*Animation: one decode step, slowed down about 50×. Every token reads all the weights from DRAM; only a
+16 KB state chunk and the int8 activations stay in L1. The static diagram, with every cache size and the
+KV cache: [docs/ARCHITECTURE.md §9](docs/ARCHITECTURE.md#9-hardware).*
 
 The Pi 4's processor has four Cortex-A72 cores at 1.5 GHz. Each core has a NEON unit (Arm's SIMD
 engine: one instruction works on a 128-bit register, for example 16 int8 values) and small private
@@ -214,11 +218,14 @@ accumulators per row (no gain). Lab notebook: `engine/bench/KERNELS.md`.
 
 ### 2.3 Exact speculative decoding with the model's own draft head
 <picture>
-  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/speculative_schematic-mobile-dark.png">
-  <source media="(max-width: 600px)" srcset="docs/figures/speculative_schematic-mobile.png">
-  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speculative_schematic-dark.png">
-  <img alt="In one speculative round the MTP head drafts 3 tokens, the full model checks all 4 positions in a single weight pass, and the matching prefix plus one of its own tokens is kept: 3.3 tokens per round on average, identical to plain greedy output." src="docs/figures/speculative_schematic.png">
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/anim_speculative-mobile-dark.gif">
+  <source media="(max-width: 600px)" srcset="docs/figures/anim_speculative-mobile.gif">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/figures/anim_speculative-dark.gif">
+  <img alt="Looping animation of one example speculative round. A row of tokens ends with the newest token and the draft d1; the MTP draft head adds the drafts d2, d3 and d4, about 8 ms each. The full model then scores the newest token and all four drafts in one sweep over its 424.9 MB of weights, 176 ms or 1.39 times a plain step. d1 to d3 match the full model's own greedy choices and get a check mark; d4 does not, falls away and is replaced by the model's own token. The row scrolls left by the four kept tokens and the MTP head drafts the next d1. Two bars compare the time: four plain steps take 508 ms, this round about 211 ms. An inset shows prompt lookup: when the newest tokens also occur earlier in the context, the tokens that followed them there become the draft." src="docs/figures/anim_speculative.gif">
 </picture>
+
+*Animation: one round at k = 4 on prose, slowed down for viewing; the bars keep real time
+(`mm2-e2e-decode_20261022_140420`). The round shown keeps 4 tokens; measured rounds keep 3.94 on average.*
 
 Because the Pi is bandwidth-bound, scoring four positions in one pass costs about 1.2× scoring one
 (152–156 ms vs 128 ms) and five positions 1.4× (176 ms). Qwen3.5's MTP head drafts a token in about
@@ -464,7 +471,7 @@ benchmarks with a Pi-wide lock so parallel work never measures on top of itself.
 
 Figures are rendered from these records by `tools/make_figures.py`, `tools/make_figures2.py` and
 `tools/make_figures3.py` (hardware figures; their Arm and Raspberry Pi sources are in
-[docs/ARCHITECTURE.md §9](docs/ARCHITECTURE.md#9-hardware)).
+[docs/ARCHITECTURE.md §9](docs/ARCHITECTURE.md#9-hardware)), the two animations by `tools/make_animations.py`.
 
 ## 8. Repository layout
 ```
@@ -473,7 +480,7 @@ engine/FORMAT.md          .pq format + exact math                     decoding, 
 engine/tools/             pinfer_run (CLI, bench), pinfer_ppl (perplexity)
 engine/bench/             kbench, lbench, spec_exact.sh, KERNELS.md
 python/                   pip package `pinfer` (ctypes, tokenizer, chat, streaming, CLI, OpenAI server)
-tools/                    convert.py, quant.py, make_figures*.py
+tools/                    convert.py, quant.py, make_figures*.py, make_animations.py
 ref/                      fp32 golden reference    tests/           golden, spec, state, malformed input, long context, Python suite (126 tests)
 bench/                    llama.cpp / MNN / ORT / LiteRT / PyTorch baselines, perplexity, results/*.json
 harness/pi.py             PC-side control of the Pi, auto-logged

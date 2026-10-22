@@ -436,7 +436,9 @@ notebooks, the result files and Arm / Raspberry Pi documentation, with every sou
 [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware)), shared style `tools/figstyle.py`. Each figure
 exists in four files: `<name>.png` and `<name>-dark.png` for desktop (1676 px, twice GitHub's 838 px
 column) and `<name>-mobile.png` / `<name>-mobile-dark.png` for phones (1080 px, three times a 360 px
-column); the pages pick one with `<picture>` by colour scheme and by `max-width: 600px`.
+column); the pages pick one with `<picture>` by colour scheme and by `max-width: 600px`. The two
+animations (`anim_*.gif`, the same four variants as looping GIFs) are rendered by `tools/make_animations.py`
+(helpers in `tools/animkit.py`), which names the source of every number it shows.
 
 | Figure | Shows | Tables |
 |---|---|---|
@@ -456,3 +458,5 @@ column); the pages pick one with `<picture>` by colour scheme and by `max-width:
 | `figures/pi4_hardware.png` | BCM2711 cores, caches and DRAM, and what pinfer keeps or streams at each level | §8, [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware) |
 | `figures/roofline.png` | Roofline: DRAM roof, Q4K kernel and int8 instruction peaks; plain, verify and prefill passes | §7, §8, [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware) |
 | `figures/arm_isa.png` | Multiply-accumulates per 128-bit instruction, A72 against newer Arm extensions | [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware) |
+| `figures/anim_decode.gif` | Animation: one plain decode step, 424.9 MB of weights streaming from DRAM through the L2 into the cores, one token per 126.7 ms | §7, §8 |
+| `figures/anim_speculative.gif` | Animation: one k = 4 round (drafts, one 176 ms verify sweep, accept, commit) against 4 plain steps; prompt-lookup inset | §3 |
