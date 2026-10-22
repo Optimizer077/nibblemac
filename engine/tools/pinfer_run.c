@@ -5,7 +5,7 @@
  *              (--ids 1,2,3 | --ids-file f) [--dump-logits out.bin] [--dump-hidden out.bin]
  *              [--bench] [--warmup | --no-warmup] [--spec k [--draft-vocab N]]
  *              [--dump-mtp out.bin] [--kv-dtype 0|1|2] [--adaptive]
- *              [--save-state f] [--load-state f] [--ngram N]
+ *              [--save-state f] [--load-state f] [--ngram N] [--rewind-at S]
  *
  * Token ids only: tokenization lives in the Python package. --dump-* write raw little-endian
  * fp32 for the PROMPT tokens: logits [T][vocab], hidden [n_layers+1][T][hidden] (same layout
@@ -33,6 +33,12 @@
  *   run A: --ids-file full.ids      run B: --ids-file head.ids --save-state s -n 1
  *   run C: --load-state s --ids-file tail.ids
  * must generate the same tokens in A and C (the state round trip is exact).
+ * --rewind-at S: in-context checkpoint check (pinfer_checkpoint / pinfer_rewind). The first
+ * S prompt tokens are fed (appended to a loaded state, if any), then pinfer_checkpoint; then
+ * twice a detour, rewound with pinfer_rewind: other tokens (the prompt reversed, rotated by
+ * the round, n_prompt - S of them) fed in the run's mode and n tokens generated from them.
+ * The rest of the prompt follows as usual, so the output must equal the run on the whole
+ * prompt. Prints the checkpoint and the (last) rewind time.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
@@ -144,7 +150,67 @@ static void usage(void) {
                     "                  [--dump-logits f] [--dump-hidden f] [--bench]\n"
                     "                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n"
                     "                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n"
-                    "                  [--save-state f] [--load-state f] [--ngram N]\n");
+                    "                  [--save-state f] [--load-state f] [--ngram N]\n"
+                    "                  [--rewind-at S]\n");
+}
+
+/* Bytes pinfer_checkpoint copies: conv + recurrent state of every linear layer (state.c). */
+static size_t checkpoint_bytes(const pinfer_ctx *ctx) {
+    size_t n = 0;
+    for (int l = 0; l < ctx->n_layers; l++)
+        if (!ctx->model.layers[l].is_full)
+            n += ((size_t)(ctx->conv_k - 1) * ctx->conv_dim +
+                  (size_t)ctx->lv_heads * ctx->lk_dim * ctx->lv_dim) * sizeof(float);
+    return n;
+}
+
+/* --rewind-at S (header comment): head, checkpoint, two detours each followed by a rewind.
+ * spec = 1: the run's speculative mode (pf_spec_prefill / pf_spec_decode), else pinfer_eval
+ * semantics. gen [n_gen] and logits [vocab] are scratch. */
+static int rewind_probe(pinfer_ctx *ctx, const int32_t *prompt, int S, int n_prompt,
+                        const pinfer_spec_params *sp, int spec, int append, int32_t *gen,
+                        int n_gen, float *logits, double *ms_ck, double *ms_rw) {
+    int rc = spec ? pf_spec_prefill(ctx, prompt, S, sp, append)
+                  : pf_forward(ctx, prompt, S, NULL, NULL, NULL);
+    if (rc < 0) { fprintf(stderr, "rewind-at: head prefill failed: %d\n", rc); return 1; }
+    const int base = pinfer_n_past(ctx), nd = n_prompt - S;
+    double t0 = now_sec();
+    rc = pinfer_checkpoint(ctx);
+    *ms_ck = 1e3 * (now_sec() - t0);
+    if (rc != PINFER_OK || pinfer_checkpoint_n_past(ctx) != base) {
+        fprintf(stderr, "rewind-at: checkpoint failed: %d\n", rc);
+        return 1;
+    }
+    int32_t *d = malloc((size_t)nd * sizeof(int32_t));
+    if (!d) { fprintf(stderr, "out of memory\n"); return 1; }
+    for (int round = 0; round < 2; round++) {
+        for (int i = 0; i < nd; i++) d[i] = prompt[(2 * n_prompt - 1 - i - round) % n_prompt];
+        if (spec) {
+            pf_stop no_stop = {-1, NULL, 0, NULL, NULL};
+            int status = PINFER_OK;
+            rc = pf_spec_prefill(ctx, d, nd, sp, 1);
+            if (rc >= 0) rc = pf_spec_decode(ctx, gen, n_gen, sp, &no_stop, NULL, NULL, &status);
+            if (rc >= 0 && status != PINFER_OK) rc = status;
+        } else {
+            rc = pf_forward(ctx, d, nd, logits, NULL, NULL);
+            for (int i = 0; rc == PINFER_OK && i < n_gen; i++) {
+                if (i > 0) rc = pinfer_eval(ctx, &gen[i - 1], 1, logits);
+                gen[i] = pinfer_argmax(logits, pinfer_n_vocab(ctx));
+            }
+        }
+        if (rc < 0) { fprintf(stderr, "rewind-at: detour %d failed: %d\n", round, rc); break; }
+        t0 = now_sec();
+        rc = pinfer_rewind(ctx);
+        *ms_rw = 1e3 * (now_sec() - t0);
+        if (rc != PINFER_OK || pinfer_n_past(ctx) != base) {
+            fprintf(stderr, "rewind-at: rewind %d failed: %d (n_past %d, want %d)\n", round, rc,
+                    pinfer_n_past(ctx), base);
+            rc = rc != PINFER_OK ? rc : PINFER_E_ARG;
+            break;
+        }
+    }
+    free(d);
+    return rc < 0;
 }
 
 /* --dump-mtp: see the header comment. normed = the prompt's final-normed hiddens [T][H]. */
@@ -187,6 +253,7 @@ int main(int argc, char **argv) {
     const char *save_state = NULL, *load_state = NULL;
     int threads = 4, n_gen = 32, max_ctx = 0, batch = PF_MAX_BATCH, bench = 0;
     int spec_k = -1, draft_vocab = 0, warmup = -1, kv_dtype = 0, adaptive = 0, ngram = 0;
+    int rewind_at = 0;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : NULL;
         int used = 1;
@@ -206,6 +273,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--save-state") && v) save_state = v;
         else if (!strcmp(a, "--load-state") && v) load_state = v;
         else if (!strcmp(a, "--ngram") && v) ngram = atoi(v);
+        else if (!strcmp(a, "--rewind-at") && v) rewind_at = atoi(v);
         else if (!strcmp(a, "--adaptive")) { adaptive = 1; used = 0; }
         else if (!strcmp(a, "--bench")) { bench = 1; used = 0; }
         else if (!strcmp(a, "--warmup")) { warmup = 1; used = 0; }
@@ -216,7 +284,8 @@ int main(int argc, char **argv) {
     if (!model || (!ids_arg == !ids_file) || n_gen < 0 || spec_k > PINFER_SPEC_MAX_K ||
         ngram < 0 || ngram > PINFER_SPEC_MAX_K || (ngram > 0 && spec_k < 0) ||
         (spec_k >= 0 && (n_gen < 1 || dump_logits || dump_hidden || dump_mtp_f)) ||
-        (load_state && (dump_logits || dump_hidden || dump_mtp_f))) {
+        (load_state && (dump_logits || dump_hidden || dump_mtp_f)) || rewind_at < 0 ||
+        (rewind_at > 0 && (n_gen < 1 || dump_logits || dump_hidden || dump_mtp_f))) {
         usage();
         return 2;
     }
@@ -228,6 +297,10 @@ int main(int argc, char **argv) {
                                       MAX_PROMPT) : -1;
     free(text);
     if (n_prompt <= 0) { fprintf(stderr, "no prompt ids\n"); return 2; }
+    if (rewind_at >= n_prompt) {
+        fprintf(stderr, "--rewind-at needs at least one prompt token after it\n");
+        return 2;
+    }
 
     pinfer_params p = pinfer_default_params();
     p.n_threads = threads;
@@ -256,6 +329,7 @@ int main(int argc, char **argv) {
     pinfer_spec_stats st = {0, 0, 0, 0, 0, 0};
     pf_spec_times tm = {0, 0, 0, 0, 0};
     double t_prefill, t_decode, t_warm = 0.0, ms_save = 0.0, ms_load = 0.0;
+    double ms_ck = 0.0, ms_rw = 0.0;
     int rc;
     if (warmup < 0) warmup = bench;
     if (warmup) {  /* untimed prefill + up to 4 tokens, same mode, then forget everything */
@@ -279,9 +353,18 @@ int main(int argc, char **argv) {
         t_warm = now_sec() - t0;
     }
     if (load_state && state_load(ctx, load_state, &ms_load)) return 1;
+    int32_t *const prompt_mem = prompt;
+    if (rewind_at > 0) {   /* the head, a checkpoint and two rewound detours; then the tail */
+        if (rewind_probe(ctx, prompt, rewind_at, n_prompt, &sp, spec_k >= 0, load_state != NULL,
+                         gen, n_gen, logits, &ms_ck, &ms_rw))
+            return 1;
+        prompt += rewind_at;
+        n_prompt -= rewind_at;
+    }
+    const int append = load_state != NULL || rewind_at > 0;
     if (spec_k >= 0) {  /* speculative path (k = 0: plain loop inside the same code) */
         t0 = now_sec();
-        rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp, load_state != NULL);
+        rc = pf_spec_prefill(ctx, prompt, n_prompt, &sp, append);
         t_prefill = now_sec() - t0;
         if (rc < 0) { fprintf(stderr, "prefill failed: %d\n", rc); return 1; }
         if (save_state && state_save(ctx, save_state, &ms_save)) return 1;
@@ -348,13 +431,18 @@ int main(int argc, char **argv) {
     if (save_state || load_state)
         printf("state: save %.1f ms load %.1f ms size %zu bytes\n", ms_save, ms_load,
                pinfer_state_size(ctx));
+    if (rewind_at > 0)
+        printf("rewind: at %d, checkpoint %.1f ms, rewind %.1f ms, slot %zu bytes\n", rewind_at,
+               ms_ck, ms_rw, checkpoint_bytes(ctx));
     if (bench && spec_k < 0)
         printf("RESULT {\"engine\": \"pinfer-%s\", \"model\": \"%s\", \"threads\": %d, "
                "\"n_prompt\": %d, \"n_gen\": %d, \"prefill_tps\": %.4f, \"decode_tps\": %.4f, "
                "\"peak_rss_mb\": %.1f, \"kv_dtype\": %d, \"state_save_ms\": %.1f, "
-               "\"state_load_ms\": %.1f}\n",
+               "\"state_load_ms\": %.1f, \"rewind_at\": %d, \"checkpoint_ms\": %.2f, "
+               "\"rewind_ms\": %.2f, \"checkpoint_bytes\": %zu}\n",
                PF_MATVEC_NAME, base_name(model), threads, n_prompt, n_gen, prefill_tps,
-               decode_tps, rss_mb, kv_dtype, ms_save, ms_load);
+               decode_tps, rss_mb, kv_dtype, ms_save, ms_load, rewind_at, ms_ck, ms_rw,
+               checkpoint_bytes(ctx));
     else if (bench)
         printf("RESULT {\"engine\": \"pinfer-%s-spec\", \"model\": \"%s\", \"threads\": %d, "
                "\"n_prompt\": %d, \"n_gen\": %d, \"prefill_tps\": %.4f, \"decode_tps\": %.4f, "
@@ -374,7 +462,7 @@ int main(int argc, char **argv) {
                (long long)st.ngram_rounds, (long long)st.ngram_drafted,
                (long long)st.ngram_accepted);
 
-    free(gen); free(hid); free(all); free(logits); free(prompt);
+    free(gen); free(hid); free(all); free(logits); free(prompt_mem);
     pinfer_free(ctx);
     return 0;
 }

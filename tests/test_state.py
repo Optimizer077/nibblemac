@@ -1,15 +1,20 @@
-"""State save / restore test (pinfer_state_save / load, pinfer_generate_greedy_cont).
+"""State save / restore and checkpoint / rewind test (pinfer_state_save / load,
+pinfer_checkpoint / rewind, pinfer_generate_greedy_cont).
 
     /root/venv-ref/bin/python tests/test_state.py [--bin PATH] [--model PATH]
 
-For every prompt and decoding mode (plain, --spec 3, --spec 3 --adaptive), three runs of the
+For every prompt and decoding mode (plain, --spec 3, --spec 3 --adaptive), four runs of the
 host build of pinfer_run (through WSL when started from Windows):
   A. the full prompt, N greedy tokens;
   B. the first part of the prompt, --save-state after the prefill;
-  C. --load-state of B's file, then the rest of the prompt appended, N greedy tokens.
-C must generate exactly A's tokens: the saved state (conv + recurrent states, KV rows, MTP
-rows) continued through the batched or the speculative path is bit-identical to never
-having stopped. The split points include one inside a 64-token prefill chunk.
+  C. --load-state of B's file, then the rest of the prompt appended, N greedy tokens;
+  D. --rewind-at the same split (in-context checkpoint): the first part, pinfer_checkpoint,
+     two detours (other tokens fed and N tokens generated in the same mode), each undone with
+     pinfer_rewind, then the rest of the prompt and N greedy tokens.
+C and D must generate exactly A's tokens: the saved state (conv + recurrent states, KV rows,
+MTP rows) or the rewound checkpoint, continued through the batched or the speculative path,
+is bit-identical to never having stopped. The split points include one inside a 64-token
+prefill chunk.
 """
 from __future__ import annotations
 
@@ -78,9 +83,13 @@ def main() -> int:
             _, info_b = run(a.bin, a.model, ids[:split], 1, extra + ["--save-state", wsl_path(st)])
             size = st.stat().st_size
             cont, info_c = run(a.bin, a.model, ids[split:], a.n_gen, extra + ["--load-state", wsl_path(st)])
-        ok = len(full) == a.n_gen and cont == full
+        rew, _ = run(a.bin, a.model, ids, a.n_gen, extra + ["--rewind-at", str(split)])
+        ok_c = len(full) == a.n_gen and cont == full
+        ok_d = len(full) == a.n_gen and rew == full
+        ok = ok_c and ok_d
         return ok, (f"   {name:>8} split {split:>2} {mode:>8}: state {size} B, {info_b.strip()} | "
-                    f"{'ok' if ok else 'DIFF'}" + ("" if ok else f"\n      A {full}\n      C {cont}"))
+                    f"load {'ok' if ok_c else 'DIFF'}, rewind {'ok' if ok_d else 'DIFF'}"
+                    + ("" if ok else f"\n      A {full}\n      C {cont}\n      D {rew}"))
 
     with ThreadPoolExecutor(a.jobs) as ex:
         results = list(ex.map(case, jobs))

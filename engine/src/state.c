@@ -7,7 +7,10 @@
  *   per full-attention layer:   K rows [n_kv][n_past] then V rows, in the cache's storage
  *                               format (plus the int8 scales, forward_kv.c)
  *   MTP head (if its cache holds rows): K rows [n_kv][mtp_rows] then V rows
- * Sizes for Qwen3.5-0.8B, fp32 cache: 20.2 MB + 24 KB per token (+ 4 KB per MTP row). */
+ * Sizes for Qwen3.5-0.8B, fp32 cache: 20.2 MB + 24 KB per token (+ 4 KB per MTP row).
+ *
+ * Also the in-context checkpoint (pinfer_checkpoint / pinfer_rewind, end of this file). */
+#include <stdlib.h>
 #include <string.h>
 
 #include "forward.h"
@@ -154,6 +157,68 @@ int pinfer_state_load(pinfer_ctx *c, const void *buf, size_t len) {
     }
     c->n_past = (int)hdr.n_past;
     c->mtp_rows = n_mtp;
+    c->ck_valid = 0;                  /* the KV rows below the checkpoint were replaced */
     if (c->spec) c->spec->m = NULL;   /* no pending draft: the next generation re-drafts */
     return PINFER_OK;
+}
+
+/* ---- In-context checkpoint (pinfer.h; engine/CONTEXT.md §10) ---------------------------
+ * The slot keeps only what feeding more tokens destroys: the conv and recurrent states of
+ * the linear layers (in all 20.2 MB for Qwen3.5-0.8B, 52.7 MB for the 4B), plus
+ * n_past and the MTP row count. The KV rows [0, ck_n_past) of the main and MTP caches are
+ * not copied: the engine writes KV rows only at positions >= n_past (forward passes, the
+ * speculative verify and MTP passes, whose rollback lowers n_past to no less than where the
+ * round started), and a row above n_past is always written before it is read. Only
+ * pinfer_reset and pinfer_state_load can bring n_past below the checkpoint, and both
+ * invalidate the slot, so while it is valid those rows are still the checkpoint's. MTP rows
+ * in [ck_mtp_rows, ck_n_past) are zeroed by the next speculative prefill (spec.c), as after
+ * pinfer_state_load. Both directions cost one memcpy of the slot, whatever the context
+ * length. */
+static size_t ck_bytes(const pinfer_ctx *c) {
+    return (size_t)count_layers(c, 0) * lin_bytes(c);
+}
+
+int pinfer_checkpoint(pinfer_ctx *c) {
+    if (!c) return PINFER_E_ARG;
+    if (!c->ck_buf) {
+        const size_t n = ck_bytes(c);
+        c->ck_buf = malloc(n > 0 ? n : 1);
+        if (!c->ck_buf) return PINFER_E_NOMEM;
+    }
+    char *cur = c->ck_buf;
+    for (int l = 0; l < c->n_layers; l++)
+        if (!c->model.layers[l].is_full) cur = copy_lin(c, l, cur, 0);
+    c->ck_n_past = c->n_past;
+    c->ck_mtp_rows = mtp_rows(c);
+    c->ck_valid = 1;
+    return PINFER_OK;
+}
+
+int pinfer_rewind(pinfer_ctx *c) {
+    if (!c || !c->ck_valid) return PINFER_E_ARG;
+    if (c->n_past < c->ck_n_past) {   /* cannot happen through the API (see above) */
+        c->ck_valid = 0;
+        return PINFER_E_ARG;
+    }
+    char *cur = c->ck_buf;
+    for (int l = 0; l < c->n_layers; l++)
+        if (!c->model.layers[l].is_full) cur = copy_lin(c, l, cur, 1);
+    c->n_past = c->ck_n_past;
+    c->mtp_rows = c->ck_mtp_rows;
+    if (c->spec) {   /* no pending draft; the n-gram history described the abandoned tokens */
+        c->spec->m = NULL;
+        pf_ngram_reset(&c->spec->ng);
+    }
+    return PINFER_OK;
+}
+
+void pinfer_checkpoint_clear(pinfer_ctx *c) {
+    if (!c) return;
+    free(c->ck_buf);
+    c->ck_buf = NULL;
+    c->ck_valid = 0;
+}
+
+int pinfer_checkpoint_n_past(const pinfer_ctx *c) {
+    return c && c->ck_valid ? c->ck_n_past : -1;
 }

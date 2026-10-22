@@ -146,6 +146,30 @@ int pinfer_state_save(const pinfer_ctx *ctx, void *buf, size_t cap);
  * The context is unchanged on failure. */
 int pinfer_state_load(pinfer_ctx *ctx, const void *buf, size_t len);
 
+/* ---- In-context checkpoint (added after 0.2.0, additive; engine/CONTEXT.md §10) ----------
+ * One rewind point held inside the context, for scoring many continuations of one prefix
+ * (e.g. several questions about one document) without a state blob. pinfer_checkpoint copies
+ * the recurrent and conv states (Qwen3.5-0.8B 20.2 MB, the 4B 52.7 MB, whatever the context
+ * length) and remembers the position; pinfer_rewind copies them back and returns to that
+ * position. The KV rows below it stay in place (the engine never rewrites them while the
+ * slot is valid) and rows above it are overwritten by the next tokens, so feeding the same
+ * tokens after a rewind gives bit-identical results to feeding them at the checkpoint.
+ *   - One slot: a new pinfer_checkpoint replaces the previous one. A rewind keeps the slot,
+ *     so one checkpoint serves any number of rewinds.
+ *   - pinfer_reset, pinfer_state_load and pinfer_generate_greedy / _ex (they reset) drop the
+ *     checkpoint; pinfer_eval, pinfer_eval_select and pinfer_generate_greedy_cont keep it.
+ *   - The slot's memory is allocated by the first pinfer_checkpoint and kept (also across a
+ *     reset) until pinfer_checkpoint_clear or pinfer_free.
+ *   - Not a persistence format: use pinfer_state_save / load to keep a state beyond the
+ *     context or move it between contexts.
+ *   - Same threading rule as every call on a context: one call at a time per context. */
+int pinfer_checkpoint(pinfer_ctx *ctx);   /* PINFER_OK, PINFER_E_ARG (NULL), PINFER_E_NOMEM */
+/* PINFER_E_ARG if there is no checkpoint (none made, or dropped); the context is then
+ * unchanged. On success pinfer_n_past(ctx) == pinfer_checkpoint_n_past(ctx). */
+int pinfer_rewind(pinfer_ctx *ctx);
+void pinfer_checkpoint_clear(pinfer_ctx *ctx);   /* drop the checkpoint, free its memory */
+int pinfer_checkpoint_n_past(const pinfer_ctx *ctx);   /* its position, or -1 if none */
+
 /* pinfer_generate_greedy_ex without the reset: the prompt (n_prompt >= 1) is appended to the
  * tokens already in context (after pinfer_eval, pinfer_state_load or an earlier generation,
  * whose last returned token is not yet in context and should lead the prompt) and generation

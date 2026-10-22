@@ -142,6 +142,7 @@ void pinfer_free(pinfer_ctx *c) {
     float *bufs[] = {c->x, c->xn, c->out, c->ta, c->tb, c->tc, c->to, c->ba, c->aa,
                      c->rope_cos, c->rope_sin, c->att};
     for (size_t i = 0; i < sizeof bufs / sizeof bufs[0]; i++) free(bufs[i]);
+    free(c->ck_buf);
     if (c->pool) pf_pool_destroy(c->pool);
     if (c->model.map) pf_model_free(&c->model);
     free(c);
@@ -156,6 +157,7 @@ void pinfer_reset(pinfer_ctx *c) {
     }
     c->n_past = 0;
     c->mtp_rows = 0;
+    c->ck_valid = 0;   /* new tokens will overwrite the checkpoint's KV rows (state.c) */
 }
 
 int pinfer_eval(pinfer_ctx *c, const int32_t *tokens, int n, float *logits) {

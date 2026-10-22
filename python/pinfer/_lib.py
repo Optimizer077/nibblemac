@@ -160,6 +160,14 @@ class Lib:
         self.pinfer_eval_select = self.optional(
             "pinfer_eval_select", ctypes.c_int,
             [ctypes.c_void_p, _c_int32_p, ctypes.c_int, _c_int32_p, ctypes.c_int, _c_float_p])
+        # In-context checkpoint (added after 0.2.0; engine/CONTEXT.md §10).
+        self.pinfer_checkpoint = self.optional("pinfer_checkpoint", ctypes.c_int,
+                                               [ctypes.c_void_p])
+        self.pinfer_rewind = self.optional("pinfer_rewind", ctypes.c_int, [ctypes.c_void_p])
+        self.pinfer_checkpoint_clear = self.optional("pinfer_checkpoint_clear", None,
+                                                     [ctypes.c_void_p])
+        self.pinfer_checkpoint_n_past = self.optional("pinfer_checkpoint_n_past", ctypes.c_int,
+                                                      [ctypes.c_void_p])
 
     def has(self, name: str) -> bool:
         """Return True if the library exports ``name`` (feature detection for newer APIs)."""

@@ -56,6 +56,8 @@ class Model:
         self._logits_p = self._logits.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
         self._tokens: list[int] = []      # tokens the engine has consumed since reset
         self._logits_valid = False        # _logits belongs to the last of _tokens
+        # tokens and last logits (None: not valid) at the engine's checkpoint (checkpoint())
+        self._ck: tuple[list[int], np.ndarray | None] | None = None
 
     # ------------------------------------------------------------------ lifecycle
     @classmethod
@@ -162,6 +164,21 @@ class Model:
         return self._lib.pinfer_state_save is not None
 
     @property
+    def supports_checkpoint(self) -> bool:
+        """True if the library has the in-context checkpoint (:meth:`checkpoint`, :meth:`rewind`)."""
+        return self._lib.pinfer_rewind is not None
+
+    @property
+    def checkpoint_n_past(self) -> int | None:
+        """Tokens in context at the current checkpoint, or None if there is none (never made,
+        or dropped by :meth:`reset`, :meth:`load_state` or a generation that reset the context)."""
+        fn = self._lib.pinfer_checkpoint_n_past
+        if fn is None:
+            return None
+        n = int(fn(self._handle()))
+        return n if n >= 0 else None
+
+    @property
     def context_tokens(self) -> tuple[int, ...]:
         """The token ids the engine's context currently holds (in order)."""
         return tuple(self._tokens)
@@ -185,9 +202,10 @@ class Model:
         return self._ctx
 
     def reset(self) -> None:
-        """Clear the context (KV cache and recurrent state)."""
+        """Clear the context (KV cache and recurrent state) and drop the checkpoint."""
         self._lib.pinfer_reset(self._handle())
         self._forget_state()
+        self._ck = None
 
     def _forget_state(self) -> None:
         """Python-side bookkeeping no longer describes the engine state (forces a reset)."""
@@ -282,6 +300,63 @@ class Model:
             ContextOverflowError: The state holds more tokens than ``max_ctx``.
         """
         _state.load(self, data)
+        self._ck = None   # the engine dropped its checkpoint
+
+    def checkpoint(self) -> None:
+        """Make the current context the rewind point of :meth:`rewind`, inside the engine.
+
+        Copies only the recurrent and conv states (Qwen3.5-0.8B 20.2 MB, 4B 52.7 MB, whatever
+        the context length) plus the tokens in context and the last logits; the KV cache stays
+        in place. For scoring many continuations of one prefix (questions about one document):
+        ``checkpoint()`` once, then ``rewind()`` before each continuation. One checkpoint per
+        model; a new one replaces it. :meth:`reset`, :meth:`load_state` and a generation that
+        does not reuse the context drop it; ``eval``, ``eval_select`` and generations that
+        extend the context keep it. Its memory stays allocated until :meth:`clear_checkpoint`
+        or :meth:`close`. Not persistent: use :meth:`save_state` to keep a state.
+
+        Raises:
+            NotImplementedError: The library predates ``pinfer_checkpoint``.
+            PinferError: Out of memory.
+        """
+        fn = self._lib.pinfer_checkpoint
+        if fn is None:
+            raise NotImplementedError("checkpoint needs a libpinfer with pinfer_checkpoint")
+        rc = fn(self._handle())
+        if rc != errors.OK:
+            raise errors.from_code(rc, "pinfer_checkpoint")
+        self._ck = (list(self._tokens), self._logits.copy() if self._logits_valid else None)
+
+    def rewind(self) -> None:
+        """Return the context to the last :meth:`checkpoint`, bit-exactly: feeding the same
+        tokens afterwards gives the same logits as feeding them at the checkpoint. The
+        checkpoint stays, so any number of rewinds can follow one checkpoint.
+
+        Raises:
+            NotImplementedError: The library predates ``pinfer_rewind``.
+            PinferError: No checkpoint (none made, or dropped); the context is unchanged.
+        """
+        fn = self._lib.pinfer_rewind
+        if fn is None:
+            raise NotImplementedError("rewind needs a libpinfer with pinfer_rewind")
+        rc = fn(self._handle())
+        if rc != errors.OK:
+            raise PinferError("rewind: no checkpoint (none made, or dropped by reset, "
+                              "load_state or a generation that reset the context)", rc)
+        if self._ck is None:   # checkpointed through the C API directly: tokens unknown
+            self._forget_state()
+            return
+        tokens, logits = self._ck
+        self._tokens = list(tokens)
+        if logits is not None:
+            self._logits[:] = logits
+        self._logits_valid = logits is not None
+
+    def clear_checkpoint(self) -> None:
+        """Drop the checkpoint and free its memory (no-op without one or without the API)."""
+        fn = self._lib.pinfer_checkpoint_clear
+        if fn is not None:
+            fn(self._handle())
+        self._ck = None
 
     def _prefill(self, ids: list[int], reuse_prefix: bool) -> int:
         """Bring the context to exactly ``ids``; return how many tokens were reused."""
