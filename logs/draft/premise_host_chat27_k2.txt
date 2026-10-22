@@ -1,0 +1,3 @@
+generated: 760,45980,20010,220,19,26023,1414,13569,1521,1141,17128,369,264,3074,22728,13540,11,864,3254,424,4021,28750,14835,537,279,8806,2483,310,1817,321,2940,1414
+load 0.003 s | warm-up 0.000 s | prefill 27 tok in 76.075 s = 0.355 tok/s | decode 31 tok in 18.717 s = 1.656 tok/s | peak RSS 1503.0 MB | matvec=ref threads=4
+spec k=2 draft_vocab=32768 adaptive=0 | rounds 15 drafted 29 accepted 16 | mean accepted 1.067, 2.067 tok/pass | per pass: mtp 66.1 ms verify 1180.9 ms commit 0.8 ms | plain steps 0 (0.0 ms each)
