@@ -1,11 +1,12 @@
 """GPU-alone benchmark of the Q4_0 x int8 QPU kernel on the Cerno 4B shapes (Pi side).
 
-usage: bash tmp/gpu/gpurun.sh bench_q4.py [--shapes gate,down,qkv] [--n 7,8,11] [--iters 10]
-                                          [--seconds S]
+usage: bash tmp/gpu/gpurun.sh bench_q4.py [--shapes gate,down,qkv] [--n 7,64] [--iters 10]
+                                          [--seconds S] [--pass 8]
 --seconds S: instead of --iters, repeat each configuration for S seconds (for the CPU + GPU
-co-run test). Prints one `RESULT {json}` line per (shape, n): median seconds per call,
-GOP/s (2 R K n / t), bytes of weights / uniforms per call, bit-exact check against the fp32
-model of the kernel on 4 sampled tiles.
+co-run test). n > --pass vectors run as ceil(n / pass) passes of equal size, one dispatch
+each, the weights re-read per pass (as the CPU's groups of 7). Prints one `RESULT {json}`
+line per (shape, n): median seconds per call, GOP/s (2 R K n / t), bytes read per call,
+bit-exact check against the fp32 model of the kernel on 4 sampled tiles (all n vectors).
 """
 from __future__ import annotations
 
@@ -22,8 +23,14 @@ from videocore6.driver import Driver
 SHAPES = {"gate": (9216, 2560), "down": (2560, 9216), "qkv": (8192, 2560), "c08gate": (3584, 1024)}
 
 
+def pass_sizes(n: int, max_pass: int) -> list[int]:
+    """n vectors in ceil(n / max_pass) passes of equal size (+-1), larger first (as the CPU)."""
+    np_ = (n + max_pass - 1) // max_pass
+    return [n // np_ + (p < n % np_) for p in range(np_)]
+
+
 def run_shape(name: str, n: int, iters: int, seconds: float, until_file: str = "",
-              tag: str = "gpu-alone", seed: int = 1) -> dict:
+              tag: str = "gpu-alone", max_pass: int = 8, seed: int = 1) -> dict:
     R, K = SHAPES[name]
     T, B = R // 32, K // 32
     assert T % 8 == 0
@@ -32,33 +39,45 @@ def run_shape(name: str, n: int, iters: int, seconds: float, until_file: str = "
     d = (rng.standard_normal((R, B)) * 0.02).astype(np.float16)
     x = rng.standard_normal((n, K)).astype(np.float32)
     q, dx = q4gpu.quant_act(x)
-    kern = q4gpu.Kernel(n)
+    sizes = pass_sizes(n, max_pass)
+    kerns = {s: q4gpu.Kernel(s) for s in set(sizes)}
     codes, scales = q4gpu.layout_weights(u, d)
-    unif = q4gpu.build_uniforms(kern, q, dx)
-    size = codes.nbytes + scales.nbytes + unif.nbytes + n * R * 4 + (1 << 20)
+    unifs, v0s, v0 = [], [], 0
+    for s in sizes:
+        unifs.append(q4gpu.build_uniforms(kerns[s], q[v0:v0 + s], dx[v0:v0 + s]))
+        v0s.append(v0)
+        v0 += s
+    size = codes.nbytes + scales.nbytes + sum(uu.nbytes for uu in unifs) + n * R * 4 + (1 << 20)
     with Driver(data_area_size=size + (4 << 20)) as drv:
-        prog = drv.program(kern.program())
-        cbuf = drv.alloc(codes.size + 128 * 2, dtype=np.uint32)   # + one padding block
-        sbuf = drv.alloc(scales.size + 16 * 2, dtype=np.uint32)
-        ubuf = drv.alloc(unif.size, dtype=np.uint32)
+        progs = {s: drv.program(k.program()) for s, k in kerns.items()}
+        cbuf = drv.alloc(codes.size + 128 * 3, dtype=np.uint32)   # + padding blocks (prefetch)
+        sbuf = drv.alloc(scales.size + 16 * 3, dtype=np.uint32)
+        ubufs = [drv.alloc(uu.size, dtype=np.uint32) for uu in unifs]
         ybuf = drv.alloc((n, R), dtype=np.float32)
-        pbuf = drv.alloc(len(q4gpu.PARAMS), dtype=np.uint32)
+        pbufs = [drv.alloc(len(q4gpu.PARAMS), dtype=np.uint32) for _ in sizes]
         cbuf[:codes.size] = codes.reshape(-1)
         cbuf[codes.size:] = 0
         sbuf[:scales.size] = scales.reshape(-1)
         sbuf[scales.size:] = 0
-        ubuf[:] = unif
+        for ub, uu in zip(ubufs, unifs):
+            ub[:] = uu
         ybuf[:] = np.nan
         nt = T // 8
-        params = {"codes": cbuf.addresses()[0], "scales": sbuf.addresses()[0],
-                  "y": ybuf.addresses()[0, 0], "act": ubuf.addresses()[0], "nt": nt, "nb": B,
-                  "tsc": nt * B * 512, "tss": nt * B * 64, "tsy": nt * 128, "r4": 4 * R,
-                  "mask": q4gpu.MASK_PAIR, "k65536": 65536, "k512": 512, "k64": 64}
-        pbuf[:] = [params[k] for k in q4gpu.PARAMS]
+        for pb, ub, v0 in zip(pbufs, ubufs, v0s):
+            params = {"codes": cbuf.addresses()[0], "scales": sbuf.addresses()[0],
+                      "y": ybuf.addresses()[v0, 0], "act": ub.addresses()[0], "nt": nt, "nb": B,
+                      "tsc": nt * B * 512, "tss": nt * B * 64, "tsy": nt * 128, "r4": 4 * R,
+                      "mask": q4gpu.MASK_PAIR, "k65536": 65536, "k512": 512, "k64": 64}
+            pb[:] = [params[k] for k in q4gpu.PARAMS]
+        jobs = [(progs[s], pb.addresses()[0]) for s, pb in zip(sizes, pbufs)]
 
         def call():
-            drv.execute(prog, local_invocation=(16, 1, 1), uniforms=pbuf.addresses()[0], thread=8)
+            for prog, pa in jobs:
+                drv.execute(prog, local_invocation=(16, 1, 1), uniforms=pa, thread=8)
 
+        unif = unifs[0]
+        ubuf = ubufs[0]
+        kern = kerns[sizes[0]]
         call()
         # CPU access speed of the (write-combined) BO mapping: read Y, write the uniform stream
         t0 = time.perf_counter()
@@ -94,13 +113,15 @@ def run_shape(name: str, n: int, iters: int, seconds: float, until_file: str = "
             times.append(time.perf_counter() - t0)
         host_cpu = (time.process_time() - c0) / max(1e-9, time.perf_counter() - w0)
         t = float(np.median(times))
-        st = kern.stats()
-        model_t = (T // 8) * (B * (st["instr"] + 4)) * 4 / 500e6
-        res = {"shape": name, "rows": R, "cols": K, "n": n, "calls": len(times), "sec": t,
-               "gops": 2 * R * K * n / t / 1e9, "exact_vs_model": exact, "bad_words": nbad,
-               "all_finite": finite, "weight_bytes": codes.nbytes + scales.nbytes,
-               "weight_gbs": (codes.nbytes + scales.nbytes) / t / 1e9,
-               "uniform_bytes_per_qpu_tile": unif.nbytes, "instr_per_block": st["instr"],
+        model_t = sum((T // 8) * (B * (kerns[s].stats()["instr"] + 4)) * 4 / 500e6 for s in sizes)
+        wbytes = (codes.nbytes + scales.nbytes) * len(sizes)   # weights re-read per pass
+        ubytes = sum(uu.nbytes for uu in unifs) * 8             # every QPU reads the stream
+        res = {"shape": name, "rows": R, "cols": K, "n": n, "passes": sizes, "calls": len(times),
+               "sec": t, "gops": 2 * R * K * n / t / 1e9, "exact_vs_model": exact,
+               "bad_words": nbad, "checked_words": int(ref.size), "all_finite": finite,
+               "weight_bytes_per_call": wbytes, "uniform_bytes_per_call": ubytes,
+               "read_gbs": (wbytes + ubytes) / t / 1e9,
+               "instr_per_block": {s: kerns[s].stats()["instr"] for s in kerns},
                "model_sec_no_stall": model_t, "efficiency_vs_model": model_t / t,
                "t_min": float(np.min(times)), "t_max": float(np.max(times)),
                "t_p10": float(np.percentile(times, 10)), "t_p90": float(np.percentile(times, 90)),
@@ -117,10 +138,12 @@ def main() -> None:
     ap.add_argument("--seconds", type=float, default=0.0)
     ap.add_argument("--until-file", default="", help="stop the timed loop when this file exists")
     ap.add_argument("--tag", default="gpu-alone")
+    ap.add_argument("--pass", dest="max_pass", type=int, default=8,
+                    help="max vectors per register pass (n > this runs several passes)")
     a = ap.parse_args()
     for name in a.shapes.split(","):
         for n in [int(v) for v in a.n.split(",")]:
-            res = run_shape(name, n, a.iters, a.seconds, a.until_file, a.tag)
+            res = run_shape(name, n, a.iters, a.seconds, a.until_file, a.tag, a.max_pass)
             print("RESULT " + json.dumps(res), flush=True)
 
 

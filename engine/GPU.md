@@ -75,6 +75,41 @@ Instructions per 32-column block (body, + 4 for the loop branch): n = 7: 327, n 
 n = 11: 476, i.e. 1.35 / 1.37 / 1.47 MAC per lane-instruction. No-stall model:
 8 QPUs x 125 M instructions/s x 16 lanes x MAC/instr x 2 = 43 / 44 / 47 GOP/s.
 
+## Pilot plan (owner's method: pilot, then scale what works; `engine/PILOTS.md`)
+
+1. Smoke test under the lock: `hello.py` (lane add; the QPU ids of an 8-batch dispatch).
+2. `gpu-q4-alone`: `bench_q4.py --shapes gate,down,qkv --n 7,64` (64 = 8 passes of 8,
+   the weights re-read per pass as in the CPU's groups of 7). Per (shape, n): median time,
+   GOP/s, bytes read per call (weights x passes + the uniform stream x 8 QPUs), bit-exactness
+   against the kernel's fp32 model on 4 sampled tiles over all n vectors (a wrong int16
+   block sum would change the output).
+3. `gpu-corun`: `corun.sh` = kbench q4 4 threads on c4gate / c4down / c4qkv at n = 7
+   (CPU alone), GPU alone, both at once (the GPU loop runs until kbench ends), CPU alone
+   again; temperature, throttle flags and ARM / V3D clocks sampled every 2 s.
+   Go if combined >= 1.2x CPU alone.
+
+## Scale-up design (only if the pilot says go): the DRM ioctl path in the engine
+
+- No py-videocore6 in the engine (GPL driver). The kernel uapi header `drm/v3d_drm.h` (MIT,
+  in the aarch64 sysroot) gives everything needed: `DRM_IOCTL_V3D_CREATE_BO` (size ->
+  handle + 32-bit GPU offset), `DRM_IOCTL_V3D_MMAP_BO` (-> mmap offset on the DRM fd),
+  `DRM_IOCTL_V3D_SUBMIT_CSD` (cfg[7] = workgroup counts << 16, wg config, batches - 1,
+  shader address | flags, uniforms address; bo_handles) and `DRM_IOCTL_V3D_WAIT_BO`.
+  The machine code comes from the Python generator (`q4gpu.py` -> `assemble()` -> a
+  `uint64[]` table compiled into the engine, one per pass size, with the uniform order).
+- Buffers: one BO for the GPU-laid-out weights of the matrices given to the GPU (made at
+  load from the Q4_0 tiles, same bits), a ring of BOs for the uniform streams (int8 codes,
+  block sums and scales of the group's vectors, built by the CPU thread that also runs
+  `kern_quant_act`), one BO for Y. `mmap` of a V3D BO is write-combined / uncached on the
+  CPU side: write streams sequentially, read Y once into cacheable memory.
+- Split per matmul: rows divided in 32-row tiles in proportion to the measured rates
+  (the GPU gets ~1/3 of the tiles if it adds ~50 % to the CPU), the CPU threads take the rest
+  with the existing kernel; one submit per group of vectors, the wait at the end of the
+  group's CPU work; no per-layer synchronization needed since Y rows are disjoint.
+- Exactness: the GPU rows are class (b) (fp32 mul / add instead of the CPU's FMLA / FMLS and
+  a different summation order, ~1e-7 relative); opt-in only, with the Cerno agreement check
+  (max |dp| <= 0.0146, top answer >= 51 / 52) and 0.8B perplexity before it is enabled.
+
 ## Results
 
 (filled in below as measured)
