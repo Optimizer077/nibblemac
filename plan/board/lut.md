@@ -18,3 +18,18 @@
   FMLS + loads; if the float part moved to D-form ops on F1 and the int->float to a magic-number add
   (exact for |t| < 2^22, same float), F0 would carry only the 16 SMLAL: floor 16 cycles vs 28-30
   measured. ubench2 (`engine/bench/ubench2.c`) tests exactly these pairings; running on the Pi.
+- 17:50 [measured] (static, no Pi yet: Pi paused for the overclock window) GCC's code for the shipping
+  nv = 7 Q4 loop (`kern_q4`, 232 instructions per block = 33 per block-vector) clusters the multiplies:
+  runs of 8-12 SMULL/SMLAL with no F1 op between them, so under in-order dispatch F1 idles while F0
+  multiplies. `-fno-schedule-insns -fno-schedule-insns2` on an interleaved C version (tbench variant
+  `isq`) does not keep the order either (GIMPLE reorders, 6 register MOVs + 1 spill per block).
+- 17:50 [measuring] **asm generator `tools/gen_kern_q4s.py`**: one asm loop per pass size NV = 2..7 (Q4_G32
+  and Q4K_G32), every multiply of vector v followed by one op of vector v-1's reduction (ADDP x3,
+  SADDLP) or vector v-2's float update (SCVTF, FMUL, FMLA, FMLS: the same ops and operands as
+  kern_quant.c), pipelined across blocks; fixed registers (32 used at NV = 7). Variant `q4m` = same
+  with the int->float as ADD 0x4B400000 + FSUB 1.5*2^23 (exact for |t| < 2^22), NV <= 6.
+  **Bit-exact under qemu**: Q4 and Q4K, n = 1-8, 13, 64, 1 and 3 threads, memcmp vs kern_q4/kern_q4k
+  (tbench `--check`). Pi timing queued for when the Pi is back (tbench, lut-* bench names).
+- 17:50 [for:speed4b] heads-up, not integrated yet: if the asm passes win, they replace the inner loop of
+  `q4_tile` for nv >= 2 in kern_quant.c (same dispatch, same group plan); your group / pass-size tuning
+  (7s + 5s) stays valid but the c/bv per pass size will change, so the 6-vs-5/7 choice may need a re-check.
