@@ -40,3 +40,42 @@ Path: `.claude/worktrees/agent-ab578c0376849057a/plan/board/numerics.md`.)
   that slows the next out_proj).
 - 17:30 [for:compress] activation precision: int8 per-32 activations add ~0.7-0.9 % of max|y| output
   error (KERNELS.md); my int7 / per-256 / mixed-radix variants will report PPL deltas here.
+- 18:05 [ack] after lead 17:5x / owner: focus on Cerno (Q4_0 batched kernel at n = 7 / 5, 4B shapes,
+  decision time). Dropped for now: fp16 DeltaNet state (0.8B decode item; at 4B n = 64 the recurrence is
+  NEON-bound per speed4b, fp16 storage would add conversions) and fast transcendentals: on 4B prefill
+  every elementwise phase together is ~3 ms of 150.7 ms per token (audit 17:27), and mlp_act is
+  DRAM-bound at n = 64 (4.7 MB of gate/up outputs per layer call read back, ~3.7 GB/s), so a cheaper exp
+  saves nothing measurable. lut owns the exact F0/F1-reordered kernel; my class-(b) variants go on top.
+- 18:05 [measured] (static, objdump of nbench, GCC 15 -O3, no Pi yet) instructions in the nv = 7 block
+  loop (7 block-vectors): engine kern_q4 232 (33.1 per bv, 12 stack ops); `sgn` (signed codes, no FMLS)
+  227 (19 stack ops: GCC spills more); Winograd `wf` 319 / `w7` 307 / `w55` 299 (45.6 / 43.9 / 42.7 per bv:
+  8 SMULL + 8 ADD + 7/5/4-op tree + 2 corrections per bv as designed, but 46-48 stack ops: P, Q and xi
+  push it over 32 registers); integer superblock `isb` (Q4_0, per-256 activations, exact 14-bit integer
+  sub-scales from the fp16 scales on the fly, SMLAL .4s into int32, one SCVTF per 256 columns) 193
+  (27.6 per bv, -17 %); `isbk` (Q4K) 184 vs kern_q4k 220. Under lut's F0 model isb has 18 F0 uops per bv
+  (16 SMULL + 2 SMLAL .4s), like today's 16 SMULL + SCVTF Q: no F0 saving, only fewer total uops. All
+  variants pass the double-reference check under qemu (rel_err_q <= 1.8e-5; isb's is the rounding of
+  multipliers of blocks < 1/16 of the superblock's largest scale). Pi timing queued (numerics-nb1-hot).
+- 18:15 [measured] (PC) **Cerno 4B Q4_0 block scales as integers**: my integer-superblock kernel writes each
+  fp16 block scale as D_r x M (D_r = 2^(E_r - 28) per row and superblock, |M| <= 16376); over all 111,534,080
+  block scales of cerno-4b-q4_0.pq every one is reproduced exactly (1491 needed a right shift, their low
+  mantissa bits were zero) (tools/numerics/q4_scale_stats.py). So `isb` on Cerno changes ONLY the activation
+  granularity (int8 per 256 columns instead of per 32); its integer sums are more accurate than today's float
+  accumulation (rel. error vs double 4e-8..1e-7 vs 1.6e-7..4.5e-7 in nbench).
+- 18:15 [integrating] (my branch only) opt-in `pinfer_params.act_quant` (0 default = today, 1 = per-256 +
+  integer superblock kernels for Q4_G32 / Q4K_G32): new `engine/src/kern_qsb.c` (kern_q4_sb, kern_q4k_sb,
+  kern_quant_act_sb), `pf_act.xs` (kern.h), `pf_pool_set_act_quant` (ops.h, matvec_ref.c no-op), pf_matmul
+  picks the sb kernel per pool; pinfer.h / pinfer.c field, `--act-quant` in pinfer_run / pinfer_ppl, Python
+  `Model.load(act_quant=)`. kern_quant.c untouched (for:lut: no conflict with your asm passes). Default path
+  bit-identical by construction; Pi gates and Cerno agreement pending (Pi paused).
+- 18:15 [idea] for:lut cost models: under your F0 model the integer-superblock multiply (2 SMLAL .4s per
+  block-vector) is F0 work, so on top of a pipelined base isb has 18 F0 uops per bv vs 16; under your
+  write-unit model it needs ~43 units vs ~50 (base with magic conversion). A hybrid that keeps one float
+  FMLA per block but by the weight scale only (per-256 activations remove the per-vector FMUL and the FMLS)
+  has 16 F0 uops and ~46 units. I will measure isb (C) against your asm base when both run.
+- 18:15 [dead-end] (analysis, Pi numbers pending) **Winograd on the A72**: (a) +-119 activations fit int8
+  but 2 products per int16 lane force a 7-op reduction; (b) objdump: 8 SMULL + 8 ADD.16b replace 16 SMULL 1:1
+  in instruction count, so Winograd is 36-39 instructions per bv vs 31 (no-spill builds); (c) F0 model:
+  8 F0 + ~22 other uops = ~15 cycles at perfect dual issue vs 16 (+6 % best case); (d) write-unit model:
+  ~56 units vs ~50 -> slower. No regime in which it wins clearly; int7 (w7) and +-55 (w55) only shorten the
+  tree and cost activation precision (nbench rel_err_fp 2x of int8).

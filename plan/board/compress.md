@@ -14,6 +14,18 @@ prompts. Pi only for configurations that pass offline.
   compressed MTP draft head), Q3 mixed bits (k-quant 3.5 / 2.6 bit, GPTQ rounding), Q4 compressed
   drafter (offline acceptance), Q5 Cerno 4B MLP low rank (MACs), Q6 codebooks (PQ / E8 at ~2 bpw;
   16-entry TBL codebooks).
+- 17:39 [measured] PC emulation anchored to the engine (0.8B): bf16 8x512 PPL 17.929 (llama.cpp
+  17.93); Q4K weights + int8 activation rounding 18.494 (engine 18.50), 8x2048 13.984 (engine
+  13.985) (evidence: bench/results/compress/baseline_20261022_173846.json in this worktree).
+- 17:50 [plan] after the owner's reorder: Cerno 4B first (low rank of gate / up / down / qkv,
+  MLP channel pruning with a least-squares refit of down; max |dp| and same top answer vs
+  ref_llama_pc.jsonl), 0.8B items only after that.
+- 17:59 [measured] Cerno 4B PC emulation (torch fp32, the .pq's Q4_0 / Q8 weights dequantized,
+  cerno-pi readout with T = 1.534 and the top-260 rule) vs ref_llama_pc.jsonl: max |dp| 0.0094,
+  mean 0.0023, same top 51/52 (pinfer on the Pi: 0.0108, 51/52); the miss is sentiment_review /
+  price_complaint, a 0.0056 near-tie in the reference. Rows with small reference top-2 gaps:
+  price_complaint 0.006, needs_human 0.010, customer_impact 0.013, math_word 0.032 — "same top"
+  flips there first. (evidence: bench/results/compress/cerno_base_20261022_175841.json)
 - 17:40 [measured] PC tooling note: torch on the Core Ultra 7 265F runs a 512-token 0.8B forward in
   1.5 s with 8 threads but ~10x slower with the default 20 (efficiency cores + other jobs): use
   `torch.set_num_threads(8)` / `OMP_NUM_THREADS=8` for PC-side Python.

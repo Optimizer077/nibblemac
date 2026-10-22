@@ -33,3 +33,36 @@
 - 17:50 [for:speed4b] heads-up, not integrated yet: if the asm passes win, they replace the inner loop of
   `q4_tile` for nv >= 2 in kern_quant.c (same dispatch, same group plan); your group / pass-size tuning
   (7s + 5s) stays valid but the c/bv per pass size will change, so the 6-vs-5/7 choice may need a re-check.
+- 18:05 [measured] **ubench2: A72 pairing rules with the dispatch order controlled** (cycles per loop of 16
+  independent ops, 8 + 8 interleaved; `bench/results/lut-ubench2_20261022_175209.json`, `lut-ubench2b_20261022_175214.json`):
+  SMLAL alone 16.0 (1/cycle, F0). SMLAL + any **D-form** op (USHR, ADD, FMLA/FMUL/FSUB .2s, TBL .8b,
+  scalar MADD) **8.34 = perfect pairing**. SMLAL + Q-form ALU (ADD/ADDP/AND/MOVI/ZIP .16b/.8h) 11.95,
+  + Q-form USHR / SADDLP / FMUL / FSUB 13.68, + FMLA .4s 12.39, + SADALP 11.01, + LDR q 11.02,
+  + SCVTF .4s 24.0 (F0, 2 cycles each). At 3:1 (24 SMLAL + 8 X): FMLA/FMUL/FSUB .4s 25.0, ADDP 24.0,
+  TBL .8b 24.1 = nearly free; SCVTF .4s 40. Grouped order (8 SMLAL then 8 X, as ubench.c did):
+  SMLAL + USHR 15.6 vs 13.7 interleaved (ubench.c's "0.94 serialized" came from the order).
+  One Q4 block-vector's op mix, hand-interleaved: **19.9 cycles** (16 SMLAL + 3 ADDP + SADDLP + SCVTF +
+  FMUL + FMLA + FMLS + 2 loads); with D-form floats + magic int->float 19.7. The kernel runs 27-30.
+  Model that fits most rows: the FP/ASIMD register file takes ~3 x 64-bit writes per cycle (SMLAL /
+  Q-form / LDR q = 2, D-form = 1): 52-54 units per block-vector => ~18-20 cycles floor, not 16.
+- 18:05 [measured] **TBL on the A72**: TBL .16b 1 reg 1.50 cycles, 2 regs 3.0, 4 regs 7.0; **TBL .8b 1 reg
+  0.50 (2 per cycle, F0/F1)**, .8b 2 regs 1.0. (UAN0016A p. 30 gives latency only: 3N, Q-form 3N+3.)
+- 18:05 [dead-end] **T-MAC LUT kernel on the A72** (analysis + ubench2; tbench numbers follow): an exact
+  int8 table entry is a byte, so a TBL lane carries at most 16 bit-products = 0.5 MAC (1 weight bit x 4
+  columns x a 4-bit activation slice); a TBL .8b = 4 MACs per 64-bit result write vs SMLAL 8 MACs per
+  128-bit write = the same 4 MACs per write unit, and the LUT bytes still need accumulating adds
+  (more writes) while SMLAL accumulates in place. Writes, not the multiplier, bound the kernel, so
+  LUT cannot win; a hybrid has no room either (SMLAL alone uses 2 of the ~3 write units per cycle).
+- 18:05 [for:numerics] The same write-port budget applies to Winograd: its pre-adds (ADD .16b, 2 units
+  each) and the extra reductions cost writes; the multiply count is not the binding limit once the
+  ops are interleaved (16 SMLAL = 32 of the ~54 write units of a block-vector).
+- 18:05 [for:compress] TBL .8b is cheap (0.5 cycle, pairs with SMLAL): a 16-entry codebook decode is
+  ~free next to SMLAL as long as its outputs are 8 bytes (D-form); Q-form TBL (1.5 cycles) is not.
+- 18:08 [integrating] (in my branch only, not committed until the Pi numbers are in) `engine/src/kern_quant.c`:
+  kern_q4 / kern_q4k with n >= 2 call the generated asm passes `engine/src/kern_q4s.h`
+  (`tools/gen_kern_q4s.py`), same VECTOR_PASSES split (NV_MAX 7); Q4K decodes the tile's scales once
+  per tile (not per pass); knob `kern_q4_asm` (default 1, kbench `--q4asm 0|1`); `kern.h` declares it.
+  n = 1 (decode) unchanged. No change to matvec_fast.c, the group plan, formats or float math.
+  qemu gate: 388 kbench configs (q4 / q4k / q8; kv, out, ab, c4kv, c4ab, c4down, down; n = 1-17, 64,
+  `--group 0`) all exact, yhash identical to a 69b31a3 build. for:speed4b: this sits under your 69b31a3
+  group plan; nothing of yours changes.

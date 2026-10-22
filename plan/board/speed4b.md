@@ -1,7 +1,7 @@
 # speed4b (4B prefill tuning; branch `worktree-agent-aff7b9e370c62872c`, commits fd0ed20 tail, 69b31a3 groups)
 
-Note: written in the speed4b worktree (`.claude/worktrees/agent-aff7b9e370c62872c/plan/board/speed4b.md`):
-the worktree isolation refused a write to the main checkout's `plan/board/`; the lead can copy it.
+Kept in the speed4b worktree (`.claude/worktrees/agent-aff7b9e370c62872c/plan/board/speed4b.md`,
+untracked; worktree isolation refuses writes to the main checkout); the lead syncs it.
 
 Cycles per block-vector (c/bv) = time x 1.5 GHz x threads / (rows/4 x cols/32 x n); one block-vector =
 4 rows x 32 columns x 1 vector = 128 int8 MACs. All numbers at 1.5 GHz (freq_khz 1500000), Q4_G32
@@ -57,3 +57,22 @@ Cycles per block-vector (c/bv) = time x 1.5 GHz x threads / (rows/4 x cols/32 x 
   loops (nv = 7: 232 -> 217 instructions per block, 12 -> 0 stack ops; nv = 6: no more MOVs); exact
   (qemu yhash 768 / 768 + float checks); Pi A/B running (`cerno-speed-kb8-nosched_*`). Would touch
   engine/Makefile + engine/bench/Makefile only (kern_quant.c compile flags).
+- 17:55 [dead-end] **`-fno-schedule-insns` on the kernels** (no pre-RA scheduling: 0 stack ops, no MOVs
+  in the nv = 4-7 loops, exact): **slower everywhere**, e.g. hot 1 thread Q4 c4kv nv = 7 27.4 -> 31.9,
+  Q4K 27.3 -> 33.8, Q8 kv 30.7 -> 36.9; cold 4 threads n = 64 c4down 31.0 -> 32.4, Q4K c4qkv 29.2 -> 33.6
+  c/bv; only the nv = 6 loop is not worse (33.4 -> 32.2). The pre-RA interleaving of the vectors' SMLAL
+  chains matters more than the ~12 stack ops per block (they go to the load / store pipes). Relevant to
+  lut's in-order F0 / F1 point: the default schedule already interleaves 7 independent chains; spills
+  are not the limit (`cerno-speed-kb8-nosched_*`, 2 rounds, yhash identical).
+- 17:55 [measured] **final, 3 rounds, medians**: 4B prefill 64 / 256 / 512 tokens 6.49 / 6.62 / 6.48 ->
+  6.78 / 6.82 / 6.80 tok/s (+4.6 / +2.9 / +4.9 %) (`cerno-speed-e2e4b-r{1,2,3}_*`); Cerno decisions
+  (5 requests x 3 rounds) median 19.75 -> 19.31 s, mean 21.93 -> 20.95 s (-4.5 %), first question
+  13.34 -> 12.62 s, later questions 5.81 -> 5.50 s, answers / probabilities identical in all 15 pairs
+  (`cerno-speed-decide-r{1,2,3}_*`). Kernel level (kbench ref -> new, 2 rounds, c/bv): n = 9 / 12 / 14
+  33-40 -> 29-33, n = 64 c4down 31.7 -> 30.6, c4gate 30.7 -> 29.0, c4out 31.4 -> 30.0, c4kv 31.6 -> 30.2,
+  c4qkv / c4z unchanged (28.5-28.8); n = 1 and 7 unchanged (`cerno-speed-kbench-final_*`).
+- 17:58 [ack] after lut 17:50: agreed; if the asm passes replace the q4_tile inner loop, the pass-size
+  costs change and `kern_group_mode` (7s + 5s / 4s, `matvec_fast.c` plan_groups) must be re-measured
+  with kbench `--gmode 0|1` at n = 9-16 and 64. My `-fno-schedule-insns` result says the vectors'
+  interleaving, not the spills, sets the speed of today's C loops. Docs: `engine/bench/KERNELS.md`
+  Part 4 (commit c73dd06). Done; nothing of mine is integrating further.

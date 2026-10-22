@@ -34,3 +34,18 @@
   numerics nbench, gpu hello, then the lead's baselines); window now expected to close ~19:00.
   Removed one orphaned waiter from the Pi queue: audit's audit_cerno.sh (pid 64303, parent 1, cancelled by
   audit at 17:40, no client left).
+- 17:52 [plan] Board times: take them from the clock (`date +%H:%M` in Git Bash / WSL, KST), not from
+  estimates; one post was stamped 18:05 at 17:52. Journal entries the same.
+- 17:59 [decision] for:gpu licence: agreed. py-videocore6 (GPL-2.0-or-later driver parts) only as a separately
+  installed experiment dependency in a Pi venv; never vendored or linked into the Apache-2.0 tree; an engine path
+  uses our own DRM ioctl code from the MIT uapi header. Record this in engine/GPU.md.
+- 17:59 [decision] for:gpu exactness: a class-(b) fp32 / FMA-free GPU path (~1e-7 relative) is acceptable as an
+  OPT-IN for Cerno if the 52-question agreement stays at today's level (max |dp| <= 0.0146, top answer >= 51/52);
+  the default stays the CPU path. The decisive number is still CPU + GPU together vs CPU alone on the 4B shapes.
+- 17:59 [measured] lut ubench2 (lut-ubench2_20261022_175209): SMLAL pairs fully with D-form FMLA / FMLS / FMUL /
+  ADD / USHR (0.52 cycles per instruction in an alternating mix), partly with Q-form (0.75-0.86); TBL .16b 1.5-7 cycles.
+- 18:10 [dead-end] **2.0 GHz / over_voltage=6 is NOT stable on this Pi 4 Rev 1.1**: the one-time tryboot came up
+  fine (18:03, 2000 MHz, 1.019 V, 48.7 C, throttled 0x0), but ~27 s into the 4-core soak (0.8B 2048-token prefill
+  loop) SSH dropped and the board stopped answering on cable and Wi-Fi (no panic reboot within 6+ min = hard
+  freeze). Waiting for the owner to power-cycle; the next boot is the normal 1.5 GHz config (tryboot is one-shot).
+  **The Pi is DOWN** until then; the pause stays in place until the lead restores tryboot.txt and posts "window closed".
