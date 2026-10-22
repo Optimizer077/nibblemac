@@ -650,3 +650,123 @@ standard and 6 adaptive rows all match. The rerun above uses this branch's scrip
   the numerics, so opt-in with a perplexity check; 3 threads for n = 2-3 (memory-bound).
 - k = 4 verification (n = 5) and prefill now run 7-vector passes; n = 8+ verification (k >= 7)
   splits into two passes again.
+
+---
+## Part 4 (2026-10-22): 4B prefill (Cerno)
+
+Goal: faster prompt reading for Cerno 4B, a decision model on Qwen3.5-4B whose workload is prefill
+only (state + question, option-token logits at the last position, `pinfer_eval_select`), bit-identical
+to the previous build. Model `cerno-4b-q4_0.pq`: hidden 2560, 32 layers (full attention at 3, 7, ..., 31),
+ffn 9216, 16 q / 4 kv heads x 256 (gated q: 8192 rows), linear attention 16 K / 32 V heads x 128; body
+Q4_0 = Q4_G32, embedding and untied head Q8_G32. Matmul shapes: in_proj_qkv = q_proj 8192x2560,
+in_proj_z 4096x2560, out_proj = o_proj 2560x4096, gate / up 9216x2560, down 2560x9216, k / v 1024x2560,
+in_proj_a / b 32x2560: K = 2560-9216 against 1024-3584 on 0.8B, ~7.1 GOP per token.
+Builds: `pinfer_run_csp0` = 4dbca6f (md5 `537fb9a3`, the same file as the Cerno agent's
+`pinfer_run_cerno2`), `pinfer_run_csp1` = 69b31a3 (md5 `508f1d74`); libpinfer `bc3004da` / `ba600f51`;
+kbench `kbench_ref` (`2c08ef37`: 4dbca6f kernels + the 4B shapes) / `kbench_csp1` (`6454499e`).
+Every timing at 1.5 GHz (`freq_khz` 1500000 on all cores before and after every bench, throttled 0x0),
+4 threads. Result files: `bench/results/cerno-speed-*` in the main checkout (kept out of git like every
+`cerno-*` result, `.gitignore`). c/bv as in Part 3 (cycles per 4-row x 32-column block per vector).
+
+### Profile (PF_FWD_STATS + PF_KERN_STATS, 256 tokens = 4 chunks of 64, both builds in one session)
+`cerno-speed-profile1_20261022_171543.json` (`cerno-speed-profile0_20261022_155058.json` = the first
+profile, 64 and 256 tokens; its 64-token run pays the mmap first touch inside the timed chunk).
+
+| part (256 tokens) | before ms | GOP/s (c/bv) | after ms | GOP/s (c/bv) |
+|---|---|---|---|---|
+| qkv / q 8192x2560, n = 64 | 6455.7 (128 calls) | 53.2 (28.9) | 6336.5 (124) + 3.4 (1 at n = 1) | 52.5 (29.2) |
+| z 4096x2560 | 2428.5 | 53.1 (29.0) | 2449.8 | 52.6 (29.2) |
+| out / o 2560x4096 | 3435.2 (128) | 50.0 (30.7) | 3253.1 (124) + 1.6 | 51.2 (30.0) |
+| gate / up 9216x2560 | 14618.8 (256) | 52.9 (29.0) | 14113.0 (248) + 7.4 | 53.1 (28.9) |
+| down 2560x9216 | 8131.2 (128) | 47.5 (32.3) | 7639.3 (124) + 3.7 | 49.0 (31.3) |
+| k / v 1024x2560 | 426.4 | 50.4 (30.5) | 417.1 | 51.5 (29.8) |
+| a / b 32x2560 | 104.3 | 19.3 | 72.2 | 27.9 |
+| head 248320x2560 Q8, n = 1 | 233.9 (2.89 GB/s) | | 238.5 | |
+| **matmul total** | **35834 (92.9 %)** | | **34536** | |
+| lin_rule (recurrence) | 1503.7 | | 1502.8 | |
+| attention (kv + scores / softmax + PV) | 226.2 + 215.0 | | 200.6 + 184.1 | |
+| mlp_act / lin_pre / norm+add / lin_post | 247.5 / 243.3 / 207.7 / 103.8 | | 242.0 / 242.5 / 206.1 / 101.8 | |
+| **wall** | **38.59 s = 6.63 tok/s** | | **37.25 s = 6.87 tok/s** | |
+
+The 4B matmuls are compute-bound and run within a few % of the 0.8B rates (Part 3, n = 64 Q4K: qkv
+54.6, gate 53.4, out 51.0, down 49.1 GOP/s): the larger K does not hurt per se. DRAM traffic is
+~2.1 GB/s (weights re-read once per group of 7), half the roof. The recurrence is 3.9 % of the time
+(5.8 ms per token, `lbench4` below), everything else outside the matmuls 3.2 %.
+
+### Kernel profile at the 4B shapes (`cerno-speed-kb0_20261022_160055.json`, kbench cold, Q4_G32)
+c/bv for n = 1 / 7 / 14 / 64: c4qkv 110.7 / 27.2 / 33.3 / 28.6; c4z 110.8 / 27.6 / 33.6 / 28.9; c4out
+110.6 / 28.5 / 35.6 / 30.3; c4gate 110.5 / 30.2 / 33.7 / 31.8; c4down 110.1 / 30.3 / 35.9 / 32.0; c4kv
+112.3 / 32.0 / 35.6 / 32.9; c4ab 164.6 / 77.8 / 84.1 / 80.6. Q4K_G32 on the same shapes: c4qkv 111.4 /
+30.1 / 34.0 / 30.7, c4down 111.1 / 30.0 / 35.7 / 30.6, c4out 111.6 / 28.6 / 35.5 / 30.0.
+- **Q4_G32 is not behind Q4K**: per block it pays one FCVTL + FMUL for the scales, Q4K a superblock
+  decode; both amortize to ~1.4 c/bv over a 7-vector pass. The differences above are within the
+  run-to-run spread (identical configurations differ by up to 4 % between runs).
+- n = 1 is DRAM-bound (~3.9 GB/s in kbench with 4 threads, 3.4-3.6 GB/s for the tail's single-token
+  calls in the engine, 3 threads); it only appears in the prefill tail.
+- **n = 14 costs 33-36 c/bv**: calls of <= 16 vectors were not split (Part 3), so 14 vectors ran as
+  two 7-vector passes per tile over two alternating activation sets.
+- Pass-size profile (`cerno-speed-kb5-passes_20261022_163146.json`, one group of n): c4qkv 57.1 / 38.6 /
+  30.9 / 31.0 / 32.1 / 28.0 / 33.2 for n = 2 / 3 / 4 / 5 / 6 / 7 / 8; c4down 56.8 / 38.8 / 34.7 / 31.8 /
+  33.4 / 30.3 / 36.9; c4out 57.3 / 38.8 / 32.6 / 30.7 / 33.2 / 29.1 / 35.4; hot 1 thread kv / c4kv
+  n = 5 27.8 / 27.9, n = 6 29.4 / 33.7, n = 7 28.5 / 28.1. **A 6-vector pass is 8-10 % worse per
+  vector than a 7 or a 5** (the nv = 6 loop has 6 register MOVs and partial-sum spills that nv = 5 and
+  7 do not), and the old equal split ran a batch of 64 as 4 x 7 + 6 x 6.
+
+### Variants (all exact: kbench yhash identical to `kbench_ref`; c/bv cold 4 threads unless noted)
+| variant | idea | result | file | decision |
+|---|---|---|---|---|
+| column chunks | cut K into chunks whose activations (n x 320 B per superblock) fit a budget; every thread runs its slab chunk by chunk, accumulators through Y (exact) | budgets 8 / 12 / 16 / 24 KB never faster, 8 KB +3-5 c/bv; the activations of K = 9216 (80 KB at n = 7) streaming from L2 cost only ~5 % against K = 2560 | `cerno-speed-kb1-chunk_20261022_161215.json` | dropped |
+| + next-tile prefetch, groups of 14 | prefetch the same superblock of the next tile (chunked runs are strided); 2 passes per tile-chunk | slower (+1-4 c/bv) | `cerno-speed-kb2-var_20261022_162010.json` | dropped |
+| **split n > 7** | quantized calls of more than 7 vectors in groups of <= 7 (`kern_qgroup_min` 7, was 16) | n = 8-16: 33-40 -> 28-33 on every 4B and 0.8B shape, Q4 and Q4K | `cerno-speed-kb4-smalln_20261022_163112.json`, `-kb3-group_20261022_162756.json` | **kept** |
+| **group plan 7s + 5s / 4s** | sizes 7, the remainder in 5s / 4s (`kern_group_mode` 1; 64 = 7 x 7 + 3 x 5, 9 = 5 + 4, 13 = 7 + 6) | n = 64: c4down 32.0 -> 30.8, c4gate 31.0 -> 29.1, down 32.4 -> 29.9; n = 12: 6 + 6 -> 7 + 5 -1 to -3 c/bv | `cerno-speed-kb7-plan_20261022_164018.json` (+ `_164246` Q4K) | **kept** |
+| **groups in one job** | all groups' activations quantized in parallel, then every group per thread: 2 barriers per call instead of one per group, no serial quantization between groups (`kern_group_fused`) | ~1 % (n = 64 c4down 32.0 -> 31.3, c4kv 31.8 -> 30.8; some shapes +-0.5) | `cerno-speed-kb6-gfused_20261022_163558.json` | **kept** |
+| fused DeltaNet sweeps | second sweep of token t and first sweep of t + 1 in one pass over the state (half the loads / stores, same per-element operations) | lbench4 n = 64 5.79 -> 5.55-5.65 ms / token (-3 % of the recurrence, 0.15 % of prefill): the recurrence is NEON-bound (56 Q-ops per row and token), not load/store-bound | `cerno-speed-lb1-fused_20261022_162826.json` | dropped |
+| `-fno-schedule-insns` | no pre-register-allocation scheduling: the nv = 4-7 loops lose every stack op and MOV (nv = 7: 232 -> 217 instructions per block, 12 -> 0 stack ops) | slower everywhere (hot 1 thread Q4 c4kv nv = 7 27.4 -> 31.9, Q4K 27.3 -> 33.8; n = 64 +1.4-4.4 c/bv), only nv = 6 not worse: the pre-RA interleaving of the vectors' SMLAL chains matters, the spills (load / store pipes) do not | `cerno-speed-kb8-nosched_20261022_175206.json` | dropped |
+| **prefill tail** (forward.c) | a call that needs only the last token's logits (pinfer_eval / pinfer_eval_select / pinfer_run without --dump-*) runs the last (full-attention) layer's query, attention, o_proj, MLP and final norm for the last token only; the other rows store K / V | 1/32 of the 4B matmul work per prefill token; logits and the state left behind identical | `cerno-speed-profile1_20261022_171543.json`, `cerno-speed-gate-cerno_20261022_170147.json` | **kept** |
+
+Kernel level, before -> after (`cerno-speed-kbench-final_20261022_174610.json`, 2 interleaved rounds,
+default settings of each build, Q4_G32): n = 9 / 12 / 14: c4down 40.0 / 38.8 / 36.4 -> 33.0 / 31.1 /
+29.9, c4gate 35.0 / 35.2 / 33.0 -> 30.0 / 28.9 / 28.2, c4out 36.4 / 39.1 / 36.5 -> 31.7 / 30.4 / 30.0,
+c4qkv 33.0 / 36.0 / 33.3 -> 30.2 / 28.5 / 29.1; n = 64: c4down 31.7 -> 30.6, c4gate 30.7 -> 29.0,
+c4out 31.4 -> 30.0, c4kv 31.6 -> 30.2, c4qkv 28.5 -> 28.6, c4z 28.8 -> 28.8; n = 1 and 7 unchanged
+(same code). Recurrence at 4B head counts (`lbench4`, 32 V / 16 K heads, 24 layers):
+34.4 / 7.6 / 5.8 ms per token at n = 1 / 7 / 64 (`cerno-speed-lb0_20261022_162017.json`).
+
+### End to end, before -> after (3 interleaved rounds, medians, all valid, 1.5 GHz)
+| run | csp0 (4dbca6f) | csp1 (69b31a3) | change | file |
+|---|---|---|---|---|
+| 4B prefill 64 tokens | 6.49 tok/s (6.49, 6.62, 6.39) | **6.78** (6.87, 6.73, 6.78) | +4.6 % | `cerno-speed-e2e4b-r{1,2,3}_*` |
+| 4B prefill 256 tokens | 6.62 (6.62, 6.64, 6.48) | **6.82** (6.82, 6.87, 6.75) | +2.9 % | same |
+| 4B prefill 512 tokens | 6.48 (6.46, 6.62, 6.48) | **6.80** (6.80, 6.90, 6.71) | +4.9 % | same |
+| Cerno decision, 5 requests x 3 rounds (median / mean) | 19.75 / 21.93 s | **19.31 / 20.95 s** | -2.2 / -4.5 % | `cerno-speed-decide-r{1,2,3}_*` |
+| first question / later questions (median) | 13.34 / 5.81 s | **12.62 / 5.50 s** | -5.4 / -5.3 % | same |
+| 0.8B prompt64 plain decode | 7.81 tok/s | 7.80 | -0.1 % | `cerno-speed-e2e08_20261022_171753.json` |
+| 0.8B prompt64 default speculative (k <= 4 adaptive, ngram 7) | 20.19 | 20.26 | +0.3 % | same |
+| 0.8B prompt64 prefill (-n 1) | 43.8 | **45.1** | +3.0 % | same |
+
+Per request (decision seconds, medians): support_triage 32.11 -> 30.52, agent_guardrail 29.56 ->
+27.86, medical_triage 19.75 -> 19.31, intent_smart_home 14.85 -> 14.17, nli 13.41 -> 12.99. Decisions
+ran through `cerno_pi.decide` (`decide_bench.py`, state reuse, `eval_select`) with the baseline and the
+new libpinfer in the same bench, order alternated per round; answers and unrounded probabilities
+identical in all 15 pairs.
+
+### Gates (final code, 69b31a3)
+| gate | result | evidence |
+|---|---|---|
+| qemu: kbench `--check` vs `kbench_ref`, q8 / q4 / q4k, 0.8B + 4B shapes, threads 1 / 4, n = 1-64, group settings default / one job off / equal sizes / no split | 4 x 768 configurations, all exact, all yhash identical; f32 / bf16 checks pass | (scratch) |
+| Pi: kbench `--check`, both builds, 0.8B (incl. dhead, f32 / bf16) + 4B shapes, threads 1 / 4, n = 1-64 | 1184 configurations x 2 builds all exact, yhash identical | `cerno-speed-gate-kbench-{new,ref}_*` |
+| Pi: `engine/spec_exact.sh ./engine/pinfer_run_csp1` (the Pi's script, 58 rows) | 58 / 58 match, standard md5s 703b5ff0, 3f9a4f66, 08c27da6, 3f9a4f66 (= Part 3) | `cerno-speed-gate-spec-exact_20261022_165439.json` |
+| Pi: `ctx_check.sh ./engine/pinfer_run_csp1 ./engine/pinfer_run_fast`; `core2_check.sh` with a `-DPF_NO_NEON` build | 5 / 5 identical; golden greedy 32 / 32, b64 = b1 = no-NEON for both models | `cerno-speed-gate-ctx-core2_20261022_165701.json` |
+| Pi: 4B `engine/bench/cerno_check.sh csp1 csp0` (p64, p256): every row's logits, tail logits vs the old last row, generated tokens; `tests/test_prefill_tail.py` on the 4B (b = 64 / 16 / 7) | all identical; PASS | `cerno-speed-gate-cerno_20261022_170147.json` |
+| Pi: Cerno decisions (`eval_select`) base vs new lib | 15 / 15 identical | `cerno-speed-decide-r*` |
+| host (final source): golden / spec / state / prefill_tail PASS, pytest 130 passed, `test_dims` and `test_malformed` 43 / 43 under `SAN=address,undefined`, no warnings (host, SAN, Pi engine, lib, benches) | PASS | `logs/verify/cerno_speed_host_gates.txt` |
+
+### What is left
+- The Q4 7-vector pass runs at 27-30 c/bv against an instruction count of ~26.4 (16 SMLAL, 4
+  reductions, SCVTF + FMUL + FMLA + FMLS, shared unpack). Pass sizes and grouping are handled now;
+  what remains is the order of the instructions (the lut agent's in-order F0 / F1 dispatch analysis,
+  `plan/board/lut.md`) and the instruction count itself (numerics: integer superblock accumulation,
+  class b).
+- A prefill chunk of 64 still has 3 groups of 5 (64 = 7 x 7 + 15); chunks of 63 or 70 would be all 7s
+  (~1-2 % by the pass-size profile); not done (scratch buffers, other batch users).
+- The recurrence (3.9 %) is NEON-bound; only fewer operations, not fewer loads, would help it.

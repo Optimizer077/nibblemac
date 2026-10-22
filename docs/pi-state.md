@@ -59,6 +59,7 @@ Full table with versions and per-item undo: `bench/BASELINES.md` → "Pi changes
 | `~/pinfer/baselines/` (4.0 GB) | MNN 3.6.1 static binaries + model, ORT GenAI int4/int8 exports, LiteRT `.litertlm`, wrappers, prompt | `rm -rf ~/pinfer/baselines` |
 | `~/pinfer/models/cerno-4b-q4_0.pq` + `cerno-4b-q4_0.tokenizer/` (3.36 GB, 2026-10-22) | GGUF import of a Qwen3.5-4B fine-tune (`tools/gguf_to_pq.py`, md5 `7d0c7ca6…`), local testing only, see `cerno-pi` | `rm -rf ~/pinfer/models/cerno-4b-q4_0.pq ~/pinfer/models/cerno-4b-q4_0.tokenizer` |
 | `~/pinfer/engine/pinfer_run_cerno1`, `~/pinfer/tmp/cerno/` (2026-10-22) | engine build with the untied head / `eval_select` (md5 `34f2946a…`), its `libpinfer.so`, Python sources, request files | `rm -rf ~/pinfer/engine/pinfer_run_cerno1 ~/pinfer/tmp/cerno` |
+| `~/pinfer/engine/pinfer_run_csp1` (2026-10-22, speed4b agent) | 4B prefill tuning build 69b31a3 (prefill tail + prefill groups, `engine/bench/KERNELS.md` Part 4), md5 `508f1d74…`. Scratch `~/pinfer/tmp/csp/` and `engine/pinfer_run_csp0` (= `pinfer_run_cerno2`) to be removed after the 17:39 overclock pause | `rm -f ~/pinfer/engine/pinfer_run_csp1` (scratch: `rm -rf ~/pinfer/tmp/csp ~/pinfer/engine/pinfer_run_csp0`) |
 
 ## Snapshots
 | Snapshot | Taken before/after |

@@ -12,6 +12,27 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### 4B prefill (Cerno) tuning (speed4b agent, 15:45–18:05; branch `worktree-agent-aff7b9e370c62872c`)
+- Engine (`fd0ed20`): **prefill tail** — a call that needs only the last token's logits
+  (`pinfer_eval`, `pinfer_eval_select`, `pinfer_run` without `--dump-*`) runs the last full-attention
+  layer's query, attention, o_proj, MLP and final norm for the last token only; the other rows only
+  store K / V. 1/32 less matmul work per prefill token on Qwen3.5-4B. `pinfer_run --dump-last f`
+  writes those logits; `tests/test_prefill_tail.py` compares them with `--dump-logits` byte for byte.
+- Kernels (`69b31a3`): quantized calls of more than 7 vectors are split into groups of ≤ 7 (was: only
+  above 16; 8–16 vectors as one group cost 33–40 instead of 28–33 cycles per block-vector), groups
+  are 7s with the remainder in 5s / 4s (6-vector passes are 8–10 % slower per vector), and all groups
+  of a call run in one job after one parallel activation quantization.
+- Bench tools: kbench Qwen3.5-4B shapes (`c4*`) and `--gfused / --qgroup / --gmode`; `lbench4`
+  (recurrence at 4B head counts); `engine/bench/cerno_check.sh` (4B bit identity of two builds).
+- Measured at 1.5 GHz, 3 rounds: 4B prefill 64 / 256 / 512 tokens 6.49 / 6.62 / 6.48 → **6.78 / 6.82 /
+  6.80 tok/s** (+4.6 / +2.9 / +4.9 %); Cerno decisions (5 requests) mean 21.93 → **20.95 s** (−4.5 %),
+  answers identical; 0.8B prompt64 plain 7.81 → 7.80, default speculative 20.19 → 20.26, prefill
+  43.8 → **45.1 tok/s**. All outputs bit-identical (kbench yhash, spec_exact 58/58, ctx_check 5/5,
+  core2, 4B logits and `eval_select`, host gates). Dropped after measuring: column-chunked activations,
+  fused recurrence sweeps, `-fno-schedule-insns`. Details: `engine/bench/KERNELS.md` Part 4.
+- Pi: `~/pinfer/engine/pinfer_run_csp1` added (`docs/pi-state.md`); scratch (`tmp/csp`,
+  `engine/pinfer_run_csp0`) removed after the lead's overclock pause.
+
 ### Renamed (lead, 15:35): piquant → **nibblepi**
 - Owner asked for a better name; a naming review checked meaning, collisions (GitHub, PyPI, npm, web)
   and trademark: `nibblepi` (a nibble = 4 bits, the weight size; pi = the board) was the only candidate
