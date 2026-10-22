@@ -13,6 +13,7 @@ math of every operation, [engine/FORMAT.md](../engine/FORMAT.md). Every fact bel
 6. [Exact speculative decoding](#6-exact-speculative-decoding)
 7. [Bit-exactness discipline](#7-bit-exactness-discipline)
 8. [Context-window work (Phase 6)](#8-context-window-work-phase-6)
+9. [Hardware](#9-hardware)
 
 ## 1. The model: Qwen3.5-0.8B per token
 
@@ -379,3 +380,122 @@ Owner notebook: `engine/CONTEXT.md`; numbers: `docs/RESULTS.md` §6.
 - **Adaptive speculation** (`spec_adapt.c`, `pinfer_spec_params.adaptive`): picks k per round from
   measured costs and first-draft acceptance, down to plain steps; output never depends on it.
 - **Not done:** bounded-context mode (attention sinks + sliding window), design only (§7 of the notebook).
+
+## 9. Hardware
+
+The three figures are rendered by `tools/make_figures3.py`. Every number in them is measured in this
+repository or quoted from Arm or Raspberry Pi documentation; the sources are listed at the end of this
+section, and the script repeats them next to each constant.
+
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/pi4_hardware-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/pi4_hardware-mobile.png">
+  <source media="(prefers-color-scheme: dark)" srcset="figures/pi4_hardware-dark.png">
+  <img alt="The Pi 4's BCM2711: four Cortex-A72 cores at 1.5 GHz with 32 KB L1 data caches, a shared 1 MB L2 and 4 GB of LPDDR4 DRAM read at a measured 4.20 GB/s. Every generated token streams 424.9 MB of weights, 405 times the L2, plus the 18.9 MB recurrent state from DRAM; what stays in L1 is a 16 KB chunk of the recurrent state and the int8 activations being multiplied. Decode is therefore at most 9.9 tokens/s; pinfer reaches 7.89." src="figures/pi4_hardware.png">
+</picture>
+
+| Part | This board (Raspberry Pi 4 Model B Rev 1.1, 4 GB) | Source |
+|---|---|---|
+| CPU | 4 × Cortex-A72, Armv8.0-A, 1.5 GHz | `freq_khz` `1500000` in every result file's `state_before`; [A72 TRM] §1.3 |
+| L1, per core | 32 KB data (2-way), 48 KB instructions (3-way), 64-byte lines | [A72 TRM] §1.3, §2.1; [BCM2711] |
+| L2 | 1 MB, shared by the four cores (the A72 allows 512 KB to 4 MB) | [BCM2711]; [A72 TRM] §1.3 |
+| DRAM | 4 GB LPDDR4; Raspberry Pi gives "LPDDR4-2400" for the BCM2711 | [BCM2711] |
+| DRAM read bandwidth, measured | 4.20 / 4.08 / 4.07 GB/s with 1 / 2 / 4 threads (256 MB streaming read) | `bench/results/memband_20261021_210615.json` |
+| DRAM peak, **estimate** | ≈ 9.6 GB/s = 2400 MT/s × 4 bytes, assuming the 32-bit bus of `docs/design.md`. Raspberry Pi does not publish the Pi 4's bus width, and [Wikipedia's Raspberry Pi 4 article](https://en.wikipedia.org/wiki/Raspberry_Pi_4) gives "LPDDR4 RAM running at 3.2 GHz" (12.8 GB/s on the same assumption); the figure labels the number as an estimate and no conclusion depends on it | — |
+| Instruction set | `/proc/cpuinfo` features `fp asimd evtstrm crc32 cpuid`: no `asimdhp` (fp16), `asimddp` (dot product) or `i8mm`; the TRM's reset values agree (ID_AA64PFR0_EL1 = 0x2222: no half precision; ID_AA64ISAR0_EL1 = 0x10000: no dot product) | `state_before.cpu_features`; [A72 TRM] chapter 4 |
+
+What pinfer moves per generated token (Q4K default, plain decode): all 424.9 MB of weights, which is
+405× the 1 MiB L2 (tensor directory of the `.pq` file, §5); the 18.9 MB recurrent state, read and
+written; and 24 KiB of fp32 KV cache per token of context (96 MiB at 4096 tokens). What stays in L1: a
+16 KB chunk of the recurrent state while all positions of a pass use it (`engine/VERIFY.md` §2), and the
+int8 activations, one byte per input: 16 KB for a prefill group of 16 positions on a 1024-input matrix
+(`engine/bench/KERNELS.md` v13). For the 3584-input MLP down projection a group of 16 is 56 KB, more than
+the 32 KB L1D, and that matrix measured faster with groups of 8 (11.0 against 11.9 ms at n = 64,
+KERNELS.md v13).
+
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/roofline-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/roofline-mobile.png">
+  <source media="(prefers-color-scheme: dark)" srcset="figures/roofline-dark.png">
+  <img alt="Roofline on log-log axes: a plain decode step does 3.5 operations per byte of weights and reaches 11.9 GOP/s, under the 4.20 GB/s DRAM roof; a verify pass over 4 positions does 14.2 operations per byte and reaches 39.3 GOP/s, near the Q4K kernel's measured 47.5 GOP/s compute roof; prefill in groups of 16 reaches 37.2 GOP/s at 50.5 operations per byte. The A72's int8 instruction peak is 96 GOP/s." src="figures/roofline.png">
+</picture>
+
+**Roofline.** The x axis is arithmetic intensity: operations per byte of weights read from DRAM. The y
+axis is achieved GOP/s. The roofs:
+
+- **DRAM roof:** 4.20 GB/s × intensity (memband, one thread).
+- **int8 instruction peak, 96 GOP/s.** The [A72 SOG] §3.14 lists `SMULL(2)` / `SMLAL(2)` at a throughput
+  of one per cycle on pipeline F0 only, and `SADALP` at one per cycle on F1, so in principle the widening
+  issues alongside. One `SMULL`/`SMLAL` multiplies 8 int8 pairs (8 multiply-accumulates, 16 operations):
+  8 × 2 × 4 cores × 1.5 GHz = 96 GOP/s. `ubench` confirms 1.00 cycle per `SMULL`/`SMLAL` but finds that
+  `SADDLP` does not overlap with them (`engine/bench/KERNELS.md` "Machine facts"), so no kernel gets there.
+- **Q4K kernel, measured: 47.5 GOP/s.** `kbench`, cold weights, 4 threads, the largest layer matrix (qkv,
+  6144 × 1024) at a batch of 16 in 4238.94 µs (`bench/results/kbench-v13-group_20261022_005221.json`,
+  variant `v13-group16`). It is a representative value, not a maximum: the same file gives 39.4–49.6 GOP/s
+  over the four layer shapes (qkv, gate, down, out) at batches of 4, 16 and 64. At 47.5 the kernel roof
+  meets the DRAM roof at 11.3 operations per byte, between 3 and 4 positions per weight read; the
+  instruction peak meets it at 22.8.
+
+The points: operations = 2 × the multiply-accumulates of the weight matrices (a plain step multiplies
+751,894,528 Q4K weights, 254,279,680 of them in the tied head; counted from the `.pq` directory); bytes =
+the weight bytes streamed; achieved = operations ÷ the whole pass's time. Attention, the recurrence and the
+other per-token work take time but are not counted, so every point sits below its roof (at 78–83% of the
+roofs drawn).
+
+| Pass | Positions per weight read | Operations | Bytes read | Ops / byte | Time | GOP/s | Source |
+|---|---|---|---|---|---|---|---|
+| Plain decode | 1 | 1.504 G | 424.9 MB | 3.54 | 126.7 ms (7.89 tok/s) | 11.9 | `speed-ab-merge4_20261022_103609` |
+| Verify pass, k = 3 | 4 | 6.015 G | 424.9 MB | 14.2 | 152.9 ms | 39.3 | `engine/VERIFY.md` (`ver3-ab-p64_20261022_080513`) |
+| Prefill, 64 tokens | 16 (4 groups; head once) | 64.20 G | 1270.6 MB | 50.5 | 1.725 s (37.1 tok/s) | 37.2 | `speed-ab-merge4_20261022_103609` |
+
+So decode leaves three quarters of the kernel's arithmetic unused, and a verify pass over 4 positions
+costs 1.20× a plain step instead of 4× (152.9 against 127.1 ms in the same `engine/VERIFY.md` run). Past
+about 4 positions per read the kernel's compute roof takes over, and further positions per pass are no
+longer nearly free.
+
+<picture>
+  <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/arm_isa-mobile-dark.png">
+  <source media="(max-width: 600px)" srcset="figures/arm_isa-mobile.png">
+  <source media="(prefers-color-scheme: dark)" srcset="figures/arm_isa-dark.png">
+  <img alt="Multiply-accumulates per 128-bit instruction: fp32 FMLA 4 and int8 SMLAL 8 are available on the Pi 4's Cortex-A72; fp16 FMLA 8 (Armv8.2), int8 SDOT 16 (Armv8.2, in the Pi 5's Cortex-A76) and int8 SMMLA 32 (Armv8.6) are not." src="figures/arm_isa.png">
+</picture>
+
+**Instruction set.** Multiply-accumulates per 128-bit instruction, from the instruction descriptions in
+the [A64 ISA]:
+
+| Instruction | MACs | Sums in | Feature | Cortex-A72 (Pi 4) | Cortex-A76 (Pi 5) |
+|---|---|---|---|---|---|
+| `FMLA` .4S, fp32 | 4 | fp32 | Advanced SIMD, Armv8.0 | yes, 1 per cycle ([A72 SOG] §3.15) | yes |
+| `FMLA` .8H, fp16 | 8 | fp16 | FEAT_FP16, optional from Armv8.2 ([features]) | no | yes ([A76 TRM]) |
+| `SMULL` / `SMLAL(2)` .8H, int8 | 8 | int16 | Advanced SIMD, Armv8.0 | yes, 1 per cycle on F0 ([A72 SOG] §3.14) | yes |
+| `SDOT` .4S, int8 | 16 (4 lanes × 4) | int32 | FEAT_DotProd, optional in Armv8.2–8.3, mandatory from 8.4 | no | yes ([A76 TRM] §A1.1) |
+| `SMMLA` .4S, int8 | 32 (2×8 by 8×2) | int32 | FEAT_I8MM, optional from Armv8.2, mandatory from 8.6 | no | no (ID_AA64ISAR1_EL1 reset value 0x100001, I8MM field 0, [A76 TRM]) |
+
+The 16-bit sums are the cost of `SMLAL`: Q4/Q4K put at most four products in a lane and widen to int32
+with one `SADDLP` after the 4-row reduction, Q8 puts two and widens with `SADDLP` + `SADALP`
+(`engine/src/kern_quant.c`), while `SDOT` accumulates straight into int32. The table counts work per instruction. It is not a claim about
+how fast a Pi 5 runs this model, which also depends on its issue rate, clock and memory.
+
+**Sources** (fetched 2026-10-22):
+
+- **A72 TRM**: Arm Cortex-A72 MPCore Processor Technical Reference Manual r0p3 (100095_0003),
+  <https://documentation-service.arm.com/static/60368ce38f952d2e4134dc2e>
+- **A72 SOG**: Arm Cortex-A72 Software Optimization Guide (UAN 0016A),
+  <https://documentation-service.arm.com/static/5ed75eeeca06a95ce53f93c7>
+- **A76 TRM**: Arm Cortex-A76 Core Technical Reference Manual r4p1 (100798),
+  <https://documentation-service.arm.com/static/5f562083235b3560a01e03bc>
+- **A64 ISA**: Arm A-profile A64 Instruction Set Architecture (DDI 0602, 2024-12): `SDOT (vector)`,
+  `SMMLA (vector)`, `SMLAL, SMLAL2 (vector)`, `FMLA (vector)`,
+  <https://developer.arm.com/documentation/ddi0602/2024-12/SIMD-FP-Instructions>
+- **features**: Arm, Feature names in A-profile architecture (109697): FEAT_FP16 and FEAT_I8MM under
+  "The Armv8.2 architecture extension", FEAT_DotProd under "The Armv8.4 architecture extension",
+  <https://developer.arm.com/documentation/109697/2026_06/Feature-descriptions>
+- **BCM2711**: Raspberry Pi documentation, Processors, BCM2711 (and BCM2712 for the Pi 5's Cortex-A76),
+  <https://www.raspberrypi.com/documentation/computers/processors.html>
+
+[A72 TRM]: https://documentation-service.arm.com/static/60368ce38f952d2e4134dc2e
+[A72 SOG]: https://documentation-service.arm.com/static/5ed75eeeca06a95ce53f93c7
+[A76 TRM]: https://documentation-service.arm.com/static/5f562083235b3560a01e03bc
+[A64 ISA]: https://developer.arm.com/documentation/ddi0602/2024-12/SIMD-FP-Instructions
+[features]: https://developer.arm.com/documentation/109697/2026_06/Feature-descriptions
+[BCM2711]: https://www.raspberrypi.com/documentation/computers/processors.html

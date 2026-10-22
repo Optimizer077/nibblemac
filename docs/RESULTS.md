@@ -319,7 +319,11 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
 </picture>
 
 `memband` (256 MB streaming read): 4.20 / 4.08 / 4.07 GB/s with 1 / 2 / 4 threads
-(`memband_20261021_210615`). One core saturates DRAM.
+(`memband_20261021_210615`). One core saturates DRAM. Against that roof, a plain decode step achieves
+11.9 GOP/s at 3.54 operations per weight byte, a 4-position verify pass 39.3 GOP/s and prefill 37.2 GOP/s;
+the Q4K kernel computes 47.5 GOP/s on qkv at a batch of 16 (39.4–49.6 over the four layer shapes at
+batches of 4–64; `kbench-v13-group_20261022_005221`) and the A72's int8 instructions top out at 96.
+Derivation and Arm sources: [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware).
 
 Best matvec kernel per dtype (n = 1, cold weights, real Qwen3.5 shapes; `kbench-v9-final_20261021_232530`,
 709 configurations, 0 noisy; `engine/bench/KERNELS.md`):
@@ -425,8 +429,10 @@ Note that `valid=true` describes the measurement conditions, not the outcome: th
 
 ## 13. Figures
 
-All rendered from the records by `tools/make_figures.py` (data from `notes.md`) and
-`tools/make_figures2.py` (data from the lab notebooks), shared style `tools/figstyle.py`. Each figure
+All rendered from the records by `tools/make_figures.py` (data from `notes.md`),
+`tools/make_figures2.py` (data from the lab notebooks) and `tools/make_figures3.py` (hardware: the lab
+notebooks, the result files and Arm / Raspberry Pi documentation, with every source in
+[ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware)), shared style `tools/figstyle.py`. Each figure
 exists in four files: `<name>.png` and `<name>-dark.png` for desktop (1676 px, twice GitHub's 838 px
 column) and `<name>-mobile.png` / `<name>-mobile-dark.png` for phones (1080 px, three times a 360 px
 column); the pages pick one with `<picture>` by colour scheme and by `max-width: 600px`.
@@ -446,3 +452,6 @@ column); the pages pick one with `<picture>` by colour scheme and by `max-width:
 | `figures/kernel_bandwidth.png` | Kernel GB/s against memband | §8 |
 | `figures/quantization.png` | Weight error and perplexity per format | §9 |
 | `figures/os_experiment.png` | Custom-kernel experiment | §10 |
+| `figures/pi4_hardware.png` | BCM2711 cores, caches and DRAM, and what pinfer keeps or streams at each level | §8, [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware) |
+| `figures/roofline.png` | Roofline: DRAM roof, Q4K kernel and int8 instruction peaks; plain, verify and prefill passes | §7, §8, [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware) |
+| `figures/arm_isa.png` | Multiply-accumulates per 128-bit instruction, A72 against newer Arm extensions | [ARCHITECTURE.md §9](ARCHITECTURE.md#9-hardware) |
