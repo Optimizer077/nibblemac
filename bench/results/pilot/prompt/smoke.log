@@ -1,0 +1,25 @@
+﻿.venv\Scripts\python.exe : 21:31:41 base rows == reference ids: 52
+At line:1 char:417
++ ... HREADS="8"; .venv\Scripts\python.exe tools\pilot\prompt\run.py --requ ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (21:31:41 base rows == reference ids: 52:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+W1022 21:31:44.662000 13028 Lib\site-packages\torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: 
+Redirects are currently not supported in Windows or MacOs.
+21:32:25 GPU: layers 0..23 (10.0 GB), TF32 off
+21:32:25 Cerno loaded from E:\Personal_tries\Raspberry_Pi\models\cerno-4b\cerno-4b-q4_0.pq in 40 s
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is 
+not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because 
+`flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the 
+optimized kernel.
+21:32:29 base support_triage: 4 questions, 208 tokens, 3.6 s
+21:32:29 base: tokens 208 (cached 208) vs_ref {'max_dp': 0.0037475222168779077, 'mean_dp': 0.00246876944269046, 
+'same_top': 4, 'rows': 4} vs_base {'max_dp': 0.0, 'mean_dp': 0.0, 'same_top': 4, 'rows': 4} -> E:\Personal_tries\Raspbe
+rry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\base_smoke_20261022_213229.json
+21:32:31 schema support_triage: 4 questions, 233 tokens, 2.2 s
+21:32:31 schema: tokens 233 (cached 37) vs_ref {'max_dp': 0.11230750711040005, 'mean_dp': 0.08842530896578381, 
+'same_top': 3, 'rows': 4} vs_base {'max_dp': 0.11213260367993383, 'mean_dp': 0.08731285483214825, 'same_top': 3, 
+'rows': 4} -> E:\Personal_tries\Raspberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\schem
+a_smoke_20261022_213231.json
