@@ -28,7 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from runlog import LOG_DIR, ROOT, describe_paths, log_event, rel, stamp, tee_command
+from runlog import LOG_DIR, ROOT, describe_paths, log_event, redact, rel, stamp, tee_command
 
 CONFIG_PATH = ROOT / "harness" / "pi.toml"
 RESULTS_DIR = ROOT / "bench" / "results"
@@ -230,7 +230,7 @@ def cmd_bench(cfg: PiConfig, args: argparse.Namespace, extra: dict) -> int:
     }
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     out = RESULTS_DIR / f"{args.name}_{stamp()}.json"
-    out.write_text(json.dumps(record, indent=2))
+    out.write_text(redact(json.dumps(record, indent=2)))
     extra.update(output=rel(out), valid=record["valid"], results=results)
     print(f"\nsaved {rel(out)}  valid={record['valid']}  "
           f"temp {before.get('temp')} -> {after.get('temp')}")
@@ -241,12 +241,12 @@ def cmd_snapshot(cfg: PiConfig, args: argparse.Namespace, extra: dict) -> int:
     """Save the Pi's configuration to logs/snapshots/<ts>_<label>/ so changes can be diffed."""
     out = LOG_DIR / "snapshots" / f"{stamp()}_{args.label}"
     out.mkdir(parents=True)
-    (out / "state.json").write_text(json.dumps(board_state(cfg), indent=2))
+    (out / "state.json").write_text(redact(json.dumps(board_state(cfg), indent=2)))
     failed = []
     for name, command in SNAPSHOT_ITEMS.items():
         proc = ssh(cfg, command, capture=True, retries=2)
-        (out / name).write_text(proc.stdout.decode(errors="replace")
-                                + proc.stderr.decode(errors="replace"), encoding="utf-8")
+        (out / name).write_text(redact(proc.stdout.decode(errors="replace")
+                                       + proc.stderr.decode(errors="replace")), encoding="utf-8")
         if proc.returncode != 0:
             failed.append(name)
     extra.update(output=rel(out), failed=failed)

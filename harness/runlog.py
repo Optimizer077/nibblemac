@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -16,6 +17,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 LOG_DIR = ROOT / "logs"
 EVENTS = LOG_DIR / "harness.jsonl"
+# The repository is public: hardware addresses (the Pi's /proc/cmdline carries its Ethernet MAC)
+# and the strings listed in the gitignored harness/redact.secret (one per line, e.g. the Wi-Fi
+# network name) never reach logs or results.
+_MAC = re.compile(r"(?<![0-9A-Fa-f:])[0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2}){5}(?![0-9A-Fa-f:])")
+_REDACT_FILE = Path(__file__).resolve().parent / "redact.secret"
+_REDACT = ([s.strip() for s in _REDACT_FILE.read_text(encoding="utf-8").splitlines() if s.strip()]
+           if _REDACT_FILE.is_file() else [])
+
+
+def redact(text: str) -> str:
+    """Replace MAC addresses and the private strings of harness/redact.secret with placeholders."""
+    text = _MAC.sub("<mac>", text)
+    for s in _REDACT:
+        text = text.replace(s, "<redacted>")
+    return text
 
 
 def stamp() -> str:
@@ -32,7 +48,7 @@ def log_event(event: dict) -> None:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     record = {"ts": datetime.now().isoformat(timespec="seconds"), **event}
     with EVENTS.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        f.write(redact(json.dumps(record, ensure_ascii=False)) + "\n")
 
 
 def sha256_file(path: Path) -> str:
@@ -60,11 +76,11 @@ def tee_command(argv: list[str], out_path: Path, header: str) -> int:
     """Run argv, stream stdout+stderr live to the terminal and save it all to out_path."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as log:
-        log.write(header + "\n\n")
+        log.write(redact(header) + "\n\n")
         proc = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         assert proc.stdout is not None
         for raw in proc.stdout:
-            line = raw.decode(errors="replace")
+            line = redact(raw.decode(errors="replace"))
             sys.stdout.write(line)
             sys.stdout.flush()
             log.write(line)

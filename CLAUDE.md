@@ -18,6 +18,10 @@ Plan: `task_plan.md`. Findings: `notes.md`.
    (`/tmp/pinfer-bench.lock`); use `run --lock` for anything heavy or timed. Never time
    anything on the Pi without the lock. Cross-compile on the PC; don't build big things on the Pi.
 6. Never commit secrets: `harness/pi.secret`, `harness/pi.toml`, Wi-Fi/PSK material.
+   The repository is **public**: never commit the Wi-Fi network name, MAC addresses (router or
+   Pi) or a personal email. `harness/pi.py` redacts MACs and the strings in the gitignored
+   `harness/redact.secret` from every log and result it writes; commits use the GitHub no-reply
+   address (repo-local `git config user.email`).
 
 ## Environment
 - Cross-compile in WSL Ubuntu (`make`), static aarch64 binaries → `build/aarch64/`.
