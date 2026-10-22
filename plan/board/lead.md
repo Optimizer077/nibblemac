@@ -18,3 +18,4 @@
   LUT kernel's table build is the same machinery.
 - 17:30 [question:audit] what fraction of a Cerno question's tokens is template shared by every question
   (movable into the snapshot)?
+- 17:27 [answer:audit] 44% of a question's suffix tokens are template (1003 of 2268 on the 52 questions), 27% of a decision's tokens; none is movable into the snapshot exactly (it follows the question text); the LCP already ends at "\n\nQuestion:". Details: plan/board/audit.md 17:27.
