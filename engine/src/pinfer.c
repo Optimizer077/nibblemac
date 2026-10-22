@@ -162,6 +162,11 @@ int pinfer_eval(pinfer_ctx *c, const int32_t *tokens, int n, float *logits) {
     return pf_forward(c, tokens, n, logits, NULL, NULL);
 }
 
+int pinfer_eval_select(pinfer_ctx *c, const int32_t *tokens, int n, const int32_t *ids,
+                       int n_ids, float *out) {
+    return pf_forward_select(c, tokens, n, ids, n_ids, out);
+}
+
 int pinfer_n_vocab(const pinfer_ctx *c) { return c ? c->vocab : 0; }
 int pinfer_n_past(const pinfer_ctx *c) { return c ? c->n_past : 0; }
 int pinfer_eos_id(const pinfer_ctx *c) { return c ? (int)c->model.hdr->eos_id : -1; }

@@ -57,6 +57,8 @@ Full table with versions and per-item undo: `bench/BASELINES.md` → "Pi changes
 | `~/pinfer/wheels/{ort,litert,torch}/` | offline aarch64 wheels (~250 MB) | `rm -rf ~/pinfer/wheels/{ort,litert,torch}` |
 | `~/pinfer/venvs/{ort,litert,torch}` | onnxruntime-genai 0.18.0 / litert-lm 0.18.1 (unusable on A72) / torch 2.14.1+cpu + transformers 5.20.2 | `rm -rf ~/pinfer/venvs/{ort,litert,torch}` |
 | `~/pinfer/baselines/` (4.0 GB) | MNN 3.6.1 static binaries + model, ORT GenAI int4/int8 exports, LiteRT `.litertlm`, wrappers, prompt | `rm -rf ~/pinfer/baselines` |
+| `~/pinfer/models/cerno-4b-q4_0.pq` + `cerno-4b-q4_0.tokenizer/` (3.36 GB, 2026-10-22) | GGUF import of a Qwen3.5-4B fine-tune (`tools/gguf_to_pq.py`, md5 `7d0c7ca6…`), local testing only, see `cerno-pi` | `rm -rf ~/pinfer/models/cerno-4b-q4_0.pq ~/pinfer/models/cerno-4b-q4_0.tokenizer` |
+| `~/pinfer/engine/pinfer_run_cerno1`, `~/pinfer/tmp/cerno/` (2026-10-22) | engine build with the untied head / `eval_select` (md5 `34f2946a…`), its `libpinfer.so`, Python sources, request files | `rm -rf ~/pinfer/engine/pinfer_run_cerno1 ~/pinfer/tmp/cerno` |
 
 ## Snapshots
 | Snapshot | Taken before/after |

@@ -156,6 +156,10 @@ class Lib:
                                                [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t])
         self.pinfer_state_load = self.optional("pinfer_state_load", ctypes.c_int,
                                                [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t])
+        # Logits of selected vocabulary ids only (decision readouts, pinfer.decide).
+        self.pinfer_eval_select = self.optional(
+            "pinfer_eval_select", ctypes.c_int,
+            [ctypes.c_void_p, _c_int32_p, ctypes.c_int, _c_int32_p, ctypes.c_int, _c_float_p])
 
     def has(self, name: str) -> bool:
         """Return True if the library exports ``name`` (feature detection for newer APIs)."""

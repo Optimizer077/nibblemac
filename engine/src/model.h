@@ -24,6 +24,8 @@ typedef struct {
     pf_mat out;                  /* [hidden, vd] */
     const float *conv_w;         /* [2*kd + vd][conv_k] */
     const float *A_log, *dt_bias;/* [lin_v_heads] */
+    const float *A;              /* [lin_v_heads] = -exp(A_log) as stored (GGUF imports), or NULL:
+                                  * a layer has exactly one of A_log and A */
     const float *lin_norm;       /* [lin_v_dim], plain w */
 
     /* full attention (is_full == 1) */
@@ -36,7 +38,8 @@ typedef struct {
     size_t map_bytes;
     const pq_header *hdr;
     const pq_tensor_entry *dir;
-    pf_mat embed;                /* [vocab, hidden]; also the tied output head */
+    pf_mat embed;                /* [vocab, hidden] */
+    pf_mat head;                 /* [vocab, hidden] output head: embed (tied) or lm_head.weight */
     const float *norm;           /* final norm [hidden] */
     pf_layer *layers;            /* [n_layers] */
 } pf_model;

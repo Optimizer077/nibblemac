@@ -126,7 +126,7 @@ static int check_header(const pq_header *h) {
         h->lin_k_dim > PQ_MAX_HEAD_DIM || !h->lin_v_dim || h->lin_v_dim > PQ_MAX_HEAD_DIM ||
         h->conv_k < 1 || h->conv_k > PQ_MAX_CONV_K)
         FAIL("bad linear-attention dimensions");
-    if (!h->tied_embeddings) FAIL("untied output head not supported");
+    if (h->tied_embeddings > 1) FAIL("bad tied_embeddings %u", h->tied_embeddings);
     if (!(h->rms_eps > 0.0f) || !isfinite(h->rms_eps) || !(h->rope_theta > 0.0f) ||
         !isfinite(h->rope_theta))
         FAIL("bad eps / rope_theta");
@@ -181,7 +181,13 @@ static int build_layer(const pf_model *m, int i, pf_layer *L) {
         rc |= pf_model_mat(m, NM("linear_attn.in_proj_b.weight"), h->lin_v_heads, H, &L->b);
         rc |= pf_model_mat(m, NM("linear_attn.in_proj_a.weight"), h->lin_v_heads, H, &L->a);
         rc |= pf_model_mat(m, NM("linear_attn.out_proj.weight"), H, vd, &L->out);
-        rc |= pf_model_vec(m, NM("linear_attn.A_log"), h->lin_v_heads, &L->A_log);
+        /* the decay rate either as A_log (HF checkpoints) or as A = -exp(A_log) (llama.cpp
+         * GGUF imports, tools/gguf_to_pq.py), never both */
+        const int has_a = pf_model_find(m, NM("linear_attn.A")) != NULL;
+        if (has_a && pf_model_find(m, NM("linear_attn.A_log")))
+            FAIL("layer %d: both linear_attn.A and linear_attn.A_log", i);
+        if (has_a) rc |= pf_model_vec(m, NM("linear_attn.A"), h->lin_v_heads, &L->A);
+        else rc |= pf_model_vec(m, NM("linear_attn.A_log"), h->lin_v_heads, &L->A_log);
         rc |= pf_model_vec(m, NM("linear_attn.dt_bias"), h->lin_v_heads, &L->dt_bias);
         rc |= pf_model_vec(m, NM("linear_attn.norm.weight"), h->lin_v_dim, &L->lin_norm);
         /* conv1d.weight is 2-D F32 [conv_dim, conv_k]: check it by hand. */
@@ -242,6 +248,11 @@ int pf_model_load(pf_model *m, const char *path) {
     if (rc == PINFER_OK) rc = check_directory(m);
     if (rc == PINFER_OK) rc = pf_model_mat(m, "embed_tokens.weight", m->hdr->vocab, m->hdr->hidden,
                                       &m->embed);
+    if (rc == PINFER_OK) {
+        m->head = m->embed;
+        if (!m->hdr->tied_embeddings)
+            rc = pf_model_mat(m, "lm_head.weight", m->hdr->vocab, m->hdr->hidden, &m->head);
+    }
     if (rc == PINFER_OK) rc = pf_model_vec(m, "norm.weight", m->hdr->hidden, &m->norm);
     if (rc == PINFER_OK) {
         m->layers = calloc(m->hdr->n_layers, sizeof(pf_layer));

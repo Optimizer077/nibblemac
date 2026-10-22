@@ -63,6 +63,13 @@ This command runs `tools/convert.py`, which is bundled in the wheel as `pinfer/_
 
 Keep the MTP head (do not pass `--no-mtp`) if you want speculative decoding.
 
+**From a llama.cpp GGUF.** A Qwen3.5 GGUF (arch `qwen35`) with Q4_0 / Q8_0 / F32 tensors converts
+without re-quantization: `python tools/gguf_to_pq.py model.gguf out.pq --tokenizer HF_DIR --verify`
+(Q4_0 → Q4_G32, Q8_0 → Q8_G32 bit for bit, llama.cpp's V-head reordering undone, an untied
+`output.weight` kept as `lm_head.weight`; details and the exactness check: `engine/FORMAT.md`,
+"Importing a llama.cpp GGUF"). This is the path for models trained for the Q4_0 grid; fine-tuned
+Qwen3.5-4B decision models distributed that way, such as Cerno 4B, run with it on the Pi.
+
 **Tokenizer search order** for `model.pq`:
 1. the `tokenizer=` argument (a directory or a `tokenizer.json` path);
 2. `$PINFER_TOKENIZER`;
@@ -120,6 +127,7 @@ A complete script is in `examples/python/generate.py`.
 | `model.apply_chat_template(messages, add_generation_prompt=True, enable_thinking=False, tools=None, use_jinja=None)` | Returns the prompt text. |
 | `model.iter_tokens(prompt_ids, max_new_tokens=128, sampling=None, stop_token_ids=None, reuse_prefix=True)` | Token-level generator. |
 | `model.eval(tokens)` / `model.reset()` | Appends tokens and returns the last token's logits (a copy) / clears the context. |
+| `model.eval_select(tokens, ids)` | Like `eval`, but returns only the logits of the vocabulary `ids` (float32 [len(ids)]), bit-identical to `eval(tokens)[ids]`; only the head rows holding them are computed (`pinfer_eval_select`). For readouts over a few label tokens. `ids` may be empty (feed only). |
 | `model.tokenize(text)` / `model.detokenize(ids, skip_special_tokens=False)` | Tokenizer shortcuts. |
 | `model.info()` | Library path, version, build (`matvec`, compiler), model facts. |
 | `model.n_vocab`, `eos_id`, `n_past`, `max_ctx`, `n_threads`, `kv_dtype`, `has_mtp`, `supports_speculative`, `version` | Properties. |
@@ -177,6 +185,7 @@ cc app.c -I/opt/pinfer/include /opt/pinfer/lib/libpinfer.a -lm -pthread   # stat
 |---|---|
 | `pinfer_default_params`, `pinfer_load`, `pinfer_free` | `pinfer_load` returns NULL on failure, with the reason in `*err`. |
 | `pinfer_eval(ctx, tokens, n, logits)` | `logits` may be NULL. Returns `PINFER_E_CTX_FULL` or `PINFER_E_ARG` without changing state. |
+| `pinfer_eval_select(ctx, tokens, n, ids, n_ids, out)` | `pinfer_eval` that writes the last token's logits of the vocabulary ids `ids[0..n_ids-1]` only (`out[i]` = `logits[ids[i]]` bit for bit); reads just the 4-row head tiles that hold them. |
 | `pinfer_reset`, `pinfer_n_past`, `pinfer_n_vocab`, `pinfer_eos_id`, `pinfer_argmax`, `pinfer_version` | |
 | `pinfer_has_mtp`, `pinfer_default_spec_params`, `pinfer_generate_greedy`, `pinfer_generate_greedy_ex` | Speculative greedy decoding with the MTP head (see `engine/src/spec.c`). `pinfer_spec_params.adaptive = 1`: k is an upper bound, the engine picks the fastest k per round (§9). `pinfer_spec_params.ngram = N`: prompt-lookup drafts of up to N tokens; `pinfer_spec_stats.ngram_*` count them. |
 | `pinfer_generate_greedy_cont(...)` | `pinfer_generate_greedy_ex` without the reset: the prompt is appended to the context (after `pinfer_eval`, `pinfer_state_load` or an earlier generation, whose last returned token is not yet in context and should lead the prompt). |

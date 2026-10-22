@@ -60,7 +60,9 @@ static void pre_task(void *arg, int tid, int nthr) {
         for (int h = 0; h < nv; h++) {  /* beta = sigmoid(b); decay = exp(g), libm (16/layer) */
             float *b = ctx->ba + (size_t)t * nv + h, *a = ctx->aa + (size_t)t * nv + h;
             *b = 1.0f / (1.0f + expf(-*b));
-            *a = expf(-expf(j->L->A_log[h]) * softplus(*a + j->L->dt_bias[h]));
+            /* g = A * softplus(a + dt_bias), A = -exp(A_log) or the stored A (model.h) */
+            const float A = j->L->A ? j->L->A[h] : -expf(j->L->A_log[h]);
+            *a = expf(A * softplus(*a + j->L->dt_bias[h]));
         }
 }
 

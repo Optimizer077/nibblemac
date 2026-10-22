@@ -98,6 +98,11 @@ int pf_forward(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits_last
 int pf_forward_h(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits_last,
                  float *logits_all, float *hidden, float *normed);
 
+/* pf_forward, then the last token's logits of the vocabulary ids ids[0..n_ids-1] only
+ * (pinfer_eval_select): out[i] == pf_forward's logits_last[ids[i]] bit for bit. */
+int pf_forward_select(pinfer_ctx *ctx, const int32_t *tokens, int n, const int32_t *ids,
+                      int n_ids, float *out);
+
 /* Prefill chunk size (clamped to 1..PF_MAX_BATCH). 1 = pure token-by-token decode path. */
 void pf_set_batch(pinfer_ctx *ctx, int batch);
 
