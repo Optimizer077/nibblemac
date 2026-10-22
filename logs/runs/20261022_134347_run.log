@@ -1,0 +1,9 @@
+# 2026-10-22T13:43:47 pi@10.42.0.2
+$ cd ~/pinfer && md5sum engine/pinfer_run_mm2 kbench/kbench_mm2 kbench/kbench_ref engine/pinfer_run_fast
+
+bb39468b11d4d9d4decaada685a1d6e7  engine/pinfer_run_mm2
+12127cc49f14090de8d2e3e2cd226846  kbench/kbench_mm2
+cd87a08d86a9e3dfa9622b9900e3bb5b  kbench/kbench_ref
+23a7624250b8445343b2322eb0014749  engine/pinfer_run_fast
+
+[exit 0]
