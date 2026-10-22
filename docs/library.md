@@ -3,7 +3,8 @@
 pinfer runs **Qwen3.5-0.8B** on a Raspberry Pi 4. It ships as
 - a C library, `libpinfer.so` / `libpinfer.a`, with one header, `pinfer.h`. Token ids go in, logits come out;
 - a Python package, `pinfer` (ctypes binding, HF `tokenizers`, sampling, chat template, streaming);
-- a command, `pinfer` (`generate`, `chat`, `bench`, `convert`, `info`).
+- a command, `pinfer` (`generate`, `chat`, `bench`, `convert`, `info`, `serve`);
+- an OpenAI-compatible HTTP server, `pinfer serve` (§10).
 
 > **Status 0.2.0 (unreleased, 2026-10-22):** the aarch64 wheel `pinfer-0.2.0-py3-none-manylinux_2_34_aarch64.whl`
 > contains the NEON kernels (`MATVEC=fast`); the x86-64 wheel contains the scalar reference kernels.
@@ -148,8 +149,9 @@ pinfer chat -m model.pq -p "One question, one answer"
 pinfer bench -m model.pq --prompt-tokens 64 -n 32 [--repeat 3] [--spec-k 3] [--json]
 pinfer convert models/Qwen3.5-0.8B out.pq [--no-mtp] [--no-tokenizer]
 pinfer info -m model.pq                                       # JSON: library, build, model
+pinfer serve -m model.pq [--host 0.0.0.0] [--port 8080]       # OpenAI-compatible HTTP server (§10)
 ```
-Common options: `--tokenizer DIR`, `-t/--threads`, `-c/--ctx`, `--kv-dtype fp32|fp16|int8`, `--lib PATH`, `-v` (log to stderr); `--adaptive` with `--speculative`. `python -m pinfer` works the same as `pinfer`.
+Common options: `--tokenizer DIR`, `-t/--threads`, `-c/--ctx/--max-ctx`, `--kv-dtype fp32|fp16|int8`, `--lib PATH`, `-v` (log to stderr); `--adaptive` with `--speculative`. `python -m pinfer` works the same as `pinfer`.
 
 ---
 
@@ -283,3 +285,154 @@ costs is the attention's pass over the cache. Pi 4, Q4K model, 4 threads, 32 gen
   costs and the draft acceptance and picks k (down to plain steps) per round; same output.
   It beats fixed k=3 where acceptance is low (long wikitext context: 9.6 vs 9.1 tok/s at 2048)
   and stays within ~2–5% of it where drafts are almost always accepted.
+
+## 10. Server (`pinfer serve`, OpenAI-compatible HTTP)
+`pinfer serve` puts one model behind the OpenAI HTTP API, so the `openai` SDK, curl, Open WebUI or an
+editor plugin can use the Pi as a local model. It uses only the standard library (`http.server`, one
+thread per connection); the package's dependencies stay numpy and tokenizers (jinja2 optional).
+```bash
+pinfer serve -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer \
+    --host 0.0.0.0 --port 8080            # default --host 127.0.0.1: this machine only
+```
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--host`, `--port` | `127.0.0.1`, `8080` | Listen address. `0.0.0.0` serves the network; there is no TLS, so use `--api-key` outside a trusted LAN. |
+| `--api-key KEY` (or `$PINFER_API_KEY`) | none | Require `Authorization: Bearer KEY` on `/v1/*` (`/health` stays open). |
+| `-c/--ctx/--max-ctx`, `--kv-dtype`, `-t`, `--tokenizer`, `--lib` | 4096, fp32, 4 | As for the other commands (§3, §9). |
+| `--speculative` / `--no-speculative`, `--spec-k` | on, library default (2) | Greedy requests use MTP speculative decoding (same tokens as plain greedy). |
+| `--no-reuse` | off | Prefill every prompt from scratch (for comparisons). |
+| `--history generated` / `template` | `generated` | How earlier assistant turns are tokenized (see *Prefix reuse*). |
+| `--state-cache-mb`, `--snapshot-min-tokens` | 256, 64 | Memory for state snapshots (0 = none); shortest prefix worth one. |
+| `--max-tokens`, `--temperature`, `--top-p`, `--top-k`, `--think` | 1024, 0, 1, 0, off | Defaults for requests that leave these out (`/v1/completions` keeps OpenAI's `max_tokens` 16). OpenAI's own default temperature is 1; this server defaults to greedy (fastest, deterministic). |
+| `--model-name` | the `.pq` file stem | Model id in `/v1/models` and responses (the `model` field of requests is not checked). |
+
+**Endpoints**
+
+| Endpoint | Notes |
+|---|---|
+| `GET /health` | `status`, `busy`, `queued`, tokens in context, snapshot cache use. |
+| `GET /v1/models`, `GET /v1/models/{id}` | One model; `max_model_len` = `--max-ctx`. |
+| `POST /v1/chat/completions` | `messages` (system / developer / user / assistant / tool; text or text parts), `max_tokens` / `max_completion_tokens`, `temperature`, `top_p`, `top_k` (extension), `seed`, `stop` (a string or up to 16), `stream`, `stream_options.include_usage`, `chat_template_kwargs.enable_thinking`. |
+| `POST /v1/completions` | `prompt` (text, `[text]` or token ids), the same options, `echo`. |
+
+Penalties, `logit_bias` and `user` are accepted and ignored. Refused with HTTP 400: `n` > 1, `logprobs`,
+`tools` / `functions`, a `response_format` other than text, `suffix`, `best_of` > 1, image or audio parts.
+
+**Responses** follow OpenAI's shapes (`chat.completion`, `chat.completion.chunk`, `text_completion`).
+`finish_reason` is `stop` (stop token or stop string) or `length` (`max_tokens` or a full context).
+`usage` carries `prompt_tokens_details.cached_tokens`, and every response (in a stream: the chunk with
+the `finish_reason` and the usage chunk) has a `pinfer` object:
+
+| Field | Meaning |
+|---|---|
+| `cached_tokens`, `cache_source` | Prompt tokens not evaluated again, and where from: `context` (the live context), `snapshot` or `null`. |
+| `spliced_tokens` | Leading prompt tokens taken from the server's own earlier request + reply (*Prefix reuse*). |
+| `prefill_seconds` | Server time to the first token (snapshot restore + prefill of the uncached tokens). |
+| `decode_seconds`, `tokens_per_second` | The rest of the generation; tokens after the first per second. |
+| `queue_seconds` | Time spent waiting for another request to finish. |
+| `speculative` | `k`, `rounds`, `drafted`, `accepted`, `tokens_per_pass`, or `null` for plain decoding. |
+
+With `chat_template_kwargs: {"enable_thinking": true}` the model writes a think block first: its text
+comes as `reasoning_content` (streamed as `delta.reasoning_content`) and the answer as `content`.
+
+**Streaming** is Server-Sent Events over chunked transfer encoding: `data: {chunk}` events, the first
+with `delta: {"role": "assistant", "content": ""}`, then text deltas, a chunk with the `finish_reason`,
+with `include_usage` a last chunk with `choices: []` and `usage` (the other chunks then carry
+`"usage": null`), and `data: [DONE]`. An error after the headers were sent arrives as a
+`data: {"error": ...}` event.
+
+**Errors** are OpenAI-style, `{"error": {"message", "type", "param", "code"}}`: 400 for a bad request
+(`invalid_json`, a wrong field, or `context_length_exceeded` when the prompt does not fit in
+`--max-ctx` with room for one reply token), 401 `invalid_api_key`, 404 `unknown_url` /
+`model_not_found`, 411 / 413 for a missing or oversized body, 500 `internal_error` (the context is
+then reset).
+
+**One model, one context.** The engine context is not thread-safe, so generations run one at a time in
+arrival order (FIFO); requests are parsed and tokenized in their own threads while they wait. A client
+that disconnects while queued is dropped; one that disconnects during a stream stops the generation at
+the next token (with speculative decoding the C call ends at its next token callback); a non-streaming
+request whose client left is stopped at the first token after a half-second check. Greedy requests (`temperature` 0, the server
+default, or `top_k` 1) use speculative decoding with k=2, the best fixed k on chat prompts (1.25–1.7×
+plain, `notes.md` "Speculative decoding on chat prompts"); sampled requests use plain decoding.
+
+**Prefix reuse.** Clients resend the whole conversation every turn. Qwen3.5 is a hybrid model: its 18
+linear-attention layers carry a recurrent state that cannot be rolled back, so the engine can continue
+its context only when the new prompt *extends* every token already in it. Two mechanisms make that
+happen:
+- *History as generated* (`--history generated`). The chat template renders an earlier assistant turn
+  without the think block the model saw while writing it (`<|im_start|>assistant\n<think>\n\n</think>\n\nA`
+  becomes `<|im_start|>assistant\nA`), and re-tokenizing a reply need not give the generated ids back.
+  The server remembers its recent replies (prompt tokens + generated tokens). When the previous
+  assistant message of a conversation is one of them, the prompt is built from those tokens,
+  `<|im_end|>` and the template's rendering of the new messages, so only the new turn is prefilled.
+  With `--history template` (what a stateless server does) the prompt diverges inside the first
+  earlier reply, and on this model nothing at all is reused from the second turn on. With thinking
+  enabled the reasoning stays in the context (the template would drop it): more context is used, but
+  nothing is prefilled again.
+- *State snapshots.* Before the live context is replaced by another conversation it is saved
+  (`save_state()`, ~20 MB + 24 KB per token with the fp32 KV cache) in an LRU bounded by
+  `--state-cache-mb`; a system message of at least `--snapshot-min-tokens` tokens is checkpointed too.
+  A request starts from the longest snapshot or live context that is a prefix of its prompt, so
+  alternating conversations, or new ones with the same system prompt, do not evict each other.
+
+Measured on the Pi 4 (Q4K, 4 threads, greedy so speculative k=2, ≤ 64 tokens per reply; client on
+the Pi over localhost; `notes.md` "`pinfer serve` on the Pi 4", `bench/results/serve_20261022_095259.json`).
+TTFT is the time from sending the request to the first content delta:
+
+| | cached / prompt tokens | TTFT |
+|---|---|---|
+| single request (39-token prompt) | 0 / 39 | 1.33 s, then 9.0 tok/s (client = server rate) |
+| 4-turn conversation, turns 2 / 3 / 4, default | 86 / 111, 147 / 169, 232 / 256 | 0.96 / 0.89 / 0.95 s |
+| same, `--history template` | 0 / 107, 0 / 161, 0 / 244 | 3.21 / 4.82 / 7.08 s |
+| same, `--no-reuse` | 0 | 3.09 / 4.58 / 6.90 s |
+| two interleaved conversations, second turns | 97 / 120, 99 / 121 (snapshots) | 1.03 / 1.01 s (3.56 / 3.50 s without) |
+
+**Limits.** One model and one generation at a time; concurrent requests are queued, not batched. No
+tool / function calling, logprobs, `n` > 1, images, embeddings or TLS; penalties and `logit_bias` are
+ignored. Regenerating the last answer (the same prompt again) prefills it from the longest snapshot
+(often only the system prompt), and a reply cut by a stop string is re-tokenized for the next turn.
+The server does not truncate history: a conversation longer than `--max-ctx` gets
+`context_length_exceeded`.
+
+Run the clients on the Pi, or replace `localhost` with the Pi's address (server started with
+`--host 0.0.0.0`).
+
+**curl**
+```bash
+curl http://localhost:8080/v1/chat/completions -H "Content-Type: application/json" -d '{
+  "model": "qwen35-0.8b-q4k-headq4k",
+  "messages": [{"role": "user", "content": "What is a Raspberry Pi?"}],
+  "max_tokens": 64, "stream": true}'
+```
+
+**openai SDK**
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8080/v1", api_key="none")  # any key without --api-key
+model = client.models.list().data[0].id
+r = client.chat.completions.create(model=model, max_tokens=64,
+                                   messages=[{"role": "user", "content": "What is a Raspberry Pi?"}])
+print(r.choices[0].message.content, r.usage, r.model_extra["pinfer"])
+stream = client.chat.completions.create(model=model, max_tokens=64, stream=True,
+                                        messages=[{"role": "user", "content": "Count to ten."}])
+for chunk in stream:
+    if chunk.choices:
+        print(chunk.choices[0].delta.content or "", end="", flush=True)
+```
+
+**From Python**
+```python
+import pinfer
+from pinfer.server import EngineConfig, serve
+
+with pinfer.Model.load("qwen35-0.8b-q4k-headq4k.pq") as m:
+    serve(m, EngineConfig(model_name="qwen"), host="127.0.0.1", port=8080)   # until Ctrl-C
+```
+`pinfer.server.make_server(Engine(m, cfg), host, port)` returns the `http.server` object instead
+(`serve_forever()`, `shutdown()`). Code: `python/pinfer/server/` (`protocol.py` wire format, `engine.py`
+context and generation, `history.py` prompt tokens, `cache.py` snapshots / replies / queue, `httpd.py`
+HTTP); tests: `tests/python/test_server.py`. Measurement: `bench/serve/serve_client.py` (works with any
+OpenAI-compatible server) and `bench/serve/serve_bench.sh` (starts the server once per configuration;
+on the Pi in one locked `bench` call).
