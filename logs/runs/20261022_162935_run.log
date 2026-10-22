@@ -1,0 +1,25 @@
+# 2026-10-22T16:29:35 pi@10.42.0.2
+$ cat ~/pinfer/kbench/mm_e2e.sh 2>/dev/null | head -40; ls ~/pinfer/data | head -30
+
+chat27.ids
+chat_code_c.ids
+chat_code_py.ids
+chat_edit.ids
+chat_fix.ids
+chat_list.ids
+chat_math.ids
+chat_story.ids
+ctx2048.ids
+ctx2112.ids
+ctx4096.ids
+ctx512.ids
+ctx64.ids
+ctx8192.ids
+next2048.ids
+next4096.ids
+next8192.ids
+prompt64.ids
+tail2048_64.ids
+wikitext2-qwen35.tokens.bin
+
+[exit 0]

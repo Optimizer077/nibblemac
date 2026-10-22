@@ -1,0 +1,9 @@
+# 2026-10-22T16:28:07 pi@10.42.0.2
+$ pgrep -a llama-server || echo 'no llama-server running'; free -m | head -2; df -h . | tail -1
+
+no llama-server running
+               total        used        free      shared  buff/cache   available
+Mem:            3794         292         814           2        2758        3502
+/dev/sda2       917G   25G  855G   3% /
+
+[exit 0]

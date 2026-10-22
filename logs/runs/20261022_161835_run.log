@@ -1,0 +1,6 @@
+# 2026-10-22T16:18:35 pi@10.42.0.2
+$ md5sum tmp/csp/lbench4_ref
+
+08ab28c99384d2d096238672cf2cccbc  tmp/csp/lbench4_ref
+
+[exit 0]

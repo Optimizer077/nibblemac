@@ -1,0 +1,56 @@
+# 2026-10-22T16:10:09 pi@10.42.0.2
+$ find tmp/csp -maxdepth 3 | head -40; md5sum tmp/csp/lib_base/libpinfer.so tmp/cerno/lib/libpinfer.so; ls venvs/pinfer/bin | head
+
+tmp/csp
+tmp/csp/kb4.sh
+tmp/csp/kbsweep.sh
+tmp/csp/lib_base
+tmp/csp/lib_base/libpinfer.so
+tmp/csp/kbench_ref
+tmp/csp/lbench_ref
+tmp/csp/kbench_c1
+tmp/csp/cerno
+tmp/csp/cerno/cerno_pi
+tmp/csp/cerno/cerno_pi/__main__.py
+tmp/csp/cerno/cerno_pi/__init__.py
+tmp/csp/cerno/cerno_pi/cli.py
+tmp/csp/cerno/cerno_pi/decide.py
+tmp/csp/cerno/requests
+tmp/csp/cerno/requests/correctness.json
+tmp/csp/cerno/bench
+tmp/csp/cerno/bench/decide_bench.py
+tmp/csp/py
+tmp/csp/py/pinfer
+tmp/csp/py/pinfer/speculative.py
+tmp/csp/py/pinfer/py.typed
+tmp/csp/py/pinfer/state.py
+tmp/csp/py/pinfer/streaming.py
+tmp/csp/py/pinfer/sampling.py
+tmp/csp/py/pinfer/__main__.py
+tmp/csp/py/pinfer/errors.py
+tmp/csp/py/pinfer/_lib.py
+tmp/csp/py/pinfer/chat.py
+tmp/csp/py/pinfer/convert.py
+tmp/csp/py/pinfer/tokenizer.py
+tmp/csp/py/pinfer/__init__.py
+tmp/csp/py/pinfer/model.py
+tmp/csp/py/pinfer/cli.py
+tmp/csp/py/pinfer/server
+tmp/csp/p256.ids
+tmp/csp/p64.ids
+tmp/csp/p512.ids
+tmp/csp/profile.sh
+bc3004daf6b5ae82db88a9a99ca60fa1  tmp/csp/lib_base/libpinfer.so
+bc3004daf6b5ae82db88a9a99ca60fa1  tmp/cerno/lib/libpinfer.so
+activate
+activate.csh
+activate.fish
+Activate.ps1
+f2py
+hf
+httpx2
+idna
+numpy-config
+pinfer
+
+[exit 0]

@@ -1,0 +1,26 @@
+# 2026-10-22T16:30:12 pi@10.42.0.2
+$ cd ~/pinfer && ls -la models/ | grep -E 'cerno|qwen35-0.8b-q4k-headq4k'; ls tmp/cerno/ids 2>&1 | head; ls -d /proc/device-tree/chosen/bootloader/* 2>/dev/null | head -20; od -An -tu1 /proc/device-tree/chosen/bootloader/tryboot 2>/dev/null; vcgencmd measure_volts core
+
+-rwxr-xr-x  1 pi pi 3362381824 Oct 22 14:08 cerno-4b-q4_0.pq
+drwxr-xr-x  2 pi pi       4096 Oct 22 14:15 cerno-4b-q4_0.tokenizer
+-rwxr-xr-x  1 pi pi 3373287808 Oct 22 13:58 cerno-4b-v1.1-q4_0.gguf
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:08 qwen35-0.8b-q4k-headq4k.pq
+p256.ids
+p64.ids
+p_long.ids
+p_mid.ids
+p_short.ids
+/proc/device-tree/chosen/bootloader/boot-mode
+/proc/device-tree/chosen/bootloader/build-timestamp
+/proc/device-tree/chosen/bootloader/capabilities
+/proc/device-tree/chosen/bootloader/name
+/proc/device-tree/chosen/bootloader/partition
+/proc/device-tree/chosen/bootloader/rsts
+/proc/device-tree/chosen/bootloader/tryboot
+/proc/device-tree/chosen/bootloader/update-timestamp
+/proc/device-tree/chosen/bootloader/usb
+/proc/device-tree/chosen/bootloader/version
+   0   0   0   0
+volt=0.8688V
+
+[exit 0]

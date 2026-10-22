@@ -1,0 +1,10 @@
+# 2026-10-22T16:07:51 pi@10.42.0.2
+$ ps -eo pid,etime,pcpu,args | grep -E 'kbench|llama|pinfer|python|flock' | grep -v grep | cut -c1-200
+
+  58529       07:06  0.0 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c python3 tmp/cerno/bench/llama_pi.py --server tmp/cerno/llama-server --gguf models/cerno-4b-v1.1-q4_0.gguf --r
+  58535       06:56  0.0 timeout --kill-after=30 1200 bash -c python3 tmp/cerno/bench/llama_pi.py --server tmp/cerno/llama-server --gguf models/cerno-4b-v1.1-q4_0.gguf --rows tmp/cerno/results/ref_lla
+  58536       06:56  0.0 python3 tmp/cerno/bench/llama_pi.py --server tmp/cerno/llama-server --gguf models/cerno-4b-v1.1-q4_0.gguf --rows tmp/cerno/results/ref_llama_pc.jsonl --only contract_clause,co
+  58585       06:56  386 tmp/cerno/llama-server -m models/cerno-4b-v1.1-q4_0.gguf --host 127.0.0.1 --port 8095 -c 4096 -t 4 --parallel 1
+  58685       05:21  0.0 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbsweep.sh tmp/csp/kbench_c1 0 8 12 16 24 7 --dtypes q4 --shapes c4qkv,c4out,c4gate,c4down,c4kv,
+
+[exit 0]

@@ -1,0 +1,25 @@
+# 2026-10-22T16:28:41 pi@10.42.0.2
+$ tr -d '\000' < /proc/device-tree/model; echo; grep -m1 Revision /proc/cpuinfo; uname -r; echo ---; grep -vE '^\s*(#|$)' /boot/firmware/tryboot.txt | tail -12; ls -la /boot/firmware/*.txt
+
+Raspberry Pi 4 Model B Rev 1.1
+Revision	: c03111
+6.18.50+rpt-rpi-v8
+---
+disable_overscan=1
+arm_boost=1
+[cm4]
+otg_mode=1
+[cm5]
+dtoverlay=dwc2,dr_mode=host
+[pi5]
+dtoverlay=nospi10
+[all]
+[all]
+os_prefix=pinfer/
+kernel=kernel8-pinfer.img
+-rwxr-xr-x 1 root root  132 Oct  6 09:27 /boot/firmware/cmdline.txt
+-rwxr-xr-x 1 root root 1272 Oct  6 09:20 /boot/firmware/config.txt
+-rwxr-xr-x 1 root root  145 Oct  6 09:27 /boot/firmware/issue.txt
+-rwxr-xr-x 1 root root 1427 Oct 22 01:25 /boot/firmware/tryboot.txt
+
+[exit 0]

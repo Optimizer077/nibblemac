@@ -1,0 +1,5 @@
+# 2026-10-22T16:08:00 pi@10.42.0.2
+$ kill 58685; sleep 1; ps -eo pid,args | grep kbsweep | grep -v grep | cut -c1-120
+
+
+[exit 0]

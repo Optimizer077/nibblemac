@@ -1,0 +1,13 @@
+# 2026-10-22T16:44:48 pi@10.42.0.2
+$ md5sum engine/pinfer_run_csp1 engine/pinfer_run_csp0 tmp/csp/pinfer_run_csp1_noneon tmp/csp/kbench_csp1 tmp/csp/lbench4_csp1 tmp/csp/lib_new/libpinfer.so tmp/csp/lib_base/libpinfer.so tmp/csp/kbench_ref
+
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+537fb9a3baa8e949cbe6fe6618bc82c9  engine/pinfer_run_csp0
+d5726a68d741c6bb5b60ed3dcc9bc77f  tmp/csp/pinfer_run_csp1_noneon
+6454499e470a3e6a567242148b77fb3d  tmp/csp/kbench_csp1
+1dd1ee00f83d441d4c022139295dba54  tmp/csp/lbench4_csp1
+ba600f512f97351c31b6bb0acc35c1eb  tmp/csp/lib_new/libpinfer.so
+bc3004daf6b5ae82db88a9a99ca60fa1  tmp/csp/lib_base/libpinfer.so
+2c08ef374d74c2e446a97883d1d98ed6  tmp/csp/kbench_ref
+
+[exit 0]

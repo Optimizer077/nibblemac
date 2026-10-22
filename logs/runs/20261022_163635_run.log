@@ -1,0 +1,6 @@
+# 2026-10-22T16:36:35 pi@10.42.0.2
+$ md5sum tmp/csp/kbench_c5
+
+c675b3fdc4363adf02f795f137da9939  tmp/csp/kbench_c5
+
+[exit 0]

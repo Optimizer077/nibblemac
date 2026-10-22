@@ -1,0 +1,7 @@
+# 2026-10-22T16:08:14 pi@10.42.0.2
+$ grep -c 'CHUNKS=' tmp/csp/kbsweep.sh; head -5 tmp/csp/kbsweep.sh | tail -1
+
+1
+BIN=$1; CHUNKS=${2//,/ }; GVECS=${3//,/ }; shift 3
+
+[exit 0]
