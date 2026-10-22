@@ -76,6 +76,7 @@ example `kv_dtype` fp16 / int8 (`engine/include/pinfer.h`).
 | Host, state / spec / attention changes | `/root/venv-ref/bin/python tests/test_state.py` | PASS: restored state continues identically |
 | Host, API or Python changes | `make -C engine host-lib && PYTHONPATH=python PINFER_LIB=$PWD/build/host/engine/lib/libpinfer.so PINFER_TEST_REQUIRE=1 /root/venv-pinfer-test/bin/python -m pytest tests/python -q` (source tree; without the two variables an installed wheel is tested instead) | all passed |
 | Host, loader / format / state / tool changes | `make -C engine host SAN=address,undefined && python3 tests/test_malformed.py` | 43/43: broken `.pq` files, state blobs and token files refused cleanly, no sanitizer report |
+| Host, GGUF import / format changes | `/root/venv-ref/bin/python tests/test_gguf.py` (after the sanitizer build) | PASS: synthetic GGUFs convert bit-exactly, llama.cpp's V-head order undone, same tokens as a reference `.pq` |
 | Host, attention / RoPE / position changes | `/root/venv-ref/bin/python tests/test_long_context.py` (fp32 reference up to 8192 tokens; ~45 min, 6.6 GB RAM) | worst rel. error ≤ 1e-3, top-1 18/18 |
 | Pi, NEON build | `python harness/pi.py bench spec-exact-<topic> -- bash engine/spec_exact.sh ./engine/pinfer_run_<topic>` | 20/20 `"match":true` |
 | Pi, kernel changes | `kbench` with `--check`, plus a run whose rows are all `"exact":true` | no failed check |
