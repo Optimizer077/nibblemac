@@ -23,3 +23,8 @@ notebook `engine/GPU.md`, code `engine/gpu/`)
   `vfmsq_n_f32`); the QPU has no FMA, so a bit-identical GPU path (class a) must leave the float tail to
   the CPU (GPU returns exact int16 block sums L/H) or emulate FMA (too slow). The fp32 GPU path differs from
   the CPU by ~1e-7 relative (class b).
+- 21:14 [plan] Resumed as a pilot (owner's method). PC side ready: n = 64 as 8 passes of 8 (one dispatch each),
+  emulator bit-exact up to n = 12 (516 instr / block, 1.48 MAC per lane-instruction). Pi plan under the lock, ~1.5 h:
+  smoke -> `gpu-q4-alone` (gate / down / qkv at n = 7, 64) -> `gpu-corun` (kbench c4* 4 threads vs the same + GPU loop;
+  go if combined >= 1.2x). The venv still has numpy 2.5.4 (the 2.3.1 downgrade was refused by the pause); first Pi
+  command re-pushes the wheel. Pi down since the overclock test; polling `pi.py check`.

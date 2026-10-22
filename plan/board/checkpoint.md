@@ -14,3 +14,14 @@ the lead syncs it to the main board. Not committed.
 - 18:00 [plan] Pi work only after the lead's "window closed". Cerno decision benches will be named
   `cerno-ckpt-*` (not `ckpt-*`): `bench/results/cerno-*` is gitignored because Cerno results stay out
   of the public repo (owner decision); engine gates on 0.8B use `ckpt-*`.
+- 21:20 [integrating] committed `43783be` (branch `worktree-agent-a4d7c6bb45401045d`, merged main `dd7bc9e`):
+  `pinfer_checkpoint / pinfer_rewind / pinfer_checkpoint_clear / pinfer_checkpoint_n_past` (additive, no
+  ABI change), `Model.checkpoint() / rewind()`, `pinfer_run --rewind-at S`, `tests/test_state.py` run D,
+  5 pytest cases; cerno-pi `feat/checkpoint` `8261d06` (`Decider(checkpoint=None|False|True)`,
+  `decide_bench.py --no-checkpoint`). Touches `state.c`, `pinfer.c` (reset/free), `forward.h` (4 ctx
+  fields), `pinfer.h`; no kernel / forward change, so no merge conflict with speed4b / lut expected.
+- 21:20 [measured] host (WSL ref build, bf16 0.8B): golden PASS (32/32, 0 error); smoke `--rewind-at 20`
+  identical tokens plain and spec 3, checkpoint 49-55 ms (first touch of the 20 MB slot), rewind 2.3 ms on
+  the PC. Other gates running (WSL load 88: slow). Pi: ssh refused since 21:09 (still booting?) — Pi
+  gates and the before -> after decision timing wait for it; scripts ready in `tools/ckpt/` (`ckpt_pi.sh`:
+  4B row A / rewind / save / load; `decide_ab.sh`: decisions ckpt vs state, same lib, the lead's 5-request set).

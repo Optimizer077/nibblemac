@@ -12,6 +12,11 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Merged (21:25): 4B prefill tuning (speed4b agent) — note: landed as commit `dcc2219`, whose message says "docs(pi)"
+- Prefill tail (the last layer computes only the last token's rows when only its logits are read) and prefill groups of
+  7s + 5s with one fused job per call; bit-identical. Cerno decisions -4.4%, 4B prefill +4-5%, 0.8B prefill 43.8 -> 45.1,
+  decode unchanged. `engine/bench/KERNELS.md` Part 4; `tests/test_prefill_tail.py`.
+
 ### Pi: overclock test reverted (21:01)
 - Boot partition edited on the PC (F:): `tryboot.txt` back to the custom-kernel test file, overclock files removed; `config.txt` / `cmdline.txt` unchanged; standard 1.5 GHz profile. `docs/pi-state.md` #5.
 
