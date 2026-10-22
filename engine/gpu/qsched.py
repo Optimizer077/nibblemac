@@ -138,7 +138,10 @@ def schedule(ops: list[Op], prefer_mul: bool = False) -> list[Slot]:
                 t = max(t, last_w[r] + 1)
         for w in op.writes:
             if w in last_r:
-                t = max(t, last_r[w])
+                # ALU writes and ldunif -> r5 land after the reads of the same instruction
+                # (WAR 0, py-videocore6 test_signals); an ldtmu write is kept one instruction
+                # after the last read of the old value (not covered by any test)
+                t = max(t, last_r[w] + (1 if op.kind == "sig" and op.name == "ldtmu" else 0))
             if w in last_w:
                 t = max(t, last_w[w] + 1)
         units = [None] if op.kind == "sig" else (
