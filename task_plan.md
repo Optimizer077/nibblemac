@@ -109,6 +109,11 @@ look carefully into the network and see what can be further optimized to make it
 - [ ] P0 Low-rank / compressed weights (agent, owner: "low rank or quicker approaches of the weights"):
       activation-aware SVD, exact head screening with error bounds, vocab-subset head, mixed 2-3 bit,
       compressed drafter for exact speculation, 4B MLP low-rank vs Cerno agreement (`engine/COMPRESS.md`)
+- [ ] P0 Advanced numerical methods (agent, owner 17:25 "advanced numerical approximation, careful,
+      kernel-native"): Winograd inner product (half the multiplies; int7 activations or an exact split),
+      integer accumulation per superblock / row, 16-bit accumulation chains, NEON polynomial exp / SiLU /
+      sigmoid / softplus / rsqrt with scalar twins, fp16 DeltaNet state (`engine/NUMERICS.md`);
+      vector-quantization codebooks (PQ, AQLM / QuIP#-style) added to the low-rank study
 - [ ] P1 Decode streaming efficiency (0.8B): 118.6 ms of streaming = 3.58 of 4.20 GB/s; barriers,
       persistent workers across matmuls -- after the audit's budget (bit-identical)
 - Decided (17:10): no DeltaNet chunked prefill for now -- the recurrence is 3.8% of 4B prefill
