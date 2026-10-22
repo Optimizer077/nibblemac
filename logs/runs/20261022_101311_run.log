@@ -1,0 +1,11 @@
+# 2026-10-22T10:13:11 pi@10.42.0.2
+$ rm -rf tmp/att3 && rm -f engine/pinfer_run_att1 engine/pinfer_run_att2 engine/pinfer_run_att3 && ls -la engine/pinfer_run_att* && md5sum engine/pinfer_run_att4 && ls tmp/ && df -h . | tail -1
+
+-rwxr-xr-x 1 pi pi 933880 Oct 22 09:07 engine/pinfer_run_att4
+58acc558990e1d2d88dad98aa564c3b5  engine/pinfer_run_att4
+ab
+pyctx
+tools
+/dev/sda2       917G   16G  864G   2% /
+
+[exit 0]

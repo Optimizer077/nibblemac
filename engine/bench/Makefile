@@ -15,7 +15,23 @@ HDR     := kbench.h ../src/kern.h ../src/ops.h ../src/pq_format.h ../src/pq_quan
 PYTHON  ?= python.exe  # Windows python (has numpy); WSL python3 has none
 GOLDEN  := $(ROOT)/build/kbench_golden.bin
 
-all: $(OUT)/kbench $(OUT)/lbench
+all: $(OUT)/kbench $(OUT)/lbench $(OUT)/abench
+
+# abench: the attention core (forward_attn.c attend) on synthetic data; abench-host = the
+# scalar mirrors on x86 (same hash as the NEON build when the two bodies agree)
+ASRC    := ../src/forward_kv.c ../src/forward_ops.c
+AHDR    := ../src/forward_attn.c ../src/forward.h ../src/model.h ../include/pinfer.h
+HOST_OUT := $(ROOT)/build/host
+
+abench: $(OUT)/abench
+$(OUT)/abench: abench.c $(ASRC) $(AHDR) $(KSRC) $(HDR) | $(OUT)
+	$(CC) $(CFLAGS) -ffp-contract=off -I../include abench.c $(ASRC) $(KSRC) -o $@ $(LDFLAGS)
+
+abench-host: $(HOST_OUT)/abench
+$(HOST_OUT)/abench: abench.c $(ASRC) $(AHDR) ../src/matvec_ref.c
+	mkdir -p $(HOST_OUT)
+	gcc -O2 -std=c11 -ffp-contract=off -Wall -Wextra -I../src -I../include abench.c $(ASRC) \
+	    ../src/matvec_ref.c -o $@ -pthread -lm
 
 $(OUT)/lbench: lbench.c $(KSRC) $(HDR) | $(OUT)
 	$(CC) $(CFLAGS) lbench.c $(KSRC) -o $@ $(LDFLAGS)
@@ -36,4 +52,4 @@ test-qemu: $(OUT)/kbench $(GOLDEN)
 asm: $(OUT)/kbench
 	aarch64-linux-gnu-objdump -d --no-show-raw-insn $(OUT)/kbench > $(ROOT)/build/kbench.asm
 
-.PHONY: all test-qemu asm
+.PHONY: all test-qemu asm abench abench-host

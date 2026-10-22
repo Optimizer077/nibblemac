@@ -125,15 +125,15 @@ void pf_mlp(pinfer_ctx *ctx, const pf_layer *L, int n);
 void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0);
 
 /* KV-cache rows (forward_kv.c). pf_kv_bytes: size of one layer's K (or V) cache in bytes;
- * store / load convert one row (g, p) of `cache` from / to fp32 (load returns the row
- * itself for fp32, otherwise buf [hd] filled with the widened values). */
+ * store converts one row (g, p) of `cache` from fp32; widen writes the fp32 values of its
+ * columns [d0, d1) to buf[d0, d1). */
 size_t pf_kv_row_bytes(int dtype, int hd);
 size_t pf_kv_bytes(const pinfer_ctx *ctx);
 void pf_kv_store(const pinfer_ctx *ctx, void *cache, int g, int p, const float *row);
-const float *pf_kv_load(const pinfer_ctx *ctx, const void *cache, int g, int p, float *buf);
+void pf_kv_widen(const pinfer_ctx *ctx, const void *cache, int g, int p, int d0, int d1,
+                 float *buf);
 void pf_kv_zero_rows(const pinfer_ctx *ctx, void *cache, int p0, int p1);
 const void *pf_kv_row(const pinfer_ctx *ctx, const void *cache, int g, int p);   /* raw row */
-void pf_dot4_f16(const float *const q[4], const uint16_t *k16, int n, float *out);
 
 /* Phase profile (forward_stats.c), active with PF_FWD_STATS=1: t = pf_stats_now() before a
  * section, pf_stats_add(phase, kind, t) after it. kind: PFS_K1 single-token call, PFS_KB
@@ -160,14 +160,19 @@ void pf_rmsnorm(float *y, const float *x, const float *w, int n, float eps);
 void pf_l2norm_scale(float *x, int n, float eps, float scale);
 void pf_conv_silu(float *x, float *state, const float *w, int C, int K, int c0, int c1);
 float pf_dot(const float *a, const float *b, int n);
+float pf_softmax_max(const float *a, int n);           /* max for the softmax (4 lanes) */
 float pf_softmax_exp(float *a, int n, float mx);       /* a = exp(a - mx); returns sum */
 void pf_attn_pv(float *o, const float *p, int np, const float *v, int stride, int hd);
 int pf_argmax(const float *v, int n);
-/* forward_kv.c: four dots against one row (each in pf_dot's order); P.V over one block of
- * np contiguous rows [np][hd] for one head (o1 == NULL) or two, accumulated into o in row
- * order without zeroing (pf_attn_pv = zero + the blocks in order). */
-void pf_dot4(const float *const q[4], const float *k, int n, float *out);
-void pf_attn_pv_blk(float *o0, const float *p0, float *o1, const float *p1, int np,
-                    const float *v, int hd);
+/* forward_kv.c, 4 heads against np rows of n elements stored back to back, fp32 or (f16)
+ * binary16: att[h][p] = (q[h] . row p) * scale, each dot in pf_dot's order (qi: the queries
+ * interleaved by pf_q4_interleave, [4 n], read instead of q when not NULL); P.V over the
+ * columns [d0, d1) (d0 a multiple of 16), accumulated into o in row order without zeroing
+ * (pf_attn_pv = zero + the runs in order). */
+void pf_q4_interleave(const float *const q[4], int n, float *qi);
+void pf_scores4(const float *qi, const float *const q[4], const void *rows, int f16, int np,
+                int n, float scale, float *const att[4]);
+void pf_attn_pv4(float *const o[4], const float *const p[4], int np, const void *v, int f16,
+                 int n, int d0, int d1);
 
 #endif

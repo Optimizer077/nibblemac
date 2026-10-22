@@ -1,0 +1,11 @@
+# 2026-10-22T10:13:04 pi@10.42.0.2
+$ du -sh tmp/att3; ls tmp/att3 | wc -l; ls -la engine/pinfer_run_att*
+
+2.1G	tmp/att3
+67
+-rwxr-xr-x 1 pi pi 933904 Oct 22 08:09 engine/pinfer_run_att1
+-rwxr-xr-x 1 pi pi 933880 Oct 22 08:45 engine/pinfer_run_att2
+-rwxr-xr-x 1 pi pi 933880 Oct 22 09:04 engine/pinfer_run_att3
+-rwxr-xr-x 1 pi pi 933880 Oct 22 09:07 engine/pinfer_run_att4
+
+[exit 0]

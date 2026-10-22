@@ -19,6 +19,7 @@ P·V), `pinfer_run_m{0,1,2}p{0,16}` / `pv1` / `pv2` (A/B only), **`pinfer_run_ct
 | 4 | State save/restore API + Python + `pinfer chat` keep-state + tests + docs | done (§6) |
 | 4b | Adaptive speculation (lead's request): never slower than plain | done (§4); first estimator failed, fixed |
 | 5 | Bounded-context mode (sinks + sliding window) | not done (§7: design only) |
+| 6 | Round 3 (issue #1): decode@4096 ≥ 85% of 64-token decode, bit-exact | done (§9): fp16 cache **87.1%** (6.86 tok/s, met); fp32 81.6% (not met, floor ~83%); prefill +5–11% |
 
 ### Summary (final binary unless noted; Q4K-headq4k, 4 threads, Pi 4)
 | context | plain fp32 tok/s (HEAD → now) | plain fp16 | prefill tok/s (HEAD → now) | spec k=3 fixed | adaptive k≤3 | RSS fp32 / fp16 | llama.cpp Q4_K_M tg |
@@ -32,6 +33,16 @@ P·V), `pinfer_run_m{0,1,2}p{0,16}` / `pv1` / `pv2` (A/B only), **`pinfer_run_ct
 ¹ lead's runs with the pre-core2 binary (`pinfer-ctx{512,2048}-q4k_20261022_02*.json`); HEAD at 2048
 from my profile run (`pinfer-ctx2048-profile-q4k_20261022_024112.json`). ² mean of 3 decode-only
 runs from a saved state (§3d); single full runs: fp32 4.91–5.42, fp16 5.35–5.60.
+
+**Round 3 (§9, `pinfer_run_att4`; decode-only means of 3 from saved states, 32 tokens; before =
+`pinfer_run_fast` in the same session):**
+
+| context | plain fp32 | plain fp16 | fp32 / fp16 as % of 64-token decode | prefill fp32 / fp16 |
+|---|---|---|---|---|
+| 64 (prompt64) | 7.86 → 7.87 | 7.88 → 7.88 | 100 / 100 | 34.8 → 36.3 / 35.3 → 36.4 |
+| 2048 | 6.89 → 7.10 | 7.21 → 7.36 | 90.1 / 93.4 | 32.4 → 32.7 / 30.7 → 33.3 |
+| 4096 | 6.29 → 6.43 | 6.59 → **6.86** | 81.6 / **87.1** | 27.5 → 29.9 / 27.8 → 28.9 |
+| 8192 | 5.30 → 5.34 | 5.67 → 6.07 | 67.8 / 77.0 | 22.7 → 24.3 / 22.0 → 24.3 |
 
 ## 1. Starting point (HEAD `d53c835`, Q4K-headq4k, 4 threads, 32 generated)
 Prompts `bench/common/ctx{64,512,2048,4096,8192}.ids` = the first N tokens of
@@ -341,3 +352,137 @@ post-RoPE, positions must be re-based (StreamingLLM assigns cache-relative posit
 means storing K pre-RoPE and rotating per query block — a second kernel path. The recurrent
 state is untouched, so the 18 linear layers keep the full history. Left for a later pass;
 `pinfer_state_save/load` already covers the "long system prompt, many chats" use.
+
+## 9. Attention, round 3 (issue #1: decode at 4096 ≥ 85% of short-context decode)
+Owner: attention round-3 agent, branch `worktree-agent-afe555a83dacc27b7` from main `3c2c887`
+(2026-10-22 06:50–). Files: `engine/src/forward_attn.c`, `forward_kv.c`, `forward_ops.c`
+(`pf_softmax_max` / `pf_softmax_exp`), `forward.h` (attention declarations),
+`engine/bench/abench.c` (new), `engine/bench/Makefile` (abench targets), `f16_check.sh` (kv dtype
+argument), `bench/common/next2048.ids`. Pi binaries (`~/pinfer/engine/`): `pinfer_run_att1`
+(first full version; its source without the later changes rebuilds md5-identical), `att2` (+ the
+int8 NaN guard), `att3` (+ interleaved queries for batches; bug #9 below, harmless for this
+model), **`pinfer_run_att4` = the source** (md5 `58acc558…`). Baseline: `pinfer_run_fast`
+(md5 `9d30bbda…` = main `3c2c887`).
+
+### 9a. Method
+- **`engine/bench/abench.c`** (new): `#include`s `forward_attn.c` and runs `attend()` (or its
+  three passes one by one, `--phases`, with each thread's busy time) on synthetic K/V of 6 layers
+  rotated, so every pass streams from DRAM as in decode. Its per-layer totals match the engine's
+  4096-vs-64 step difference for the baseline (5.0 ms fp32, 3.9 ms fp16 per layer ≈ (156.7 − 126.9)
+  / 6 and (150.4 − 126.9) / 6 ms). Exactness: an FNV hash of every output and probability; the host
+  build (scalar mirrors) and the NEON build under qemu give the HEAD hashes for 21 shapes (fp32 /
+  fp16 / int8, n = 1 / 3 / 4 / 5 / 6 / 9 / 13 / 64, head_dim 36–320, groups of 3 / 4 / 6 / 8 / 16
+  heads) × 1 and 3 threads, after every change (scratchpad `att3/hashcheck.sh`, `hash2.sh`).
+  `--stream` / `--stream-cols` / `--stream-alt`: plain reads of the cache with each thread split =
+  the DRAM ceiling.
+- Engine: decode-only from states saved by `pinfer_run_fast` (§3d, `pv_ab.sh`, 3 rounds
+  alternating, 32 tokens), `PF_FWD_STATS=1` profiles, gates as in CONTRIBUTING.
+
+Baseline, abench, 4096 tokens, μs per layer (`att3-abench-base_20261022_070108.json`):
+
+| | fp32 scores | fp32 softmax+P·V | fp16 scores | fp16 softmax+P·V | stream K / V fp32 | fp16 |
+|---|---|---|---|---|---|---|
+| 4 threads | 2276 (3.69 GB/s) | 2730 | 1693 | 2209 | 2205 / 2193 (3.80 GB/s) | 1107 / 1083 |
+| 1 thread | 4819 | 9125 | 6631 | 9298 | | |
+
+So fp32 scores already ran at the stream ceiling; fp32 P·V and all of fp16 did not.
+
+### 9b. Problems found → fixes (all bit-identical; evidence in `bench/results/att3-*`)
+| # | problem (measured) | cause | fix |
+|---|---|---|---|
+| 1 | fp16 dot 1214 cycles per K row (1 thread) | `pf_dot4_f16`'s accumulator array `c[4][4]`: GCC stored all 16 accumulators to the stack (8 STP) in **every** iteration (disassembly) | named accumulators (`dot4_row`) |
+| 2 | ~124 scalar ops per row after each 4-head dot | `hsum` with lane extracts + scalar adds per head | 15 FADDP: `vpaddq` adds lanes (0,1), (2,3) — exactly hsum's pairs and pf_dot's combination order, for the 4 heads at once |
+| 3 | P·V read every V row twice (2 threads per group, head halves), 2 heads per V load, V widened into L1 per block (fp16) | split by heads | split by **columns** (KV group × column range): each V element read by one thread, 4 heads per load, fp16 widened in registers (`pf_attn_pv4`); per element still row order from 0 |
+| 4 | softmax 132 μs per layer = 24 cycles per score | scalar compare chain for the max, one exp chain per iteration | `pf_softmax_max` (4 lanes, compare + select, same structure in the scalar mirror) and two exp chains per iteration (sum still in element order) → 93 μs. The max may differ from the old loop only in the sign of a zero maximum, which `exp(a − max)` cannot see (x − (±0) differ only for x = −0, and exp(−0) = exp(+0) = 1 exactly in both bodies) |
+| 5 | P·V on one thread: fp32 and fp16 both 547 cycles per half-row, cold — compute would be ~350 | the column-blocked order (16 columns across 8 rows, then the next 16) is not a stream the hardware prefetcher follows | PRFM of the next block's lines while one block is computed (`prefetch_rows`; 8 PRFM per 512-B half row). abench P·V −10% fp32 / −12% fp16 (`att3-abench-v6_20261022_080020.json`); engine fp32 +2.4%, fp16 +0.8% (`att3-ab-knobs-ctx4096_20261022_083218.json`). This is not §3d's prefetch: there the passes were row-sequential and the hardware prefetcher already followed them |
+| 6 | 4 query streams + a K stream from L2: 1013 vs 665 cycles per row (scratch `kt2`, `att3-kt2_20261022_072947.json`) | L1 / load-unit behaviour with 5 streams | the dots read the 4 queries interleaved by 4 (`pf_q4_interleave`, one base pointer, LDP pairs): 661. Single tokens per query quad; a batch interleaves its tokens' queries up front (32 KB of stack, head_dim ≤ 256, one quad per group): batched scores −8…−10% (`att3-abench-bqi_20261022_090115.json`; binary `att3`) |
+| 7 | scores in row halves: stream 3.75 GB/s; column halves (both threads of a group in the same rows) 3.96 | DRAM locality | single-token scores in alternate 16-row blocks between the group's two threads: stream 3.95–4.01 GB/s, abench fp32 scores −7% (`att3-abench-salt_20261022_080629.json`); engine neutral (6.43 vs 6.41) |
+| 8 | int8 store, scalar tail: `(int)rintf(NaN)` is undefined (UBSan: "nan is outside the range of representable values of type 'int'", HEAD `forward_kv.c:118`) | NaN / inf activation | clamp in float first, NaN → 0 like FCVTNS; finite values unchanged (hash matrix incl. 6 int8 shapes); UBSan clean (scratch `nan_i8.c`) |
+| 9 | (own bug, binary `att3`, found before any run of that path) the batch-interleave flag was also set for a *single* int8 token with > 4 heads per group, where the batched loop runs over several query quads: the NEON dots then used the first quad's queries for all quads | the up-front interleave covers one quad | separate flags (`iq` single token, `iqb` batch with ≤ 4 heads per group); 7 hash shapes added (int8 single token with 6 / 16 heads per group, batches of 16 heads, head_dim 320); `att3` fails them, the source passes. This model has 4 heads per group, so `att3`'s measurements stand; final binary `att4` |
+
+Instruction-level facts measured on the A72 for this (`att3-insn-mix*_20261022_07*.json`, scratch
+`mix.c` / `mix2.c`): FMUL / FADD .4s 1 per cycle (mixed too), FMLA .4s 1, FCVTL 2 cycles, FADDP
+1.5; 16 FMUL→FADD pairs 32.1 cycles with 4 temporaries, 35.2 with one shared temporary; +5 vector
+MOVs +5 cycles. Even with an L1-resident block the P·V kernel needs 44–46 cycles per row-chunk (16
+columns × 4 heads = 32 FP operations; `att3-kt_20261022_072343.json`), the 4-head dot 660 / 800
+cycles per row (fp32 / fp16; FP floor 512 / 640).
+
+abench after the fixes, 4096 tokens, μs per layer (`att3-abench-v6_*`, `att3-abench-salt_*`,
+`att3-abench-attend-v8_20261022_082921.json`):
+
+| | fp32 scores | softmax | fp32 P·V | fp16 scores | softmax | fp16 P·V |
+|---|---|---|---|---|---|---|
+| baseline | 2276 | (in P·V) | 2730 incl. softmax | 1693 | (in P·V) | 2209 incl. softmax |
+| round 3 | 2224–2245 | 93–98 | 2073–2160 | 1203–1278 | 91–97 | 1565–1598 |
+
+### 9c. Tried and not kept
+- **P·V inner-loop variants** (scratch `kt2.c`, `att3-kt2_*`, `att3-kt5_*`, `att3-kt-sched_*`):
+  4 rows per iteration with p as lanes (GCC hoisted the loads and spilled; equal speed), the next
+  row loaded one iteration ahead (5 vector moves per row; 46.7 vs 45.7 cycles), two register sets
+  A / B (spilled; fp16 worse), 8 columns × 2 rows, column-major order, a transposed p tile: all 43–58
+  cycles per row-chunk against 44–55 for the plain one-row loop. With `optimize("no-schedule-insns")`
+  the two-set version was 7–8% faster on L2-resident rows (worth ~0.4% of decode): not kept, a
+  GCC-specific attribute for that.
+- P·V blocks of 16 rows; PRFM two blocks ahead or into L2 only (`att3-abench-pf_20261022_071900.json`,
+  `att3-ab-knobs-ctx4096_*`): no better than one block ahead into L1.
+- Score blocks of 64 rows instead of 16 (no better than halves).
+- **Engine vs abench gap.** In the engine, P·V takes 15–20% longer than in abench (fp32 2.51–2.54
+  vs 2.07–2.16 ms; fp16 1.81–1.84 vs 1.57–1.60), also for the baseline binary
+  (`att3-prof-smstat-ctx4096_20261022_083616.json`: softmax in the engine 94–96 μs = abench). Not
+  cold caches or TLB (64 MB read or written between layers changes nothing,
+  `att3-abench-thrash_*`, `att3-abench-wthrash_*`); partly the physical page placement: touching the
+  cache pages token by token over all layers, as a prefill does, makes abench P·V +5–11% fp32 and
+  scores +5% (`att3-abench-filltok_20261022_083952.json`), while plain streaming is unaffected.
+  Touching each stream's pages ahead in chunks of 64–1024 rows did not recover it reliably
+  (`att3-abench-fillchunk_20261022_084221.json`). Huge pages would; this kernel has THP off.
+
+### 9d. Results (Pi 4, Q4K-headq4k, 4 threads; decode-only from saved states, 32 tokens, 3 rounds)
+`pinfer_run_fast` (main) → **`pinfer_run_att4`** (final). Decode: 3 decode-only runs each from the
+same saved state, alternating, 32 tokens; "% of 64" = decode / the same binary's decode on the
+64-token prompt. Prefill: one full prefill each (`--no-warmup`), the runs that saved the states;
+every saved state of the new binaries is md5-identical to the baseline's.
+
+| context | KV | decode tok/s before → after | % of 64 before → after | prefill tok/s before → after | result files |
+|---|---|---|---|---|---|
+| 64 (prompt64) | fp32 | 7.862 → 7.874 (median¹) | 100% | 34.8 → 36.3 (mean of 3) | `att3-final-ab-ctx64_20261022_100343.json` |
+| 64 | fp16 | 7.879 → 7.878 (median¹) | 100% | 35.3 → 36.4 | same |
+| 2048 | fp32 | 6.889² → 7.097 | 87.6² → **90.1%** | 32.42 → 32.71 (att2) / 32.53 (att3) | `att3-final-ab-ctx2048-4096_20261022_100706.json`, `att3-mkstate-base-ctx2048-4096_*`, `att3-prefill-att{2,3}-ctx2048-4096_*` |
+| 2048 | fp16 | 7.210 → 7.361 | 91.5 → **93.4%** | 30.67 → 33.30 / 32.46 | same |
+| 4096 | fp32 | 6.290 → 6.427 | 80.0 → **81.6%** | 27.49 → 29.89 (att4) | same + `att3-prefill-att4-ctx4096_20261022_093931.json` |
+| 4096 | fp16 | 6.592 → **6.863** | 83.7 → **87.1%** | 27.82 → 28.87 (att4) | same |
+| 8192 | fp32 | 5.304 → 5.340 | 67.5 → 67.8% | 22.72 → 24.27 (att3) | `att3-final-ab-ctx8192_20261022_101024.json`, `att3-mkstate-base-ctx8192-kv{0,1}_*`, `att3-prefill-att3-ctx8192-kv{0,1}_*` |
+| 8192 | fp16 | 5.666 → 6.065 | 71.9 → **77.0%** | 21.95 → 24.29 (att3) | same |
+
+¹ each binary had one run at 5.7–5.9 tok/s in the 3 rounds (both alike); means fp32 7.14 → 7.86,
+fp16 7.88 → 7.23. ² one cold first run (6.54); the other two 7.06–7.07. The first decode-only A/B
+with `att1` gave 4096 fp16 6.607 → 6.872 and fp32 6.335 → 6.398
+(`att3-ab-att1-ctx2048-4096_20261022_081801.json`).
+
+Prefill: att2 / att3 / att4 run the same code for this model except the interleaved batch
+queries of att3 / att4, and single full prefills of identical code vary by up to ±4% (att3 vs
+att4 at 4096: 28.76 / 27.78 vs 29.89 / 28.87). The cleaner measure of the batched attention is a
+64-token prefill chunk after a restored 4096-token state (3 rounds,
+`att3-tailprefill-ctx4096_20261022_094945.json`): fp32 22.15 → 22.99 (att2) → **23.73** (att4)
+tok/s, fp16 22.30 → 23.81 → **24.29** (+7% / +9%).
+
+abench of the final kernels against the baseline in one run, ms per layer
+(`att3-final-abench_20261022_101116.json`; hashes equal):
+
+| | 64 fp32 / fp16 | 4096 fp32 | 4096 fp16 | 8192 fp32 | 8192 fp16 | 8-token block at 4096 fp32 / fp16 |
+|---|---|---|---|---|---|---|
+| baseline | 0.085 / 0.077 | 5.04 | 4.15 | 9.95 | 8.28 | 23.7 / 24.0 |
+| final | 0.076 / 0.051 | 4.41 (−13%) | 2.94 (−29%) | 8.76 (−12%) | 6.07 (−27%) | 19.0 / 19.3 (−20%) |
+
+**Issue #1:** with the fp16 cache, decode at 4096 tokens is 6.86 tok/s = 87% of 64-token decode
+(target 85%: met). With the fp32 cache (the default) 6.43 = 81.6% (not met; its floor at the
+measured 3.95 GB/s is ~83%). The fp32 gains in the engine are smaller than abench's (8192: +0.7%
+decode vs −12% attention time in abench), see §9c.
+
+### 9e. Open items
+- fp32 KV at 4096 stays below 85%: its floor at the measured stream rate (3.95 GB/s, 16 MB per
+  layer) is ~83%, and the engine's P·V runs 15–20% above abench's (page placement, §9c).
+- Kernel time per row is still ~1.4× the FP-operation count (scores 660 / 800 cycles vs 512 / 640,
+  P·V 44 vs 32): GCC's scheduling of the 16-accumulator loops. Hand scheduling (assembly) is the
+  remaining lever for prefill and fp16 decode; not done (style of the code base).
+- With fp16 above 85% at 4096, making fp16 the default would need the quality decision of §5c
+  (greedy output differs from fp32 at near-ties); unchanged here.

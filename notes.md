@@ -146,6 +146,23 @@ plain 7.09), 4096 → 7.53 (7.38, 6.11) (`pinfer-adaptive2-*_20261022_05*.json`)
 snapshot 70.5 MB, save 94 ms, load 90 ms vs 63 s prefill, exact (`state-check-ctx6_*.json`);
 `pinfer chat` turn 2: 0.68 s vs 2.10 s re-prefill. Details: `engine/CONTEXT.md`.
 
+### Attention round 3 — issue #1 (2026-10-22 06:50–, `engine/CONTEXT.md` §9)
+`pinfer_run_att4` (final, bit-identical: `ctx_check` 5/5, fp16 / int8 checks 3/3, `spec_exact`
+20/20) against `pinfer_run_fast` (main `3c2c887`). Decode: means of 3 decode-only runs from the
+same saved state (32 tokens, `pv_ab.sh`); prefill: one run each, `--no-warmup` (8192: `att3`,
+the same code for this model).
+
+| ctx | decode fp32 before → after | decode fp16 before → after | % of 64-token decode (fp32 / fp16, after) | prefill fp32 / fp16 before → after | result files |
+|---|---|---|---|---|---|
+| 64 | 7.862 → 7.874 (median) | 7.879 → 7.878 | 100 / 100 | 34.8 → 36.3 / 35.3 → 36.4 | `att3-final-ab-ctx64_20261022_100343.json` |
+| 2048 | 6.889 → 7.097 | 7.210 → 7.361 | 90.1 / 93.4 | 32.4 → 32.7 / 30.7 → 33.3 | `att3-final-ab-ctx2048-4096_20261022_100706.json` |
+| 4096 | 6.290 → 6.427 | 6.592 → **6.863** | 81.6 / **87.1** | 27.5 → 29.9 / 27.8 → 28.9 | same, `att3-prefill-att4-ctx4096_20261022_093931.json` |
+| 8192 | 5.304 → 5.340 | 5.666 → 6.065 | 67.8 / 77.0 | 22.7 → 24.3 / 22.0 → 24.3 | `att3-final-ab-ctx8192_20261022_101024.json`, `att3-prefill-att3-ctx8192-kv*` |
+
+Issue #1 (decode@4096 ≥ 85% of 64-token decode): met with the fp16 cache (87.1%), not with fp32
+(81.6%, floor ~83%). 64-token prefill chunk after 4096 tokens: 22.2 → 23.7 (fp32), 22.3 → 24.3
+(fp16) (`att3-tailprefill-ctx4096_20261022_094945.json`).
+
 ## Custom kernel 6.18.50-pinfer — effect on speed (2026-10-22 01:25–01:29, one-time tryboots)
 Same binary (`pinfer_run_fast` @ `af06041`), same model (`q4k-headq4k`), 4 threads, 64+64 tokens.
 

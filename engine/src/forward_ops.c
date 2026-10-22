@@ -286,13 +286,50 @@ float pf_dot(const float *a, const float *b, int n) {
     return s + t;
 }
 
-/* a[j] = exp(a[j] - mx) for j < n; returns the sum (4 partial sums + sequential tail). */
+/* Maximum of a[0..n) for the softmax: 4 lanes (element j in lane j % 4 of the first n/4*4)
+ * each keeping its first maximum (x > m), lanes 1..3 then the tail folded into lane 0 the
+ * same way. NaNs are never picked (like the former single scalar loop); the value equals that
+ * loop's except possibly the sign of a zero maximum, which exp(a - max) does not see
+ * (x - (+0) and x - (-0) differ only for x = -0, and exp(-0) = exp(+0) = 1 exactly). */
+float pf_softmax_max(const float *a, int n) {
+    float m[4] = {-INFINITY, -INFINITY, -INFINITY, -INFINITY};
+    int i = 0;
+#if PF_NEON
+    float32x4_t mv = vdupq_n_f32(-INFINITY);
+    for (; i + 4 <= n; i += 4) {
+        const float32x4_t x = vld1q_f32(a + i);
+        mv = vbslq_f32(vcgtq_f32(x, mv), x, mv);
+    }
+    vst1q_f32(m, mv);
+#else
+    for (; i + 4 <= n; i += 4)
+        for (int l = 0; l < 4; l++)
+            if (a[i + l] > m[l]) m[l] = a[i + l];
+#endif
+    float mx = m[0];
+    for (int l = 1; l < 4; l++)
+        if (m[l] > mx) mx = m[l];
+    for (; i < n; i++)
+        if (a[i] > mx) mx = a[i];
+    return mx;
+}
+
+/* a[j] = exp(a[j] - mx) for j < n; returns the sum (4 partial sums + sequential tail). The
+ * NEON loop runs two exp chains per iteration (see pf_silu_mul); the sum still adds them
+ * in element order. */
 float pf_softmax_exp(float *a, int n, float mx) {
     float s, t = 0.0f;
     int i = 0;
 #if PF_NEON
     float32x4_t acc = vdupq_n_f32(0.0f);
     const float32x4_t m = vdupq_n_f32(mx);
+    for (; i + 8 <= n; i += 8) {
+        const float32x4_t e0 = expq(vsubq_f32(vld1q_f32(a + i), m));
+        const float32x4_t e1 = expq(vsubq_f32(vld1q_f32(a + i + 4), m));
+        vst1q_f32(a + i, e0);
+        vst1q_f32(a + i + 4, e1);
+        acc = vaddq_f32(vaddq_f32(acc, e0), e1);
+    }
     for (; i + 4 <= n; i += 4) {
         const float32x4_t e = expq(vsubq_f32(vld1q_f32(a + i), m));
         vst1q_f32(a + i, e);

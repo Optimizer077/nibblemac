@@ -127,6 +127,36 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
     (`ver3-exact_20261022_075930.json`).
 - Tried and dropped, with numbers in VERIFY.md §6: fused token sweeps (slower at n = 4), software
   prefetch of the next chunk (slower), deferring the conv-state commit (no gain).
+### Attention round 3 — issue #1 (attention agent, 06:50–; details `engine/CONTEXT.md` §9)
+- **Changed** (`engine/src/forward_attn.c`, `forward_kv.c`, `forward_ops.c`; bit-identical for
+  fp32 / fp16 / int8, batched == token by token): 4-head dots with named accumulators (the fp16
+  dot stored its 16 accumulators to the stack every iteration) and FADDP final sums (15 instead
+  of ~124 scalar ops per row); P·V split by (KV group × column range) so every V element is read
+  once and feeds all 4 heads; softmax as its own pass with a 4-lane max and two exp chains;
+  prefetch of the next P·V block (the column-blocked order defeats the hardware prefetcher);
+  the dots read the 4 queries interleaved (single tokens and batches); single-token scores with
+  the group's two threads in alternate 16-row blocks. (A bug of the batch interleave for a single
+  int8 token with > 4 heads per group was caught by new hash shapes before use and fixed.)
+- **Fixed:** int8 KV store, scalar tail: `(int)rintf(NaN)` was undefined behaviour (UBSan);
+  now clamped in float, NaN → 0 as on NEON, finite values unchanged.
+- **Added:** `engine/bench/abench.c` (attention-core microbench: cold layers, per-phase and
+  per-thread times, stream ceilings, output hash for bit identity; `make -C engine/bench
+  abench` / `abench-host`); `f16_check.sh` takes the KV dtype (int8 check); `bench/common/next2048.ids`.
+- **Measured** (Pi 4, Q4K, 4 threads; decode-only from saved states, 3 rounds; `pinfer_run_fast`
+  → `pinfer_run_att4`): decode at 4096 fp16 6.59 → **6.86 tok/s = 87.1% of 64-token decode**
+  (issue #1 target met with the fp16 cache), fp32 6.29 → 6.43 (81.6%); 2048 fp16 7.21 → 7.36,
+  fp32 6.89 → 7.10; 8192 fp16 5.67 → 6.07, fp32 5.30 → 5.34; 64 tokens unchanged (7.86 → 7.87).
+  Prefill (one run each, saved states md5-identical): 4096 27.5 → 28.8–29.9, 8192 22.7 → 24.3
+  (fp32) / 22.0 → 24.3 (fp16); a 64-token chunk after 4096 tokens 22.2 → 23.7 / 22.3 → 24.3.
+  abench attention per layer: 4096 fp16 −29%, fp32 −13%; 8-token blocks −20%.
+- **Not kept** (measured): P·V loop variants (4 rows per iteration, loads one row ahead, two
+  register sets, 16-row blocks), prefetch two blocks ahead or into L2, 64-row score blocks,
+  page pre-touching; a GCC `no-schedule-insns` variant (−7% kernel cycles, ~0.4% of decode).
+- **Gates** (final `pinfer_run_att4`): host golden / spec / state PASS, 17 host dumps
+  md5-identical to main; Pi `ctx_check` 5/5, fp16 check 3/3, int8 check 3/3, `spec_exact` 20/20
+  (`att3-gates-att4_20261022_091651.json`, `att3-spec-exact-att4_20261022_092716.json`).
+- **Pi:** `engine/pinfer_run_att4` added (scratch states / binaries in `tmp/att3` and
+  `pinfer_run_att1`–`att3` removed); `data/next2048.ids` pushed (= `bench/common/next2048.ids`).
 
 ### Merged (lead, 06:50)
 - Context-window work merged to `main` after the full gate (host golden / spec 81/81 / state /
