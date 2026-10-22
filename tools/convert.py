@@ -36,6 +36,11 @@ ZERO_CENTERED_SUFFIXES = ("input_layernorm.weight", "post_attention_layernorm.we
                           "q_norm.weight", "k_norm.weight")
 ZERO_CENTERED_EXACT = ("norm.weight", "mtp.norm.weight", "mtp.pre_fc_norm_embedding.weight",
                        "mtp.pre_fc_norm_hidden.weight")
+# Rows quantized per quantize_pack call. Every quantized dtype's parameters are per row and the
+# packed layout is 4-row tiles in row order, so blocks of a multiple of 4 rows give the same
+# bytes as the whole matrix, with bounded temporaries (the Qwen3.5-2B embedding, 248320 x 2048,
+# took 17.2 GB in one piece).
+QUANT_ROW_BLOCK = 16384
 
 
 def read_safetensors(paths: list[Path]) -> dict[str, tuple[str, list[int], memoryview]]:
@@ -85,7 +90,9 @@ def convert_tensor(name: str, dtype: str, shape: list[int], buf: memoryview, tar
     if len(shape) == 1:                                       # gated norm, A_log, dt_bias
         return F32, shape, to_f32(dtype, buf).astype(np.float32).tobytes()
     if len(shape) == 2 and target != BF16:
-        packed, _ = quantize_pack(target, to_f32(dtype, buf).reshape(shape))
+        w = to_f32(dtype, buf).reshape(shape)
+        packed = b"".join(quantize_pack(target, w[r:r + QUANT_ROW_BLOCK])[0]
+                          for r in range(0, shape[0], QUANT_ROW_BLOCK))
         return target, shape, packed
     if len(shape) == 2 and dtype == "BF16":
         return BF16, shape, bytes(buf)

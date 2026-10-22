@@ -45,6 +45,10 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 | `~/pinfer/golden/qwen35-0.8b/meta.json` | golden prompt / ids for the Python tests (copy of `ref/golden/qwen35-0.8b/meta.json`) |
 | `~/pinfer/tests/python/` | Python test suite (copy of `tests/python/`) |
 | `~/pinfer/examples/pinfer_example` | C API example, static aarch64 (`make -C engine examples`) |
+| `~/pinfer/engine/ng/pinfer_run_ng1`, `~/pinfer/data/chat_fix.ids`, `chat_edit.ids` | drafting work 2026-10-22 (`engine/DRAFT.md`): final binary (md5 `7d701ad6`) and the two copy prompts that `engine/bench/{chat_spec,spec_exact}.sh` read. Undo: `rm -r ~/pinfer/engine/ng ~/pinfer/data/chat_fix.ids ~/pinfer/data/chat_edit.ids` |
+| `~/pinfer/models/qwen35-2b-q4k-headq4k.pq` (1.09 GB, md5 `6441a5bd…`) | Qwen3.5-2B @ `15852e8c`, default Q4K recipe (2B agent, 2026-10-22 11:05; `engine/MODEL2B.md`). Undo: `rm ~/pinfer/models/qwen35-2b-q4k-headq4k.pq` |
+| `~/pinfer/models/Qwen3.5-2B-Q4_K_M.gguf` (1.31 GB, sha256 `727ffd79…`) | llama.cpp v0.7.0 GGUF of Qwen3.5-2B (11:27). Undo: `rm ~/pinfer/models/Qwen3.5-2B-Q4_K_M.gguf` |
+| `~/pinfer/engine/pinfer_run_2b1`, `pinfer_ppl_2b1` (md5 `b18a5157…`, `7b616ead…`) | NEON build of the 2B branch (`worktree-agent-a24ea2f8313af7f40`). Undo: `rm ~/pinfer/engine/pinfer_{run,ppl}_2b1` |
 
 ## Baseline runtimes placed by the baselines agent (2026-10-21/22, user-level only, no apt)
 Full table with versions and per-item undo: `bench/BASELINES.md` → "Pi changes made by this agent".

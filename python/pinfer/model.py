@@ -321,7 +321,8 @@ class Model:
                  stop_token_ids: Iterable[int] | None = None, stream: bool = False,
                  reuse_prefix: bool = True, speculative: bool = False,
                  spec_k: int | None = None, draft_vocab: int | None = None,
-                 spec_adaptive: bool | None = None) -> GenerationResult | TextStream:
+                 spec_adaptive: bool | None = None,
+                 spec_ngram: int | None = None) -> GenerationResult | TextStream:
         """Generate a continuation of ``prompt`` (text or token ids).
 
         Args:
@@ -346,6 +347,9 @@ class Model:
                 unchanged). Default: the library's.
             spec_adaptive: Let the engine lower ``spec_k`` (down to plain steps) whenever
                 acceptance makes that faster; output unchanged. Default: the library's.
+            spec_ngram: Prompt-lookup drafts of up to this many tokens (0..8) when the newest
+                tokens repeat earlier context, e.g. text or code the answer copies; output
+                unchanged. 0 = off. Default: the library's (off).
 
         Returns:
             A :class:`GenerationResult`, or a :class:`TextStream` when ``stream=True``.
@@ -366,7 +370,8 @@ class Model:
         result: list[GenerationResult] = []
         if speculative:
             tokens = iter_speculative(self, ids, max_new_tokens, extra | {self.eos_id}, state,
-                                      spec_k, draft_vocab, spec_adaptive, reuse_prefix)
+                                      spec_k, draft_vocab, spec_adaptive, reuse_prefix,
+                                      ngram=spec_ngram)
         else:
             tokens = self.iter_tokens(ids, max_new_tokens, sampling, extra, reuse_prefix, state)
         chunks = self._text_chunks(tokens, len(ids), stops, state, result)

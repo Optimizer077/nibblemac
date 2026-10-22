@@ -36,7 +36,9 @@ Toolchain, harness, flash, first boot, direct cable, EEPROM, logging system. See
 - [x] Engine-core vectorization (fba8a1a): 7.88 plain / 16.49 spec / 37.4 prefill; verify ratio 1.28; DRAM floor 12% away
 - [x] MTP self-speculative decoding, exact: Q4 6.88 → 12.56 tok/s (k=3, draft vocab 32768)
 - [x] Draft-vocab restriction (32768 ids) for the draft head — same acceptance, draft step 140→30 ms; [ ] two-stage exact head: deferred (low gain left)
-- [ ] Prompt-lookup / n-gram drafting
+- [x] Prompt-lookup / n-gram drafting (`ngram`, `--ngram`, `spec_ngram`; issue #6, engine/DRAFT.md):
+      code-edit chat answer +15-19%, 2048 context +16%, chat unchanged; gated on match length /
+      agreement with the MTP draft; [ ] default (recommended adaptive k<=3 + ngram 7, lead)
 - [x] Own kernel 6.18.50-pinfer: tryboot K1–K3 — isolation, nohz_full, THP all < 1% (DRAM-bound); not made permanent. [ ] overclock (needs user ok; only prefill/compute would gain)
 
 ## Phase 5 — release (in progress)
@@ -62,6 +64,8 @@ that is 192 MB/token — comparable to the 437 MB of weights).
       matching prefix (`pinfer_generate_greedy_cont`)
 - [x] Adaptive speculation (`--adaptive`, `spec_adaptive`): decayed acceptance estimator; beats fixed
       k=3 at 2048/4096 context; **default not changed yet** — measure on chat and code prompts first
+      → 2026-10-22 (issue #2, DRAFT.md): confidence-gated chain, 0.984-1.056x the best fixed k on
+      chat, prompt64, ctx2048 (was 0.90-1.04x)
 - [ ] Bounded-context mode for endless chat (attention sinks + sliding window) — designed only
       (CONTEXT.md §7)
 - [x] Compare with llama.cpp at 64–4096 depth: pinfer 6.38 vs 3.43 tok/s at 4096 (1.86×)

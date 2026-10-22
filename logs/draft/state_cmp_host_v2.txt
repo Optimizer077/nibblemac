@@ -1,0 +1,57 @@
+# logs/draft/state_cmp.c, host build (ref kernels, bf16), 2026-10-22 12:13:02 KST
+== golden.ids
+k=1 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 22, ngram rounds 0
+k=2 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 19, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 0
+k=4 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 0
+k=3 dv=0 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 15, ngram rounds 0
+k=3 dv=32768 adaptive=1 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 23, ngram rounds 0
+k=6 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 15, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 16, ngram rounds 3
+k=0 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 26, ngram rounds 4
+k=3 dv=32768 adaptive=1 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 22, ngram rounds 3
+k=8 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 15, ngram rounds 3
+k=2 dv=32768 adaptive=0 ngram=5: tokens same (24+12), state identical (n_past 48, 21381120 B) | rounds 17, ngram rounds 3
+all identical
+== prompt64.ids
+k=1 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 21, ngram rounds 0
+k=2 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 16, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 15, ngram rounds 0
+k=4 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 12, ngram rounds 0
+k=3 dv=0 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 15, ngram rounds 0
+k=3 dv=32768 adaptive=1 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 18, ngram rounds 0
+k=6 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 11, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 15, ngram rounds 5
+k=0 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 19, ngram rounds 7
+k=3 dv=32768 adaptive=1 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 18, ngram rounds 4
+k=8 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 12, ngram rounds 4
+k=2 dv=32768 adaptive=0 ngram=5: tokens same (24+12), state identical (n_past 102, 22708224 B) | rounds 15, ngram rounds 4
+all identical
+== chat27.ids
+k=1 dv=32768 adaptive=0 ngram=0: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 15, ngram rounds 0
+k=2 dv=32768 adaptive=0 ngram=0: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 12, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=0: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 11, ngram rounds 0
+k=4 dv=32768 adaptive=0 ngram=0: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 11, ngram rounds 0
+k=3 dv=0 adaptive=0 ngram=0: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 11, ngram rounds 0
+k=3 dv=32768 adaptive=1 ngram=0: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 21, ngram rounds 0
+k=6 dv=32768 adaptive=0 ngram=0: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 11, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=8: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 11, ngram rounds 1
+k=0 dv=0 adaptive=0 ngram=8: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 21, ngram rounds 3
+k=3 dv=32768 adaptive=1 ngram=8: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 21, ngram rounds 0
+k=8 dv=0 adaptive=0 ngram=8: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 10, ngram rounds 1
+k=2 dv=32768 adaptive=0 ngram=5: tokens same (24+3), state identical (n_past 56, 21577728 B) | rounds 12, ngram rounds 1
+all identical
+== chat_edit.ids
+k=1 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 18, ngram rounds 0
+k=2 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 12, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 11, ngram rounds 0
+k=4 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 10, ngram rounds 0
+k=3 dv=0 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 9, ngram rounds 0
+k=3 dv=32768 adaptive=1 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 11, ngram rounds 0
+k=6 dv=32768 adaptive=0 ngram=0: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 8, ngram rounds 0
+k=3 dv=32768 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 8, ngram rounds 5
+k=0 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 10, ngram rounds 9
+k=3 dv=32768 adaptive=1 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 8, ngram rounds 5
+k=8 dv=0 adaptive=0 ngram=8: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 7, ngram rounds 4
+k=2 dv=32768 adaptive=0 ngram=5: tokens same (24+12), state identical (n_past 241, 26124288 B) | rounds 10, ngram rounds 6
+all identical

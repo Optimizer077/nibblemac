@@ -1,0 +1,75 @@
+# host gates 2026-10-22 11:34:28 KST, worktree /mnt/e/Personal_tries/Raspberry_Pi/.claude/worktrees/agent-ab157f97c4ad73f36
+d20902a30c8a5043b22c78ad6c25a0cb  engine/src/spec.c
+a73b6c497553630240c132ef490441bd  engine/src/spec_adapt.c
+990d561e04e40637edeeebc269249cab  engine/src/ngram.c
+cc038a2698856ea8a4b4951dbead1819  engine/src/spec.h
+a33e1795ce74db4d5848180057e975e6  engine/include/pinfer.h
+host build rc=0
+== test_golden
+   hidden rel max err 0.000e+00, logits rel max err 0.000e+00 (limit 1e-05) -> PASS
+
+4. greedy generation
+   ours: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   gold: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   32/32 match -> PASS
+
+OVERALL: PASS
+== test_spec
+      row 3: rel max err 1.812e-06  argmax ours    369 gold    369
+      row 4: rel max err 1.529e-06  argmax ours    264 gold    264
+      row 5: rel max err 1.202e-06  argmax ours    220 gold    220
+      row 6: rel max err 1.394e-06  argmax ours     11 gold     11
+      row 7: rel max err 2.836e-06  argmax ours  12506 gold  12506
+      row 8: rel max err 1.190e-06  argmax ours    628 gold    628
+      row 9: rel max err 1.010e-06  argmax ours   1542 gold   1542
+    chain 2: rel max err 1.358e-06  argmax ours    383 gold    383
+    chain 3: rel max err 1.804e-06  argmax ours    866 gold    866
+    chain 4: rel max err 1.525e-06  argmax ours   6165 gold   6165
+   chained drafts ours [1542, 383, 866, 6165] gold [1542, 383, 866, 6165] -> PASS
+
+2. exactness: 10 prompts x 14 configs (140 runs, 8 in parallel)
+     golden (10 prompt ids, 32 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    varied1 (21 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    varied2 (15 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    varied3 (11 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    varied4 (11 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    varied5 (10 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    varied6 ( 5 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    bench64 (64 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+     long74 (74 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+    edit203 (203 prompt ids, 40 gen): k0:ok k1:ok k2:ok k3:ok k4:ok k3v32768:ok k3adapt:ok k3b2:ok k3g8:ok g8:ok a3g8:ok k8g8:ok k2g5b2:ok
+   -> PASS
+
+   acceptance (informational): config rounds drafted accepted accept-rate tokens/pass ngram-rounds
+           k1    217     211      165       0.782       1.760            0
+           k2    164     321      218       0.679       2.329            0
+           k3    143     418      239       0.572       2.671            0
+           k4    130     498      252       0.506       2.938            0
+     k3v32768    162     464      220       0.474       2.358            0
+      k3adapt    244     190      138       0.726       1.566            0
+         k3b2    143     418      239       0.572       2.671            0
+         k3g8    156     471      226       0.480       2.449           29
+           g8    259     184      123       0.668       1.475           58
+         a3g8    250     188      132       0.702       1.528           14
+         k8g8    121     829      261       0.315       3.157           22
+       k2g5b2    153     339      229       0.676       2.497           27
+
+OVERALL: PASS
+== test_state
+9 prompt x mode cases, 6 in parallel
+     golden split  4    plain: state 20299848 B, save 12.6 ms load 0.0 ms size 20299848 bytes | ok
+     golden split  4    spec3: state 20316232 B, save 12.5 ms load 0.0 ms size 20316232 bytes | ok
+     golden split  4 adaptive: state 20316232 B, save 12.7 ms load 0.0 ms size 20316232 bytes | ok
+    bench64 split 40    plain: state 21184584 B, save 13.1 ms load 0.0 ms size 21184584 bytes | ok
+    bench64 split 40    spec3: state 21348424 B, save 12.7 ms load 0.0 ms size 21348424 bytes | ok
+    bench64 split 40 adaptive: state 21348424 B, save 12.7 ms load 0.0 ms size 21348424 bytes | ok
+     long74 split 64    plain: state 21774408 B, save 11.9 ms load 0.0 ms size 21774408 bytes | ok
+     long74 split 64    spec3: state 22036552 B, save 12.2 ms load 0.0 ms size 22036552 bytes | ok
+     long74 split 64 adaptive: state 22036552 B, save 11.9 ms load 0.0 ms size 22036552 bytes | ok
+
+OVERALL: PASS
+== pytest
+host-lib rc=0
+........................................................................ [ 56%]
+.......................................................                  [100%]
+127 passed in 257.33s (0:04:17)

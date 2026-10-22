@@ -71,15 +71,25 @@ typedef struct {
                         expected tokens per second, probing again as the text changes, so
                         speculation never runs slower than plain decoding for long
                         (engine/CONTEXT.md). 0 (added in 0.2; zero-initialised): fixed k. */
+    int ngram;       /* prompt-lookup drafts (engine/DRAFT.md): when the newest tokens repeat
+                        an earlier 2-4 token sequence of the context (prompt or output), up to
+                        `ngram` tokens that followed it are drafted instead of MTP drafts, so
+                        copied text verifies several tokens per pass. 0..PINFER_SPEC_MAX_K;
+                        0 (added in 0.2; zero-initialised) = off. Works with k = 0 (n-gram
+                        drafts only, plain steps otherwise; no MTP head needed). With adaptive,
+                        the engine picks n-gram or MTP drafts per pass. Never affects output. */
 } pinfer_spec_params;
 
 typedef struct {
     int64_t rounds;   /* verification passes */
     int64_t drafted;  /* draft tokens proposed */
     int64_t accepted; /* draft tokens accepted (tokens per pass = 1 + accepted / rounds) */
+    int64_t ngram_rounds;    /* of these, passes that verified an n-gram draft (added in 0.2) */
+    int64_t ngram_drafted;   /* n-gram draft tokens proposed */
+    int64_t ngram_accepted;  /* n-gram draft tokens accepted */
 } pinfer_spec_stats;
 
-pinfer_spec_params pinfer_default_spec_params(void);  /* k = 2, draft_vocab = 32768 */
+pinfer_spec_params pinfer_default_spec_params(void);  /* k = 2, draft_vocab = 32768, ngram 0 */
 
 /* 1 if the loaded model has an MTP head (needed for k > 0). */
 int pinfer_has_mtp(const pinfer_ctx *ctx);

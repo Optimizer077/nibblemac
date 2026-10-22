@@ -222,6 +222,36 @@ Files: `chat-spec-adaptive_20261022_075629.json` (plain/k3/adaptive, 2 reps), `c
   few % to gain. Low chat acceptance is the MTP head's, not the vocabulary cut.
 - Adaptive k ≤ 3 is below fixed k=2 on chat (story: 1.43 tokens/pass — it falls back to plain
   too often); it stays opt-in. To fix in `spec_adapt.c`: never worse than the best fixed k.
+  *Fixed by the drafting work below (issue #2).*
+
+## Drafting: prompt lookup and adaptive k (issues #6, #2; 2026-10-22 10:55–13:30, drafting agent; `engine/DRAFT.md`)
+Q4K, 4 threads, `engine/bench/chat_spec.sh`, all valid; before = `pinfer_run_fast` `23a76242`,
+after = `pinfer_run_ng1` `7d701ad6`. tok/s, mean of 2 runs (prompt64 3).
+
+| prompt | best fixed k (after) | adaptive k≤3 before → after | after / best fixed | adaptive + `--ngram 7` |
+|---|---|---|---|---|
+| chat27 | k=2 11.01 | 10.49 → 11.02 | 1.00 | 11.03 |
+| code, Python | k=2 13.13 | 11.89 → 12.95 | 0.986 | 12.95 |
+| code, C | k=2 13.66 | 13.14 → 14.26 | 1.044 | 14.26 |
+| list | k=2 12.55 | 11.95 → 12.40 | 0.988 | 12.41 |
+| math | k=2 15.04 | 14.54 → 14.80 | 0.984 | 14.77 |
+| story | k=2 11.19 | 11.29 → 11.17 | 0.998 | 11.06 |
+| prompt64 | k=3 18.47 | 18.69 → 18.20 | 0.985 | 19.98 (k=3 + ngram 20.47) |
+| ctx2048 | k=2 10.55 | 10.96 → 11.14 | 1.056 | 12.96 |
+| copy: edit code | k=3 19.12 | 18.90 → 19.40 | 1.015 | 22.21 (k=2 + ngram 22.75) |
+| copy: fix typos | k=3 19.27 | 19.43 → 19.40 | 1.007 | 18.94 |
+
+Files: `ng-base-chat-r{1,2}_*`, `ng-base-p64_20261022_111810.json`, `ng-base-copy_20261022_121404.json`,
+`ng-base-ctx2048-r{1,2}_*`; `ng1-chat-r{1,2}_*`, `ng1-p64_20261022_120929.json`,
+`ng1-copy_20261022_124147.json`, `ng1-ctx2048-r{1,2}_*`.
+- Adaptive now chains MTP drafts while the newest draft's top-1 probability is ≥ 0.6 and has
+  no calibration steps; ≥ 0.984× the best fixed k on all eight prompts (old: 0.90–1.04).
+- The oracle k per round is 13–18% above the best fixed k, but confidence predicts only ~1%
+  of it; the remaining gain is luck (DRAFT.md §2c).
+- Prompt lookup pays on copied code (+15–19%) and long repetitive context (+16%), not on chat;
+  unconditional lookup loses up to 26% (math), hence the gate on match length / MTP agreement.
+- Verify pass per width n = 2..9: 136 / 143 / 152 / 200 / 258 / 266 / 285 / 360 ms
+  (`ng-base-p64_20261022_111810.json`): wide passes limit both long chains and long n-grams.
 
 ## Verify pass (issue #5, 2026-10-22 06:43–08:30, `engine/VERIFY.md`)
 Q4K-headq4k, 4 threads, 64 generated, all runs valid. Once merged, the default row of the
@@ -269,3 +299,34 @@ nothing measurable), 6.4 s total, blocking 6.35 s.
   `--state-cache-mb 0`.
 - Decode speed matches `pinfer_run` at the same tokens/pass (chat-prompt table above, k=2:
   1.76 → 9.85, 2.21 → 12.23 tok/s; server: 1.68 → 9.03, 2.25 → 12.34 tok/s).
+
+## Scoreboard — Qwen3.5-2B on the Pi 4 (issue #7, 2026-10-22 10:50–13:20, 2B agent; `engine/MODEL2B.md`)
+`Qwen/Qwen3.5-2B` @ `15852e8c` (Apache-2.0): same architecture as 0.8B except hidden 2048 and
+ffn 6144; tokenizer identical. Default Q4K recipe (`--quant q4k`), 1.09 GB, 1060 MB read per plain
+step (0.8B: 425 MB). Binary `pinfer_run_2b1` (`b18a5157`, branch `worktree-agent-a24ea2f8313af7f40`),
+4 threads, 64 generated, medians of 3 runs (Q8-MTP and 0.8B chat27 rows: 2), all valid, throttled 0x0.
+Correct: host golden PASS (worst 1.18e-6, greedy 32/32), MTP head ≤ 3.9e-6, speculative == plain
+on host (9 prompts × 8 configs) and Pi (10/10).
+
+| Engine | Format | File | Decode plain (prompt64 / chat27) | Decode MTP spec (prompt64 / chat27) | Prefill (prompt64) | Peak RSS | PPL (c8) |
+|---|---|---|---|---|---|---|---|
+| pinfer | 2B Q4K + Q4K head | 1.09 GB | **3.41 / 3.42** | k=2 **4.35 / 4.82** (1.58 / 1.75 tok/pass); k=3 4.16 / 4.79 | **14.6** | 1040 MiB (1080 spec) | **13.38** |
+| pinfer | 2B, MTP head Q8 | 1.13 GB | (same model) | k=2 4.33 / 4.94; k=3 4.11 / 4.67 | 13.8 | 1108 MiB | (same) |
+| llama.cpp v0.7.0 | 2B Q4_K_M | 1.31 GB | 2.49 (tg64) | — | 5.99 (pp64) | 1314 MiB | 13.32 |
+| llama.cpp v0.7.0 | 2B Q8_0 / Q4_0 / bf16 | 2.08 / 1.24 / 3.90 GB | — | — | — | — | 12.81 / 13.73 / 12.81 (PC) |
+| pinfer | 0.8B Q4K (default) | 0.44 GB | 7.89 / 7.83 | k=3 18.43 / 10.31; k=2 — / 10.98 | 37.1 | 433 MiB | 18.48 |
+
+Files: `bench/results/speed-2b-q4k-p64_20261022_114956.json`, `speed-2b-q4k-chat27_20261022_122132.json`,
+`ppl-c8-2b-q4k_20261022_122815.json`, `final-2b_20261022_131607.json` (Q8 MTP, llama.cpp 2B, 0.8B
+chat27), `spec-exact-2b-q4k_20261022_114018.json`; llama.cpp perplexity on the PC with
+`bench/model2b/ppl_pc_c8.sh` (0.8B Q4_K_M control 18.59 = published).
+
+- 2B vs llama.cpp on the same weights: 1.37× plain decode, 1.75–1.94× with speculation, 2.4×
+  prefill, equal perplexity (13.38 vs 13.32), 21% less memory.
+- 2B vs 0.8B: 0.43× plain speed for 2.50× the bytes (stream 3.75 vs 3.65 GB/s), 0.44× on chat
+  (4.82 vs 10.98 at k=2), 0.39× prefill; perplexity −28% (13.38 vs 18.48).
+- Speculation gains only 1.28× (prompt64) / 1.41× (chat27): the verify pass is cheap (3 rows
+  1.08× a plain step) but the MTP head drafts 1.6–2.0 tokens per pass; k=2 ≥ k=3. A Q8 MTP head
+  does not help. The 2B head's fp32 acceptance is also below 0.8B's (first draft 83.4 vs 87.3%).
+- **Verdict:** 2B fits (≈1.1 GB of 3.7 GB) and is exact; usable as an opt-in quality model at
+  ~4.8 tok/s chat; 0.8B stays the interactive default.

@@ -127,6 +127,23 @@ def test_speculative_matches_greedy(fresh: Any, golden: dict[str, Any]) -> None:
     assert list(after.token_ids) == golden["greedy_ids"][:2] and after.cached_tokens == 0
 
 
+def test_speculative_ngram_matches_greedy(fresh: Any, golden: dict[str, Any]) -> None:
+    """Prompt-lookup drafts (spec_ngram, engine/DRAFT.md) never change the output."""
+    if not fresh.supports_speculative:
+        pytest.skip("library or model without speculative decoding")
+    ids = list(golden["input_ids"]) * 3   # repeated text: the lookup finds long matches
+    plain = list(fresh.generate(ids, 24).token_ids)
+    for kw in ({"spec_ngram": 8}, {"spec_ngram": 8, "spec_k": 0},
+               {"spec_ngram": 4, "spec_adaptive": True}):
+        r = fresh.generate(ids, 24, speculative=True, **kw)
+        assert list(r.token_ids) == plain, kw
+        st = r.spec_stats
+        assert st is not None and st["ngram"] == kw["spec_ngram"], kw
+        assert st["ngram_rounds"] > 0 and st["ngram_accepted"] <= st["ngram_drafted"], kw
+    with pytest.raises(ValueError):
+        fresh.generate(ids, 1, speculative=True, spec_ngram=9)
+
+
 def test_speculative_context_clamp(lib: Any, model_path: Path, tokenizer: Any,
                                    golden: dict[str, Any]) -> None:
     prompt = golden["input_ids"]

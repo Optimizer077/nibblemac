@@ -10,11 +10,14 @@ Runs the host build of pinfer_run (through WSL when started from Windows) and ch
      row (so the chained drafts equal draft_ids.npy). Observed 2026-10-21 (matvec_ref):
      <= 4e-6; a wrong concat order, norm, position or hidden gives O(1) errors.
   2. Exactness: for every prompt (golden, the 6 other varied prompts of prompts.json, the
-     64-token bench prompt, a 74-token prompt = two prefill chunks), `--spec k` for k = 0..4,
-     k = 3 with --draft-vocab 32768 and k = 3 --adaptive (engine picks k per round) must generate
-     exactly the tokens of the plain greedy loop (no --spec); on the golden prompt both must
-     equal greedy_ids.npy. Any rollback error (conv state, recurrent state, KV position)
-     changes the main model's logits and shows up here.
+     64-token bench prompt, a 74-token prompt = two prefill chunks, the 203-token code-edit
+     chat prompt whose answer copies the prompt), `--spec k` for k = 0..4, k = 3 with
+     --draft-vocab 32768, k = 3 --adaptive (engine picks the chain length per round), and the
+     prompt-lookup drafts of engine/DRAFT.md (--ngram: with k = 3, alone with k = 0, adaptive,
+     the widest pass k = 8, and a prefill chunk smaller than the pass) must generate exactly
+     the tokens of the plain greedy loop (no --spec); on the golden prompt both must equal
+     greedy_ids.npy. Any rollback error (conv state, recurrent state, KV position) changes
+     the main model's logits and shows up here.
 Also prints the acceptance statistics per k (informational, not a pass criterion).
 """
 from __future__ import annotations
@@ -65,7 +68,7 @@ def run(binary: Path, model: Path, ids: list[int], n_gen: int, extra: list[str]
 
 
 def check_mtp(binary: Path, model: Path) -> bool:
-    print("1. MTP head vs ref/golden/qwen35-0.8b-mtp (golden prompt)")
+    print(f"1. MTP head vs {GOLDEN_MTP} (golden prompt)")
     ids = np.load(GOLDEN / "input_ids.npy").astype(np.int32).tolist()
     gold = np.concatenate([np.load(GOLDEN_MTP / "mtp_logits.npy"),
                            np.load(GOLDEN_MTP / "chain_logits.npy")])
@@ -91,13 +94,18 @@ def check_mtp(binary: Path, model: Path) -> bool:
 
 
 def main() -> int:
+    global GOLDEN, GOLDEN_MTP
     p = argparse.ArgumentParser()
     p.add_argument("--bin", type=Path,
                    default=ROOT / "build" / "host" / "engine" / "pinfer_run")
     p.add_argument("--model", type=Path, default=ROOT / "models" / "pq" / "qwen35-0.8b-bf16.pq")
     p.add_argument("--n-gen", type=int, default=40, help="tokens per run (golden: 32)")
     p.add_argument("--jobs", type=int, default=8)
+    p.add_argument("--golden", type=Path, default=GOLDEN,
+                   help="golden directory; the MTP reference is read from <golden>-mtp")
     a = p.parse_args()
+    GOLDEN, GOLDEN_MTP = a.golden, a.golden.with_name(a.golden.name + "-mtp")
+    print(f"golden: {GOLDEN}\nmodel : {a.model}")
 
     res1 = check_mtp(a.bin, a.model)
 
@@ -111,10 +119,20 @@ def main() -> int:
     prompts.append(("bench64", bench["ids"], a.n_gen))
     # > PF_MAX_BATCH (64) prompt ids: the MTP prefill runs over two chunks
     prompts.append(("long74", bench["ids"] + golden_ids, a.n_gen))
+    # a chat answer that copies its prompt (n-gram drafts are taken most of the time)
+    edit = [int(t) for t in re.findall(r"\d+", (ROOT / "bench" / "common" / "chat_edit.ids")
+                                       .read_text("utf-8"))]
+    prompts.append(("edit203", edit, a.n_gen))
+    dv = ["--draft-vocab", str(DRAFT_VOCAB)]
     configs = [("plain", [])] + [(f"k{k}", ["--spec", str(k)]) for k in KS] + \
-              [(f"k3v{DRAFT_VOCAB}", ["--spec", "3", "--draft-vocab", str(DRAFT_VOCAB)]),
-               ("k3adapt", ["--spec", "3", "--draft-vocab", str(DRAFT_VOCAB), "--adaptive"]),
-               ("k3b2", ["--spec", "3", "-b", "2"])]   # prefill chunk smaller than k+1
+              [(f"k3v{DRAFT_VOCAB}", ["--spec", "3"] + dv),
+               ("k3adapt", ["--spec", "3", "--adaptive"] + dv),
+               ("k3b2", ["--spec", "3", "-b", "2"]),   # prefill chunk smaller than k+1
+               ("k3g8", ["--spec", "3", "--ngram", "8"] + dv),
+               ("g8", ["--spec", "0", "--ngram", "8"]),   # n-gram drafts only, no MTP head
+               ("a3g8", ["--spec", "3", "--adaptive", "--ngram", "8"] + dv),
+               ("k8g8", ["--spec", "8", "--ngram", "8"]),   # widest pass, PINFER_SPEC_MAX_K
+               ("k2g5b2", ["--spec", "2", "--ngram", "5", "-b", "2"])]
     jobs = [(name, ids, n, cname, extra) for name, ids, n in prompts for cname, extra in configs]
     print(f"\n2. exactness: {len(prompts)} prompts x {len(configs)} configs "
           f"({len(jobs)} runs, {a.jobs} in parallel)")
@@ -134,21 +152,23 @@ def main() -> int:
             ok_p &= same
             line.append(f"{cname}:{'ok' if same else 'DIFF'}")
             m = re.search(r"rounds (\d+) drafted (\d+) accepted (\d+)", spec)
+            g = re.search(r"ngram rounds (\d+)", spec)
             if m:
-                s = stats.setdefault(cname, [0, 0, 0])
+                s = stats.setdefault(cname, [0, 0, 0, 0])
                 for i in range(3):
                     s[i] += int(m.group(i + 1))
+                s[3] += int(g.group(1)) if g else 0
         res2 &= ok_p
         print(f"   {name:>8} ({len(ids):>2} prompt ids, {n} gen): {' '.join(line)}"
               f"{'' if ok_p else '  <-- FAIL'}")
     print(f"   -> {'PASS' if res2 else 'FAIL'}")
 
     print("\n   acceptance (informational): config rounds drafted accepted accept-rate "
-          "tokens/pass")
-    for cname, (r, d, acc) in stats.items():
+          "tokens/pass ngram-rounds")
+    for cname, (r, d, acc, ng) in stats.items():
         if r:
             print(f"   {cname:>10} {r:>6} {d:>7} {acc:>8} {acc / max(d, 1):>11.3f} "
-                  f"{1 + acc / r:>11.3f}")
+                  f"{1 + acc / r:>11.3f} {ng:>12}")
 
     ok = res1 and res2
     print(f"\nOVERALL: {'PASS' if ok else 'FAIL'}")

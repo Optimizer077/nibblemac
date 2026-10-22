@@ -18,6 +18,74 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   addresses are placeholders (`<wifi-ssid>`, `<router-mac>`, `<pi-mac>`), and commits use the
   GitHub no-reply address. The previous private repository is `piquant-archive`.
 - Issues #1–#11 recreated in the public repository; #8 (license) closed.
+### Prompt-lookup drafts and adaptive k (issues #6, #2; drafting agent, 10:55–13:30; branch `worktree-agent-ab157f97c4ad73f36`; notebook `engine/DRAFT.md`)
+- Added: prompt-lookup (n-gram) drafting, `pinfer_spec_params.ngram` (0..8, 0 = off),
+  `pinfer_run --ngram N`, Python `generate(..., spec_ngram=N)`. `engine/src/ngram.c` indexes the
+  token history (2–4-grams → most recent end position, verified hits); a draft is taken when
+  the match extends over ≥ 16 tokens, or over 4–15 tokens and its first token equals the MTP
+  head's free first draft (then ≤ 3 tokens). Its MTP rows are deferred like plain steps, so
+  n-gram rounds cost no MTP pass. k = 0 with ngram > 0 works without an MTP head.
+  `pinfer_spec_stats` gained `ngram_rounds` / `ngram_drafted` / `ngram_accepted` (ABI 0.2.0).
+- Changed: the adaptive policy (`spec_adapt.c`, `pinfer_spec_params.adaptive`) chains MTP
+  drafts while the newest draft's top-1 probability is ≥ 0.6 (up to k) and drops the
+  calibration steps; a plain-mode guard compares measured rates (2-round probes). Output never
+  changes (exact by construction; gates below).
+- Added: `engine/bench/draft_trace.c` (per-position MTP drafts), `engine/bench/draft_sim.py`
+  (offline replay of policies; exact against the engine), copy and held-out prompts
+  (`bench/common/make_copy_prompts.py`), n-gram configs in `chat_spec.sh` / `spec_exact.sh`,
+  `logs/draft/state_cmp.c`.
+- Measured (Pi, Q4K, 4 threads, tok/s, before → after): adaptive k ≤ 3 on chat 10.49 → 11.02,
+  11.89 → 12.95, 13.14 → 14.26, 11.95 → 12.40, 14.54 → 14.80, 11.29 → 11.17 (story); prompt64
+  18.69 → 18.20; ctx2048 10.96 → 11.14. After / best fixed k: 0.984–1.056 on all eight prompts
+  (before 0.90–1.04). With `--ngram 7`: code-edit chat answer 22.21 (adaptive, +14.5%) / 22.75
+  (k=2, +19% vs k=3 19.12); prompt64 k=3 20.47 (+11%); ctx2048 adaptive 12.96 (+16%); chat
+  within −1.0…+3.1%; typo fixing −2.4%. Files `bench/results/ng-*`, `ng1-*`.
+- Measured: verify pass per width n = 2..9: 136 / 143 / 152 / 200 / 258 / 266 / 285 / 360 ms
+  (`ng-base-p64_20261022_111810.json`); oracle per-round k is 13–18% above the best fixed k,
+  of which confidence thresholds recover ~1% (DRAFT.md §2c).
+- Gates: host golden / spec (130 speculative runs incl. n-gram and a copy prompt) / state
+  PASS, pytest 127 passed, state identity 48/48 (`logs/draft/`); Pi spec_exact 58/58 incl.
+  the original 20 rows with the baseline md5s (`spec-exact-ng1_20261022_115556.json`), state
+  identity 48/48 (`state-cmp-ng1_20261022_120036.json`).
+- Decided (recommendation for the lead, not applied): `pinfer_default_spec_params()` =
+  adaptive k ≤ 3 with ngram 7 for `generate(speculative=True)` and `pinfer serve`
+  (DRAFT.md §7).
+- Pi: `~/pinfer/engine/ng/pinfer_run_ng1` (md5 `7d701ad6`) and `~/pinfer/data/chat_{fix,edit}.ids`
+  kept; all other scratch removed; `pinfer_run_fast` untouched (`23a76242`).
+### Qwen3.5-2B (issue #7, 2B agent, 10:50–13:20; branch `worktree-agent-a24ea2f8313af7f40`; notebook `engine/MODEL2B.md`)
+- Added: Qwen3.5-2B support, proven against an fp32 reference. `Qwen/Qwen3.5-2B` @ `15852e8c`
+  (Apache-2.0) differs from 0.8B only in hidden 2048 and ffn 6144 (same layers, attention,
+  DeltaNet, vocab, tied head, 1-layer MTP head, tokenizer); the converter and the engine take
+  every size from `config.json` / the `.pq` header, so no format change. Default Q4K file 1.09 GB.
+- Added: `ref/mtp_reference.py --name`, `tests/test_golden.py --golden`, `tests/test_spec.py
+  --golden` (defaults unchanged); golden sets `ref/golden/qwen35-2b{,-mtp}` (gitignored).
+- Added: `tests/test_dims.py` (synthetic bf16 models with other dimension relations, plain and
+  `--spec 1..3` under the sanitizers, speculative == plain); `bench/model2b/` (`speed.sh`,
+  `spec_exact_2b.sh`, `llama_rss.sh` = llama-bench + peak RSS, `ppl_pc_c8.sh` for any model).
+- Fixed (engine): the MTP head's fc input rows (2H floats) are built in `ctx->ta`, which was
+  sized without 2H: a header with 2H above every projection width gave an ASan heap-buffer-overflow
+  in `pf_mtp_forward` (`tests/test_dims.py` `mtp-wide`). `pinfer.c` now sizes the rows
+  `max(…, 2H)`; no size change for 0.8B / 2B, outputs unchanged.
+- Changed (converter): `tools/convert.py` quantizes in blocks of 16,384 rows: byte-identical files
+  (md5 checked for 2B Q4K, 0.8B Q4K, 0.8B mix), peak RSS of the 2B Q4K conversion 17.2 → 8.4 GB.
+- Measured (correctness): host golden 2B PASS (worst per-layer rel. error 1.18e-6, logits
+  1.21e-6, top-1 10/10, greedy 32/32); MTP head ≤ 3.9e-6, drafts = reference; speculative ==
+  plain for 9 prompts × 8 configs (host) and 10/10 on the Pi. 0.8B gates on this branch: golden /
+  spec / state PASS, pytest 126/126, malformed 43/43, Pi spec_exact 20/20, ctx_check 5/5 identical
+  to `pinfer_run_fast`.
+- Measured (Pi 4, 2B Q4K, 4 threads): plain **3.41** tok/s (prompt64) / 3.42 (chat27),
+  speculative k=2 **4.35 / 4.82**, k=3 4.16 / 4.79, prefill 14.6, peak RSS 1040 MiB (1080 spec),
+  perplexity (8 × 512) **13.38** (0.8B 18.48). llama.cpp v0.7.0 Q4_K_M 2B: 2.49 tg64, 5.99 pp64,
+  1314 MiB, perplexity 13.32 (PC). A Q8 MTP head does not raise acceptance (k=2 4.33 / 4.94).
+  Files: `bench/results/{speed-2b-q4k-p64_20261022_114956, speed-2b-q4k-chat27_20261022_122132,
+  ppl-c8-2b-q4k_20261022_122815, final-2b_20261022_131607, spec-exact-2b-q4k_20261022_114018,
+  gates08-2b1_20261022_111351}.json`.
+- Decided: 2B is an opt-in quality model (fits with ~2.4 GB to spare, 28% lower perplexity,
+  ~4.8 tok/s chat); 0.8B stays the default. Next levers: more tokens per pass (verify of 3 rows
+  costs 1.08× a step), fewer bytes (MLP 48% of a step), prefill groups for wide matrices.
+- Pi: added `models/qwen35-2b-q4k-headq4k.pq`, `models/Qwen3.5-2B-Q4_K_M.gguf`,
+  `engine/pinfer_{run,ppl}_2b1` (2.3 GB, rows in `docs/pi-state.md`); pushes of the GB files ran
+  inside held lock windows; scratch (`tmp/m2b`, the Q8-MTP file) removed. Nothing shared replaced.
 
 ### OpenAI-compatible server (server agent, 08:55–10:05; branch `worktree-agent-a344482719d7c5ce0`)
 - Added: `pinfer serve` (`python/pinfer/server/`, standard library only): `GET /health`,

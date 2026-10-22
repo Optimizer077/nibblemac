@@ -29,10 +29,11 @@ if TYPE_CHECKING:
     from .model import Model
 
 _DONE = object()
+SPEC_MAX_K = 8   # PINFER_SPEC_MAX_K
 
 
 def _spec_params(model: Model, k: int | None, draft_vocab: int | None,
-                 adaptive: bool | None = None) -> SpecParams:
+                 adaptive: bool | None = None, ngram: int | None = None) -> SpecParams:
     lib = model._lib
     sp = lib.pinfer_default_spec_params() if lib.pinfer_default_spec_params else SpecParams(3, 0, 0)
     if k is not None:
@@ -41,19 +42,25 @@ def _spec_params(model: Model, k: int | None, draft_vocab: int | None,
         sp.draft_vocab = int(draft_vocab)
     if adaptive is not None:
         sp.adaptive = int(bool(adaptive))
+    if ngram is not None:
+        if not 0 <= int(ngram) <= SPEC_MAX_K:
+            raise ValueError(f"spec_ngram must be 0..{SPEC_MAX_K} (got {ngram})")
+        sp.ngram = int(ngram)
     return sp
 
 
 def iter_speculative(model: Model, ids: list[int], max_new_tokens: int, stop_ids: set[int],
                      state: dict[str, Any], k: int | None = None,
                      draft_vocab: int | None = None, adaptive: bool | None = None,
-                     reuse_prefix: bool = True) -> Iterator[int]:
+                     reuse_prefix: bool = True, *, ngram: int | None = None) -> Iterator[int]:
     """Yield the tokens of one speculative greedy generation (see module docstring).
 
     ``state`` receives the same keys as :meth:`pinfer.Model.iter_tokens` plus ``spec_stats``.
     With ``reuse_prefix`` and a library that has ``pinfer_generate_greedy_cont``, a prompt
     that extends the tokens already in context is continued from them (only the new tokens
-    are prefilled, ``cached_tokens`` tells how many were reused).
+    are prefilled, ``cached_tokens`` tells how many were reused). ``ngram``: prompt-lookup
+    drafts of up to this many tokens (``pinfer_spec_params.ngram``; None = the library's
+    default, 0 = off).
     """
     lib = model._lib
     if (lib.pinfer_generate_greedy is None and lib.pinfer_generate_greedy_ex is None) \
@@ -67,7 +74,7 @@ def iter_speculative(model: Model, ids: list[int], max_new_tokens: int, stop_ids
                  finish_reason="length", spec_stats=None)
     if max_new_tokens <= 0:
         return
-    sp = _spec_params(model, k, draft_vocab, adaptive)
+    sp = _spec_params(model, k, draft_vocab, adaptive, ngram)
     stats = SpecStats()
     # Continue from the context when the prompt extends it (and at least one token is new).
     have = model._tokens
@@ -89,7 +96,10 @@ def iter_speculative(model: Model, ids: list[int], max_new_tokens: int, stop_ids
                                       stats)
     finally:  # also when the consumer closes the generator early
         state["spec_stats"] = {"k": sp.k, "rounds": stats.rounds, "drafted": stats.drafted,
-                               "accepted": stats.accepted}
+                               "accepted": stats.accepted, "adaptive": bool(sp.adaptive),
+                               "ngram": sp.ngram, "ngram_rounds": stats.ngram_rounds,
+                               "ngram_drafted": stats.ngram_drafted,
+                               "ngram_accepted": stats.ngram_accepted}
 
 
 def _iter_ex(model: Model, fn: Any, prompt: Any, ids: list[int], n_ctx: int,

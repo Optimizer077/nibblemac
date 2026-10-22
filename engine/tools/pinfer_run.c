@@ -5,7 +5,7 @@
  *              (--ids 1,2,3 | --ids-file f) [--dump-logits out.bin] [--dump-hidden out.bin]
  *              [--bench] [--warmup | --no-warmup] [--spec k [--draft-vocab N]]
  *              [--dump-mtp out.bin] [--kv-dtype 0|1|2] [--adaptive]
- *              [--save-state f] [--load-state f]
+ *              [--save-state f] [--load-state f] [--ngram N]
  *
  * Token ids only: tokenization lives in the Python package. --dump-* write raw little-endian
  * fp32 for the PROMPT tokens: logits [T][vocab], hidden [n_layers+1][T][hidden] (same layout
@@ -25,6 +25,8 @@
  * the layout of ref/golden/qwen35-0.8b-mtp (mtp_logits.npy then chain_logits.npy).
  * --kv-dtype: KV-cache storage, 0 fp32 (default), 1 fp16, 2 int8 (pinfer_params.kv_dtype).
  * --adaptive: with --spec k, let the engine lower k (down to plain steps) when that is faster.
+ * --ngram N: prompt-lookup drafts of up to N tokens when the newest tokens repeat earlier
+ * context (pinfer_spec_params.ngram, engine/DRAFT.md); with --spec 0 the only drafts.
  * --save-state f: write the context state right after the prefill (pinfer_state_save).
  * --load-state f: restore a saved state first; the prompt is then appended to it (plain path:
  * pinfer_eval semantics; --spec: pinfer_generate_greedy_cont semantics), so
@@ -142,7 +144,7 @@ static void usage(void) {
                     "                  [--dump-logits f] [--dump-hidden f] [--bench]\n"
                     "                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n"
                     "                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n"
-                    "                  [--save-state f] [--load-state f]\n");
+                    "                  [--save-state f] [--load-state f] [--ngram N]\n");
 }
 
 /* --dump-mtp: see the header comment. normed = the prompt's final-normed hiddens [T][H]. */
@@ -184,7 +186,7 @@ int main(int argc, char **argv) {
     const char *dump_logits = NULL, *dump_hidden = NULL, *dump_mtp_f = NULL;
     const char *save_state = NULL, *load_state = NULL;
     int threads = 4, n_gen = 32, max_ctx = 0, batch = PF_MAX_BATCH, bench = 0;
-    int spec_k = -1, draft_vocab = 0, warmup = -1, kv_dtype = 0, adaptive = 0;
+    int spec_k = -1, draft_vocab = 0, warmup = -1, kv_dtype = 0, adaptive = 0, ngram = 0;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : NULL;
         int used = 1;
@@ -203,6 +205,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--kv-dtype") && v) kv_dtype = atoi(v);
         else if (!strcmp(a, "--save-state") && v) save_state = v;
         else if (!strcmp(a, "--load-state") && v) load_state = v;
+        else if (!strcmp(a, "--ngram") && v) ngram = atoi(v);
         else if (!strcmp(a, "--adaptive")) { adaptive = 1; used = 0; }
         else if (!strcmp(a, "--bench")) { bench = 1; used = 0; }
         else if (!strcmp(a, "--warmup")) { warmup = 1; used = 0; }
@@ -211,6 +214,7 @@ int main(int argc, char **argv) {
         i += used;
     }
     if (!model || (!ids_arg == !ids_file) || n_gen < 0 || spec_k > PINFER_SPEC_MAX_K ||
+        ngram < 0 || ngram > PINFER_SPEC_MAX_K || (ngram > 0 && spec_k < 0) ||
         (spec_k >= 0 && (n_gen < 1 || dump_logits || dump_hidden || dump_mtp_f)) ||
         (load_state && (dump_logits || dump_hidden || dump_mtp_f))) {
         usage();
@@ -248,8 +252,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    pinfer_spec_params sp = {spec_k, draft_vocab, adaptive};
-    pinfer_spec_stats st = {0, 0, 0};
+    pinfer_spec_params sp = {spec_k, draft_vocab, adaptive, ngram};
+    pinfer_spec_stats st = {0, 0, 0, 0, 0, 0};
     pf_spec_times tm = {0, 0, 0, 0, 0};
     double t_prefill, t_decode, t_warm = 0.0, ms_save = 0.0, ms_load = 0.0;
     int rc;
@@ -331,13 +335,16 @@ int main(int argc, char **argv) {
     double R = st.rounds > 0 ? (double)st.rounds : 1.0;
     double mean_acc = (double)st.accepted / R;
     if (spec_k >= 0)
-        printf("spec k=%d draft_vocab=%d adaptive=%d | rounds %lld drafted %lld accepted %lld | "
-               "mean accepted %.3f, %.3f tok/pass | per pass: mtp %.1f ms verify %.1f ms commit "
-               "%.1f ms | plain steps %lld (%.1f ms each)\n", spec_k, draft_vocab, adaptive,
+        printf("spec k=%d draft_vocab=%d adaptive=%d ngram=%d | rounds %lld drafted %lld "
+               "accepted %lld | mean accepted %.3f, %.3f tok/pass | per pass: mtp %.1f ms "
+               "verify %.1f ms commit %.1f ms | plain steps %lld (%.1f ms each) | ngram rounds "
+               "%lld drafted %lld accepted %lld\n", spec_k, draft_vocab, adaptive, ngram,
                (long long)st.rounds, (long long)st.drafted, (long long)st.accepted, mean_acc,
                1.0 + mean_acc, 1e3 * tm.mtp / R, 1e3 * tm.verify / R, 1e3 * tm.commit / R,
                (long long)tm.plain_steps,
-               tm.plain_steps ? 1e3 * tm.plain / (double)tm.plain_steps : 0.0);
+               tm.plain_steps ? 1e3 * tm.plain / (double)tm.plain_steps : 0.0,
+               (long long)st.ngram_rounds, (long long)st.ngram_drafted,
+               (long long)st.ngram_accepted);
     if (save_state || load_state)
         printf("state: save %.1f ms load %.1f ms size %zu bytes\n", ms_save, ms_load,
                pinfer_state_size(ctx));
@@ -356,13 +363,16 @@ int main(int argc, char **argv) {
                "\"accept_rate\": %.4f, \"tokens_per_pass\": %.4f, \"mtp_ms_per_pass\": %.2f, "
                "\"verify_ms_per_pass\": %.2f, \"commit_ms_per_pass\": %.2f, "
                "\"adaptive\": %d, \"plain_steps\": %lld, \"kv_dtype\": %d, "
-               "\"state_save_ms\": %.1f, \"state_load_ms\": %.1f}\n",
+               "\"state_save_ms\": %.1f, \"state_load_ms\": %.1f, \"ngram\": %d, "
+               "\"ngram_rounds\": %lld, \"ngram_drafted\": %lld, \"ngram_accepted\": %lld}\n",
                PF_MATVEC_NAME, base_name(model), threads, n_prompt, n_gen, prefill_tps,
                decode_tps, rss_mb, spec_k, draft_vocab, (long long)st.rounds,
                (long long)st.drafted, (long long)st.accepted, mean_acc,
                st.drafted ? (double)st.accepted / (double)st.drafted : 0.0, 1.0 + mean_acc,
                1e3 * tm.mtp / R, 1e3 * tm.verify / R, 1e3 * tm.commit / R, adaptive,
-               (long long)tm.plain_steps, kv_dtype, ms_save, ms_load);
+               (long long)tm.plain_steps, kv_dtype, ms_save, ms_load, ngram,
+               (long long)st.ngram_rounds, (long long)st.ngram_drafted,
+               (long long)st.ngram_accepted);
 
     free(gen); free(hid); free(all); free(logits); free(prompt);
     pinfer_free(ctx);

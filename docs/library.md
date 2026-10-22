@@ -113,7 +113,7 @@ A complete script is in `examples/python/generate.py`.
 | Item | Description |
 |---|---|
 | `Model.load(path, tokenizer=None, n_threads=4, max_ctx=4096, lib_path=None, kv_dtype="fp32")` | Map a `.pq` file. `tokenizer`: a `Tokenizer`, a path, `None` (search), or `False` (none). `kv_dtype`: `"fp32"` (exact), `"fp16"` or `"int8"` KV cache (§9). |
-| `model.generate(prompt, max_new_tokens=128, *, temperature=0, top_p=1, top_k=0, seed=None, stop=None, stop_token_ids=None, stream=False, reuse_prefix=True, speculative=False, spec_k=None, draft_vocab=None, spec_adaptive=None)` | `prompt` is text or token ids. Returns a `GenerationResult`, or a `TextStream` when `stream=True`. `spec_adaptive=True` lets the engine lower `spec_k` when that is faster (§9). |
+| `model.generate(prompt, max_new_tokens=128, *, temperature=0, top_p=1, top_k=0, seed=None, stop=None, stop_token_ids=None, stream=False, reuse_prefix=True, speculative=False, spec_k=None, draft_vocab=None, spec_adaptive=None, spec_ngram=None)` | `prompt` is text or token ids. Returns a `GenerationResult`, or a `TextStream` when `stream=True`. `spec_adaptive=True` lets the engine lower `spec_k` when that is faster (§9). `spec_ngram=N` (0..8) adds prompt-lookup drafts of up to N tokens where the answer repeats the context (§9, `engine/DRAFT.md`). |
 | `model.save_state()` / `model.load_state(data)` | Snapshot / restore the whole context (recurrent + conv states, KV cache, MTP cache, tokens, last logits) as `bytes`; continuation is bit-exact. ~20 MB + 24 KB per token. A state loads only into a model of the same `.pq` file and `kv_dtype`: otherwise `ModelFormatError`, naming what differs (`pinfer.state`). §9. |
 | `model.context_tokens` / `model.supports_state` | Token ids currently in the engine's context / library has the state API. |
 | `model.chat(messages, max_new_tokens=512, *, enable_thinking=False, tools=None, **generate_kwargs)` | Applies the chat template, then calls `generate`. |
@@ -178,14 +178,14 @@ cc app.c -I/opt/pinfer/include /opt/pinfer/lib/libpinfer.a -lm -pthread   # stat
 | `pinfer_default_params`, `pinfer_load`, `pinfer_free` | `pinfer_load` returns NULL on failure, with the reason in `*err`. |
 | `pinfer_eval(ctx, tokens, n, logits)` | `logits` may be NULL. Returns `PINFER_E_CTX_FULL` or `PINFER_E_ARG` without changing state. |
 | `pinfer_reset`, `pinfer_n_past`, `pinfer_n_vocab`, `pinfer_eos_id`, `pinfer_argmax`, `pinfer_version` | |
-| `pinfer_has_mtp`, `pinfer_default_spec_params`, `pinfer_generate_greedy`, `pinfer_generate_greedy_ex` | Speculative greedy decoding with the MTP head (see `engine/src/spec.c`). `pinfer_spec_params.adaptive = 1`: k is an upper bound, the engine picks the fastest k per round (§9). |
+| `pinfer_has_mtp`, `pinfer_default_spec_params`, `pinfer_generate_greedy`, `pinfer_generate_greedy_ex` | Speculative greedy decoding with the MTP head (see `engine/src/spec.c`). `pinfer_spec_params.adaptive = 1`: k is an upper bound, the engine picks the fastest k per round (§9). `pinfer_spec_params.ngram = N`: prompt-lookup drafts of up to N tokens; `pinfer_spec_stats.ngram_*` count them. |
 | `pinfer_generate_greedy_cont(...)` | `pinfer_generate_greedy_ex` without the reset: the prompt is appended to the context (after `pinfer_eval`, `pinfer_state_load` or an earlier generation, whose last returned token is not yet in context and should lead the prompt). |
 | `pinfer_state_size(ctx)`, `pinfer_state_save(ctx, buf, cap)`, `pinfer_state_load(ctx, buf, len)` | Snapshot / restore the context (recurrent + conv states, KV rows, MTP rows). The blob (state format 2) carries a 64-bit fingerprint of the model file (its header, tensor directory and sampled weights) and is tied to it and to `kv_dtype`: `E_FORMAT` for another file, KV format or format version (0.1 blobs included), `E_CTX_FULL` if it holds more tokens than `max_ctx`. |
 | `pinfer_params.kv_dtype` | `PINFER_KV_F32` (0, default), `PINFER_KV_F16`, `PINFER_KV_I8`: KV-cache storage (§9). |
 
 Error codes: `PINFER_OK` 0, `E_IO` −1, `E_FORMAT` −2, `E_NOMEM` −3, `E_ARG` −4, `E_CTX_FULL` −5.
 
-**ABI note (0.2.0).** After 0.1.0, `pinfer_params` gained `kv_dtype` and `pinfer_spec_params` gained `adaptive` (both at the end, zero = the old behaviour), so the version is 0.2.0 and the SONAME `libpinfer.so.0.2`. Callers that zero-initialise the structs through `pinfer_default_params` / `pinfer_default_spec_params` are source-compatible; binaries built against the 0.1 header must be rebuilt (0.x: any minor release may change the ABI). State blobs saved by 0.1 are refused (format 2).
+**ABI note (0.2.0).** After 0.1.0, `pinfer_params` gained `kv_dtype`, `pinfer_spec_params` gained `adaptive` and `ngram`, and `pinfer_spec_stats` gained `ngram_rounds` / `ngram_drafted` / `ngram_accepted` (all at the end, zero = the old behaviour), so the version is 0.2.0 and the SONAME `libpinfer.so.0.2`. Callers that zero-initialise the structs through `pinfer_default_params` / `pinfer_default_spec_params` are source-compatible; binaries built against the 0.1 header must be rebuilt (0.x: any minor release may change the ABI). State blobs saved by 0.1 are refused (format 2).
 
 **ABI.** The shared library exports only `pinfer_*` symbols (linker version script `engine/pkg/pinfer.map`). In the static archive, every other global symbol is made local (`ld -r` followed by `objcopy --keep-global-symbol`). While the version is 0.x, the SONAME is `libpinfer.so.MAJOR.MINOR`, because any minor release may change the ABI. `make -C engine check-lib` verifies the exports, the NEEDED libraries and the glibc symbol versions.
 
@@ -281,10 +281,16 @@ costs is the attention's pass over the cache. Pi 4, Q4K model, 4 threads, 32 gen
   bit-exact. A 2048-token state is 70.5 MB and restores in 0.1 s (prefilling it takes 63 s).
   `pinfer chat` keeps the state between turns and only prefills the new turn (second turn of a
   short chat: 0.7 s instead of 2.1 s before the first token).
-- **Adaptive speculation** (`spec_adaptive=True`, `--adaptive`): the engine measures its pass
-  costs and the draft acceptance and picks k (down to plain steps) per round; same output.
-  It beats fixed k=3 where acceptance is low (long wikitext context: 9.6 vs 9.1 tok/s at 2048)
-  and stays within ~2–5% of it where drafts are almost always accepted.
+- **Adaptive speculation** (`spec_adaptive=True`, `--adaptive`): `spec_k` becomes an upper
+  bound; the MTP head keeps drafting while its newest draft is confident (top-1 probability
+  ≥ 0.6), and the engine falls back to plain steps when its measured rate is below plain
+  decoding's; same output. Within 0.984–1.056× of the best fixed k on the chat prompts,
+  prompt64 and a 2048-token context (`engine/DRAFT.md`).
+- **Prompt-lookup drafts** (`spec_ngram=N`, `pinfer_run --ngram N`): where the answer repeats
+  the context (an edited function, a quoted passage, repetitive text), up to N tokens that
+  followed the earlier occurrence are verified in one pass; same output. Code-edit chat answer
+  22.2 vs 19.4 tok/s (adaptive, N = 7), 2048-token wikitext context 13.0 vs 11.1; ordinary chat
+  unchanged.
 
 ## 10. Server (`pinfer serve`, OpenAI-compatible HTTP)
 `pinfer serve` puts one model behind the OpenAI HTTP API, so the `openai` SDK, curl, Open WebUI or an

@@ -14,7 +14,9 @@ blocks (Qwen3_5DecoderLayer / Qwen3_5RMSNorm) with the semantics of vLLM's
     with inputs (m of the previous step, d). Its attention sees the MTP KV rows 0..i
     (computed from main hiddens) plus the earlier chain rows of the same draft.
 
-Outputs (run in WSL: /root/venv-ref/bin/python ref/mtp_reference.py):
+Outputs (run in WSL: /root/venv-ref/bin/python ref/mtp_reference.py; for another model
+`--model models/Qwen3.5-2B --name qwen35-2b` reads ref/golden/<name>/ from ref/dump_reference.py
+and writes ref/golden/<name>-mtp/):
   ref/golden/qwen35-0.8b-mtp/
     mtp_logits.npy  fp32 [T, V]   MTP logits of rows i=0..T-1 of the golden prompt, with
                                   x_T = first greedy token (row T-1 drafts greedy[1])
@@ -158,12 +160,16 @@ def acceptance(drafts: torch.Tensor, x: torch.Tensor, start: int) -> dict:
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--model", default="models/Qwen3.5-0.8B")
+    p.add_argument("--name", default="qwen35-0.8b",
+                   help="golden set: reads ref/golden/NAME, writes ref/golden/NAME-mtp")
     p.add_argument("--new-tokens", type=int, default=96)
     p.add_argument("--k", type=int, default=4)
     p.add_argument("--vocabs", default="248320,131072,65536,32768,16384,8192")
     a = p.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
     torch.manual_seed(0)
+    global GOLDEN, OUT
+    GOLDEN, OUT = ROOT / "ref" / "golden" / a.name, ROOT / "ref" / "golden" / f"{a.name}-mtp"
     OUT.mkdir(parents=True, exist_ok=True)
 
     mdir = ROOT / a.model
