@@ -7,9 +7,11 @@
  * All activations and states are fp32. The Gated DeltaNet mixer lives in forward_lin.c, the
  * gated full attention in forward_attn.c. */
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "forward.h"
+#include "pq_quant.h"
 
 /* cos/sin tables for positions pos0..pos0+n-1. Computed in fp32 exactly like the reference
  * (inv_freq = 1 / theta^(2i/rot) in float, angle = float(pos) * inv_freq) so long-context
@@ -101,15 +103,16 @@ static void forward_chunk(pinfer_ctx *ctx, const int32_t *tok, int n, int t0, in
         if (l + 1 < ctx->n_layers) dump(ctx, hidden, l + 1, n_total, t0, ctx->x, n);
     }
 
-    /* Final norm + tied head. Only the rows whose logits are wanted pay for the 248k-row
-     * head matmul (it is ~1/3 of all weight bytes). */
+    /* Final norm + head (tied: the embedding). Only the rows whose logits are wanted pay for
+     * the 248k-row head matmul (it is ~1/3 of all weight bytes); pf_forward_select computes
+     * only some of its rows. */
     pf_norm_rows(ctx, ctx->xn, m->norm, n);
     dump(ctx, hidden, ctx->n_layers, n_total, t0, ctx->xn, n);
     if (normed) memcpy(normed + (size_t)t0 * H, ctx->xn, (size_t)n * H * sizeof(float));
     if (logits_all)
-        pf_matmul(ctx->pool, &m->embed, ctx->xn, logits_all + (size_t)t0 * ctx->vocab, n);
+        pf_matmul(ctx->pool, &m->head, ctx->xn, logits_all + (size_t)t0 * ctx->vocab, n);
     if (logits_last && t0 + n == n_total)
-        pf_matvec(ctx->pool, &m->embed, ctx->xn + (size_t)(n - 1) * H, logits_last);
+        pf_matvec(ctx->pool, &m->head, ctx->xn + (size_t)(n - 1) * H, logits_last);
     ctx->n_past += n;
 }
 
@@ -128,6 +131,66 @@ int pf_forward_h(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits_la
         int nb = n - t0 < ctx->batch ? n - t0 : ctx->batch;
         forward_chunk(ctx, tokens + t0, nb, t0, n, logits_last, logits_all, hidden, normed);
     }
+    return PINFER_OK;
+}
+
+/* Head rows of a few vocabulary ids. The rows are gathered, as whole 4-row tiles (quantized
+ * layouts) or 4-row groups (F32 / BF16; the last group repeats its last row if the vocabulary
+ * is not a multiple of 4), into one small matrix and computed with one pf_matvec. A head row's
+ * result depends only on that row's weights and on the activation vector (quantized per call,
+ * the same way for any matrix: kern_act.c), and threads split only whole tiles, so each value
+ * equals the full head matvec's bit for bit. After pf_forward the last token's final-normed
+ * hidden state is still row (n - 1) % batch of ctx->xn (forward_chunk's last chunk). */
+int pf_forward_select(pinfer_ctx *ctx, const int32_t *tokens, int n, const int32_t *ids,
+                      int n_ids, float *out) {
+    if (!ctx || n_ids < 0 || (n_ids > 0 && (!ids || !out))) return PINFER_E_ARG;
+    for (int i = 0; i < n_ids; i++)
+        if (ids[i] < 0 || ids[i] >= ctx->vocab) return PINFER_E_ARG;
+    int rc = pf_forward(ctx, tokens, n, NULL, NULL, NULL);
+    if (rc != PINFER_OK || n_ids == 0) return rc;
+
+    const pf_mat *W = &ctx->model.head;
+    const int quant = pq_sb_bytes(W->dtype) != 0;
+    const size_t elem = W->dtype == PQ_F32 ? 4 : 2;
+    const size_t group_bytes = quant ? (size_t)(W->cols / PQ_SB_COLS) * pq_sb_bytes(W->dtype)
+                                     : (size_t)PQ_TILE_ROWS * W->cols * elem;
+    /* one slot per distinct 4-row group, in first-use order */
+    int *slot = malloc((size_t)n_ids * sizeof(int)), *grp = malloc((size_t)n_ids * sizeof(int));
+    int ng = 0;
+    for (int i = 0; slot && grp && i < n_ids; i++) {
+        const int g = ids[i] / PQ_TILE_ROWS;
+        int s = 0;
+        while (s < ng && grp[s] != g) s++;
+        if (s == ng) grp[ng++] = g;
+        slot[i] = s;
+    }
+    char *buf = slot && grp ? aligned_alloc(64, ((size_t)ng * group_bytes + 63) & ~(size_t)63)
+                            : NULL;
+    float *y = buf ? malloc((size_t)ng * PQ_TILE_ROWS * sizeof(float)) : NULL;
+    if (!y) {
+        free(slot); free(grp); free(buf);
+        return PINFER_E_NOMEM;
+    }
+    for (int s = 0; s < ng; s++) {
+        char *dst = buf + (size_t)s * group_bytes;
+        if (quant) {
+            memcpy(dst, (const char *)W->data + (size_t)grp[s] * group_bytes, group_bytes);
+            continue;
+        }
+        const size_t row_bytes = (size_t)W->cols * elem;
+        for (int r = 0; r < PQ_TILE_ROWS; r++) {
+            int row = grp[s] * PQ_TILE_ROWS + r;
+            if (row >= W->rows) row = W->rows - 1;
+            memcpy(dst + (size_t)r * row_bytes, (const char *)W->data + (size_t)row * row_bytes,
+                   row_bytes);
+        }
+    }
+    const pf_mat sub = {W->dtype, ng * PQ_TILE_ROWS, W->cols, buf};
+    const int last = (n - 1) % ctx->batch;
+    pf_matvec(ctx->pool, &sub, ctx->xn + (size_t)last * ctx->H, y);
+    for (int i = 0; i < n_ids; i++)
+        out[i] = y[slot[i] * PQ_TILE_ROWS + ids[i] % PQ_TILE_ROWS];
+    free(y); free(buf); free(slot); free(grp);
     return PINFER_OK;
 }
 

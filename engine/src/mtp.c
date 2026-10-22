@@ -89,9 +89,10 @@ int pf_mtp_forward(pinfer_ctx *ctx, const float *h, const int32_t *tok, int n, i
     pf_norm_rows(ctx, ctx->xn, t->norm_out, n);
     if (out) memcpy(out, ctx->xn, (size_t)n * H * sizeof(float));
 
-    /* Tied head, optionally restricted to the first n_voc token ids: a prefix of rows is a
-     * valid matrix for BF16 and for the 4-row-tiled quantized layouts (n_voc % 4 == 0). */
-    pf_mat head = ctx->model.embed;
+    /* The model's head (tied: the embedding), optionally restricted to the first n_voc token
+     * ids: a prefix of rows is a valid matrix for BF16 and for the 4-row-tiled quantized
+     * layouts (n_voc % 4 == 0). */
+    pf_mat head = ctx->model.head;
     if (n_voc > 0 && n_voc < head.rows) head.rows = n_voc & ~3;
     if (logits_all) pf_matmul(ctx->pool, &head, ctx->xn, logits_all, n);
     if (logits_last) pf_matvec(ctx->pool, &head, ctx->xn + (size_t)(n - 1) * H, logits_last);

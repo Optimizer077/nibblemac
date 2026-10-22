@@ -55,6 +55,14 @@ void pinfer_reset(pinfer_ctx *ctx);
 /* Feed n tokens in order. If logits is not NULL it receives n_vocab floats for the LAST token. */
 int pinfer_eval(pinfer_ctx *ctx, const int32_t *tokens, int n, float *logits);
 
+/* pinfer_eval that computes the LAST token's logits for the vocabulary ids ids[0..n_ids-1]
+ * only: out[i] equals pinfer_eval's logits[ids[i]] bit for bit, but only the head rows that
+ * hold those ids are read (a decision readout scores a few option tokens out of a 248k-row
+ * head). n_ids 0 (out may be NULL) only feeds the tokens. An id outside [0, n_vocab) gives
+ * PINFER_E_ARG without changing state. (Added in 0.2.0, after the 0.2.0 ABI note.) */
+int pinfer_eval_select(pinfer_ctx *ctx, const int32_t *tokens, int n, const int32_t *ids,
+                       int n_ids, float *out);
+
 /* ---- Speculative greedy decoding with the model's MTP head (additive, engine/SPEC.md) ----
  * The MTP head drafts k tokens by chaining itself; the main model checks all of them in ONE
  * batched pass (weights streamed once) and keeps the longest correct prefix plus one token of

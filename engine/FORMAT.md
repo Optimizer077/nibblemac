@@ -27,7 +27,7 @@ data_offset   tensor data; data_offset is a multiple of 4096, every tensor start
 | lin_k_heads, lin_v_heads, lin_k_dim, lin_v_dim, conv_k | u32 | 16, 16, 128, 128, 4 |
 | full_attn_mask | u32 | bit i set ⇒ layer i is full attention (layers 3,7,…,23) |
 | eos_id | u32 | 248044 |
-| tied_embeddings | u32 | 1 |
+| tied_embeddings | u32 | 1 (0: separate `lm_head.weight`, e.g. GGUF imports) |
 | has_mtp | u32 | 1 if `mtp.*` tensors are present |
 | rms_eps, rope_theta | f32 | 1e-6, 1e7 |
 
@@ -44,7 +44,7 @@ never inside a kernel (tests: `tests/test_malformed.py`, `engine/HARDENING.md`).
   `engine/src/pq_format.h` (hidden, ffn ≤ 65536; vocab ≤ 2²¹; n_layers ≤ 32; head counts ≤ 256;
   head dims ≤ 1024; conv_k ≤ 8), so no product of header fields can wrap; `n_heads % n_kv_heads`,
   `lin_v_heads % lin_k_heads`, `rot_dim` even and ≤ `head_dim`, `eos_id < vocab`, `rms_eps` and
-  `rope_theta` positive and finite, tied embeddings.
+  `rope_theta` positive and finite, `tied_embeddings` 0 or 1 (before 0.2.0: 1 only).
 - Engine limits (`pinfer_load`): `lin_v_dim` ≤ 512 and a multiple of 32 (the DeltaNet kernel
   works in 32-column chunks), `head_dim` ≤ 512 and a multiple of 4.
 - Directory: `dir_offset` ≥ the header size and 8-byte aligned, all entries inside the file.
@@ -66,13 +66,18 @@ never inside a kernel (tests: `tests/test_malformed.py`, `engine/HARDENING.md`).
 
 ## Tensor names and conventions
 HF prefix `model.language_model.` is dropped; vision tensors are not stored. `mtp.*` keeps its name.
-- `embed_tokens.weight` BF16 [vocab, hidden] — also the output head (tied).
+- `embed_tokens.weight` BF16 [vocab, hidden] — also the output head when `tied_embeddings` = 1.
+- `lm_head.weight` [vocab, hidden], any matrix dtype — the output head; present (and required)
+  only when `tied_embeddings` = 0.
 - `norm.weight`, `layers.N.input_layernorm.weight`, `layers.N.post_attention_layernorm.weight`,
   `layers.N.self_attn.{q,k}_norm.weight`, `mtp.*norm*.weight`: F32, **stored as the effective
   multiplier `1 + w`** (Qwen3.5 zero-centered RMSNorm). Engine computes `x/rms(x) * stored`.
 - `layers.N.linear_attn.norm.weight`: F32 **as-is** (gated RMSNorm uses plain `w`).
 - `layers.N.linear_attn.conv1d.weight`: F32 [6144, 4] (depthwise, causal, kernel 4).
 - `layers.N.linear_attn.A_log`, `dt_bias`: F32 [16]. Engine uses `g = -exp(A_log)·softplus(a + dt_bias)`.
+  Instead of `A_log` a layer may store `layers.N.linear_attn.A` = `-exp(A_log)` (F32 [lin_v_heads],
+  as llama.cpp stores it; `tools/gguf_to_pq.py`); the engine then uses `g = A·softplus(…)`.
+  Exactly one of the two must be present.
 - Every other 2-D weight: BF16 (v1 converter) or a quantized dtype.
 
 ## Forward pass (reference semantics, from transformers 5.20.2 `modeling_qwen3_5.py`)
@@ -129,3 +134,27 @@ contiguous range. "Row `i`" below means row `4t+i`; `[k][i]` arrays are stored a
   then 6-bit rounding under per-row maxima, with refits.
 - Not part of the file: at run time the kernels quantize activations to int8 per 32 columns
   (scale = absmax/127), so a quantized matmul result also carries that rounding.
+
+## Importing a llama.cpp GGUF (`tools/gguf_to_pq.py`)
+
+llama.cpp's **Q4_0** and **Q8_0** blocks are exactly **Q4_G32** and **Q8_G32** groups: 32 weights
+of one row, one IEEE fp16 scale, value `d·(u − 8)` with the same nibble order (low nibble = column
+j, high nibble = column j + 16), or `d·q` with int8 `q`. The converter therefore moves blocks into
+the 4-row tiles above without touching a scale or a code, which matters for models trained for the
+Q4_0 grid (quantization-aware training): re-quantizing them would lose accuracy.
+`python tools/gguf_to_pq.py model.gguf out.pq [--tokenizer HF_DIR] --verify` accepts arch
+`qwen35` GGUFs whose tensors are F32, Q4_0 or Q8_0 (others are refused) and undoes llama.cpp's
+conversion transforms:
+
+| GGUF | .pq | transform |
+|---|---|---|
+| `token_embd`, `output` | `embed_tokens.weight`, `lm_head.weight` | copied; `output` is dropped (tied) if byte-identical to `token_embd` |
+| `blk.N.attn_qkv`, `attn_gate`, `ssm_alpha`, `ssm_beta` | `linear_attn.in_proj_{qkv,z,a,b}` | V-head rows from llama.cpp's "tiled" order (position `i·n_k + g`) back to the HF "grouped" order (head `g·r + i`, r = n_v / n_k) when n_v > n_k |
+| `blk.N.ssm_out` | `linear_attn.out_proj` | the same permutation of its input columns, in whole 32-column blocks |
+| `blk.N.ssm_a`, `ssm_dt.bias`, `ssm_conv1d` | `linear_attn.A`, `dt_bias`, `conv1d.weight` | per V head (conv: its V channels) |
+| norms (`attn_norm`, `post_attention_norm`, `attn_q_norm`, `attn_k_norm`, `output_norm`, `ssm_norm`) | as in this format | copied: llama.cpp also stores `1 + w`, except for `ssm_norm` |
+| other matrices | `self_attn.*`, `mlp.*` | copied |
+
+`--verify` re-reads both files and checks every tensor: fp16 scales and codes equal (after the
+permutation), dequantized weights equal bit for bit, F32 tensors equal bit for bit, and
+`tools/quant.py`'s reference packers rebuild the same bytes. MTP (`nextn`) blocks are refused.
