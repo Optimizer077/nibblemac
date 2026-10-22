@@ -103,6 +103,16 @@ look carefully into the network and see what can be further optimized to make it
       4B measurements, when no agent is on the Pi (reboot drops the lock)
 - [ ] P1 Network audit (agent): `docs/network-audit.md`, time budgets per workload, ranked
       candidates with exactness class; then implement the top items (new agents)
+- [ ] P0 Beyond the multiplier (agent, owner 17:10 "creative optimization, better kernels"): table-lookup
+      (T-MAC style) and dual-pipe kernels for the compute-bound paths (prefill, verify, Cerno); bit-identical
+      integer results; integrate only if >= 5% on n >= 4 (`engine/bench/KERNELS.md` Part 5)
+- [ ] P0 Low-rank / compressed weights (agent, owner: "low rank or quicker approaches of the weights"):
+      activation-aware SVD, exact head screening with error bounds, vocab-subset head, mixed 2-3 bit,
+      compressed drafter for exact speculation, 4B MLP low-rank vs Cerno agreement (`engine/COMPRESS.md`)
+- [ ] P1 Decode streaming efficiency (0.8B): 118.6 ms of streaming = 3.58 of 4.20 GB/s; barriers,
+      persistent workers across matmuls -- after the audit's budget (bit-identical)
+- Decided (17:10): no DeltaNet chunked prefill for now -- the recurrence is 3.8% of 4B prefill
+  (`cerno-speed-profile0`: matmul 36.7 of 39.6 s); huge pages already measured within 1% (os/kernel)
 - [ ] P1 README redesign (visual + structure) with the final numbers, after the tests above
 - [ ] P2 Owner decisions: Cerno sample set / Decision Index (7 GB, one gated dataset); PyPI name;
       Gemma 4 (llama.cpp check first); social-preview upload
