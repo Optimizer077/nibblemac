@@ -1,0 +1,17 @@
+# 2026-10-22T14:18:22 pi@10.42.0.2
+$ cd ~/pinfer && for b in mm0 mm1 ref v0 vA vB vC vD vP5 vP5S vE vE4 vF vFW vS vSW vF6 vF7 vF8 mm2 mm2nt; do rm -f kbench/kbench_$b; done; rm -f kbench/mm_ab.sh kbench/mm_gates.sh kbench/mm_e2e.sh kbench/mm_nt.sh kbench/mm_kstats.sh kbench/spec_exact_mm.sh engine/pinfer_run_mm2nt; ls kbench; ls engine | grep mm; md5sum engine/pinfer_run_mm2 engine/pinfer_run_fast
+
+kbench
+kbench_golden.bin
+kbench-v10
+kbench-v7
+kbench-v8
+kbench-v9
+lbench
+spec_exact.sh
+ubench
+pinfer_run_mm2
+bb39468b11d4d9d4decaada685a1d6e7  engine/pinfer_run_mm2
+23a7624250b8445343b2322eb0014749  engine/pinfer_run_fast
+
+[exit 0]

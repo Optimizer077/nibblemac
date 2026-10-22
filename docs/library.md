@@ -239,7 +239,7 @@ result-file paths is the "Scoreboard" in `notes.md`).
 - Decode is memory-bandwidth-bound (one Cortex-A72 core already saturates the ~4.2 GB/s DRAM);
   tok/s ≈ 4.2 GB/s ÷ bytes of weights per token, minus overheads. Speculative decoding with the
   model's MTP head gets past that ceiling by verifying several drafted tokens per weight pass.
-- `--speculative` defaults (0.2): **adaptive k ≤ 3 with prompt-lookup drafts (n-gram 7)**, draft
+- `--speculative` defaults (0.2): **adaptive k ≤ 4 with prompt-lookup drafts (n-gram 7)**, draft
   vocabulary 32768. The engine continues the MTP draft chain while the draft is confident, uses
   n-gram drafts when the text repeats the context, and falls back to plain steps when speculation
   would be slower. Within 0.98–1.06× of the best fixed k on every benchmark prompt and 7–27% faster on
@@ -360,7 +360,7 @@ arrival order (FIFO); requests are parsed and tokenized in their own threads whi
 that disconnects while queued is dropped; one that disconnects during a stream stops the generation at
 the next token (with speculative decoding the C call ends at its next token callback); a non-streaming
 request whose client left is stopped at the first token after a half-second check. Greedy requests (`temperature` 0, the server
-default, or `top_k` 1) use speculative decoding with the library default (adaptive k ≤ 3 with n-gram drafts,
+default, or `top_k` 1) use speculative decoding with the library default (adaptive k ≤ 4 with n-gram drafts,
 1.25–1.8× plain on chat prompts, `engine/DRAFT.md`); sampled requests use plain decoding.
 
 **Prefix reuse.** Clients resend the whole conversation every turn. Qwen3.5 is a hybrid model: its 18

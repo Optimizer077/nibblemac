@@ -1,0 +1,7 @@
+# 2026-10-22T14:27:31 pi@10.42.0.2
+$ md5sum engine/pinfer_run_cerno1 tmp/cerno/lib/libpinfer.so
+
+34f2946a72a81ecf4f5522863e8ceeee  engine/pinfer_run_cerno1
+81855186830be1d15a616285196b4bb9  tmp/cerno/lib/libpinfer.so
+
+[exit 0]

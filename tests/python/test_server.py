@@ -263,7 +263,7 @@ def test_chat_blocking_and_streaming_agree(client: Client) -> None:
     assert "<|im_end|>" not in msg["content"] and "<think>" not in msg["content"]
     assert r["usage"]["total_tokens"] == r["usage"]["prompt_tokens"] + \
         r["usage"]["completion_tokens"]
-    assert r["pinfer"]["speculative"] is None or r["pinfer"]["speculative"]["k"] == 3  # library default
+    assert r["pinfer"]["speculative"] is None or r["pinfer"]["speculative"]["k"] == 4  # library default
     chunks = client.stream("/v1/chat/completions", {"messages": msgs, "max_tokens": 3,
                                                     "stream_options": {"include_usage": True}})
     assert chunks[0]["choices"][0]["delta"] == {"role": "assistant", "content": ""}

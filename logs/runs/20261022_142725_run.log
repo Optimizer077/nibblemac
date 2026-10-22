@@ -1,0 +1,13 @@
+# 2026-10-22T14:27:25 pi@10.42.0.2
+$ md5sum engine/pinfer_run_cerno1 tmp/cerno/lib/libpinfer.so; ls tmp/cerno; venvs/pinfer/bin/python -c 'import numpy, tokenizers; print(numpy.__version__, tokenizers.__version__)'
+
+34f2946a72a81ecf4f5522863e8ceeee  engine/pinfer_run_cerno1
+81855186830be1d15a616285196b4bb9  tmp/cerno/lib/libpinfer.so
+bench
+cerno_pi
+lib
+py
+requests
+2.5.4 0.23.3
+
+[exit 0]

@@ -1,0 +1,7 @@
+# 2026-10-22T14:27:44 pi@10.42.0.2
+$ mkdir -p tmp/cerno && rm -f tmp/cerno/PUSHDONE && touch tmp/cerno/LOCKHELD && echo "lock held $(date +%T)"; for i in $(seq 540); do [ -e tmp/cerno/PUSHDONE ] && break; sleep 1; done; rm -f tmp/cerno/LOCKHELD tmp/cerno/PUSHDONE; echo "lock released $(date +%T) after ${i}s"
+
+lock held 14:27:45
+lock released 14:28:41 after 57s
+
+[exit 0]

@@ -1,0 +1,7 @@
+# 2026-10-22T14:55:42 pi@10.42.0.2
+$ cd engine && cp -p pinfer_run_fast pinfer_run_fast.pre-0.2.0 && cp -p pinfer_ppl_fast pinfer_ppl_fast.pre-0.2.0 && cp pinfer_run_merge6 pinfer_run_fast && cp pinfer_ppl_merge6 pinfer_ppl_fast && md5sum pinfer_run_fast pinfer_run_fast.pre-0.2.0
+
+d48ffda1a5999d071358c80041b9c591  pinfer_run_fast
+23a7624250b8445343b2322eb0014749  pinfer_run_fast.pre-0.2.0
+
+[exit 0]

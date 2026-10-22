@@ -12,6 +12,13 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Release 0.2.0 (lead, 15:40) — notes in `docs/release-0.2.0.md`
+- Speculative default: adaptive k ≤ 4 with prompt-lookup drafts (ngram 7); on prompt64 20.22 tok/s vs
+  19.78 with k ≤ 3 and 18.42 with fixed k = 4 (`kcap-merge6_20261022_145226.json`).
+- README headline 20 tok/s, prefill 43 tok/s, chat answers 11.0–14.8 tok/s; figures re-rendered.
+- The Pi's `engine/pinfer_run_fast` / `pinfer_ppl_fast` are the gated merge build `d48ffda1`
+  (previous kept as `*.pre-0.2.0`).
+
 ### Hardware figures (figures agent, 13:35–14:10; branch `worktree-agent-a83b76690e63d2416`)
 - Added: `tools/make_figures3.py` and three figures in four variants each (desktop / phone × light /
   dark): `pi4_hardware` (BCM2711 cores, caches and DRAM, and what pinfer keeps in L1 or streams from

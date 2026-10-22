@@ -286,7 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--api-key", help="require 'Authorization: Bearer KEY' (or $PINFER_API_KEY)")
     s.add_argument("--speculative", action=argparse.BooleanOptionalAction, default=True,
                    help="greedy requests use MTP speculative decoding (default on)")
-    s.add_argument("--spec-k", type=int, help="max draft tokens per pass (default: library's, adaptive k <= 3 with n-gram drafts)")
+    s.add_argument("--spec-k", type=int, help="max draft tokens per pass (default: library's, adaptive k <= 4 with n-gram drafts)")
     s.add_argument("--no-reuse", action="store_true",
                    help="re-prefill every prompt (no prefix reuse, no snapshots; for comparison)")
     s.add_argument("--history", choices=("generated", "template"), default="generated",

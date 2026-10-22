@@ -1,0 +1,56 @@
+# 2026-10-22T14:02:44 pi@10.42.0.2
+$ df -h . | tail -1; free -m | head -2; ls; echo ---; ls -la models | head -30; echo ---; ls venvs; ls llama | head; ls baselines 2>/dev/null
+
+/dev/sda2       917G   19G  861G   3% /
+               total        used        free      shared  buff/cache   available
+Mem:            3794         247        1663           4        1953        3546
+baselines
+data
+engine
+examples
+gmon.out
+golden
+kbench
+kernel
+llama
+llama_bench.sh
+memband
+models
+tests
+tmp
+venvs
+wheels
+---
+total 8769844
+drwxrwxr-x  3 pi pi       4096 Oct 22 13:16 .
+drwxrwxr-x 16 pi pi       4096 Oct 22 01:38 ..
+-rwxr-xr-x  1 pi pi 1546749184 Oct 21 21:36 qwen35-0.8b-bf16.pq
+-rwxr-xr-x  1 pi pi  439391488 Oct 21 23:46 qwen35-0.8b-mix-headq4k.pq
+-rwxr-xr-x  1 pi pi  566531328 Oct 21 23:47 qwen35-0.8b-mix-headq8.pq
+-rwxr-xr-x  1 pi pi  512977920 Oct 21 21:26 Qwen3.5-0.8B-Q4_0.gguf
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:09 qwen35-0.8b-q4-headq4k.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 21 23:37 qwen35-0.8b-q4-headq4.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:08 qwen35-0.8b-q4k-headq4k.pq
+-rwxr-xr-x  1 pi pi  541903872 Oct 21 21:26 Qwen3.5-0.8B-Q4_K_M.gguf
+-rwxr-xr-x  1 pi pi  833592320 Oct 21 21:25 Qwen3.5-0.8B-Q8_0.gguf
+-rwxr-xr-x  1 pi pi  822678784 Oct 21 23:33 qwen35-0.8b-q8-headq8.pq
+-rwxr-xr-x  1 pi pi        358 Oct 21 21:26 Qwen3.5-0.8B.SHA256SUMS
+drwxrwxr-x  2 pi pi       4096 Oct 21 22:15 qwen35-0.8b-tokenizer
+-rwxr-xr-x  1 pi pi 1094714624 Oct 22 11:03 qwen35-2b-q4k-headq4k.pq
+-rwxr-xr-x  1 pi pi 1312164832 Oct 22 11:11 Qwen3.5-2B-Q4_K_M.gguf
+---
+litert
+ort
+pinfer
+pinfer.freeze.txt
+torch
+BUILD_INFO.txt
+llama-bench
+llama-completion
+llama-perplexity
+llama-simple
+bench
+mnn
+models
+
+[exit 0]

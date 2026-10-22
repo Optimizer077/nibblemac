@@ -1,0 +1,8 @@
+# 2026-10-22T14:29:43 pi@10.42.0.2
+$ ls /usr/bin/time; ./engine/pinfer_run_cerno1 -m models/cerno-4b-q4_0.pq -t 4 --ids-file tmp/cerno/ids/p64.ids -n 2 2>&1 | tail -20
+
+ls: cannot access '/usr/bin/time': No such file or directory
+generated: 15098,36358
+load 0.011 s | warm-up 0.000 s | prefill 64 tok in 19.167 s = 3.339 tok/s | decode 1 tok in 2.736 s = 0.365 tok/s | peak RSS 2627.1 MB | matvec=fast threads=4
+
+[exit 0]

@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------- data (Pi 4, 4 threads, 64+64 tokens)
 # (label, plain tok/s, speculative tok/s or None, perplexity or None, source)
 ENGINES = [
-    ("pinfer Q4K (ours)", 7.89, 18.43, 18.50, "speed-ab-merge4_20261022_103609"),
+    ("pinfer Q4K (ours)", 7.89, 20.22, 18.50, "kcap-merge6_20261022_145226"),  # default: adaptive k<=4 + ngram 7
     ("pinfer Q8 (ours)", 4.22, 8.73, 17.96, "pinfer-fast-q8-headq8_20261021_235144"),
     ("MNN 3.6 int4", 6.67, None, None, "mnn-qwen35-0.8b-int4_20261021_221038"),
     ("llama.cpp Q4_K_M", 5.41, None, 18.59, "llamacpp-qwen35-0.8b-Q4_K_M_20261021_213929"),
@@ -49,7 +49,8 @@ ENGINES = [
     ("llama.cpp Q8_0", 4.12, None, 17.97, "llamacpp-qwen35-0.8b-Q8_0_20261021_214506"),
     ("ONNX Runtime GenAI int4", 3.10, None, None, "ort-qwen35-0.8b-int4-acc4_20261021_222410"),
 ]
-PREFILL = {"pinfer Q4K (ours)": 37.1, "MNN 3.6 int4": 30.9, "llama.cpp Q8_0": 17.1,
+PREFILL = {"pinfer Q4K (ours)": 43.1,  # mm2-e2e-prefill_20261022_140719
+ "MNN 3.6 int4": 30.9, "llama.cpp Q8_0": 17.1,
            "llama.cpp Q4_0": 15.7, "llama.cpp Q4_K_M": 14.8, "ONNX Runtime GenAI int4": 9.9}
 # Optimization steps in order (desktop label, phone label, plain, speculative); 2026-10-21/22
 # Phone labels stay within ~7 characters: six slots share a 360 px column.
@@ -60,6 +61,7 @@ PROGRESS = [
     ("bit-exact kernels\n+ NEON recurrence", "exact\nkernels", 7.26, 13.35),
     ("vectorized\nper-token ops", "vector\nops", 7.88, 16.49),
     ("cheaper\nverify pass", "faster\nverify", 7.89, 18.43),  # speed-ab-merge4_20261022_103609
+    ("adaptive k +\nn-gram drafts", "n-gram\ndrafts", 7.88, 20.22),  # kcap-merge6_20261022_145226
 ]
 # Context length sweep, Q4K, wikitext prompt of N tokens then 32 generated (engine/CONTEXT.md Summary).
 # After: attention round 3 (ctx, plain fp32 KV, plain fp16 KV, fp32 prefill) — decode = medians of 3 rounds
@@ -72,9 +74,9 @@ CONTEXT = [(64, 7.87, 7.88, 36.3), (512, 7.69, 7.67, 36.8), (2048, 7.10, 7.36, 3
 CONTEXT_BEFORE = [(64, 7.88, 37.4), (2048, 6.57, 25.7), (4096, 5.56, 18.1)]
 # llama.cpp Q4_K_M token generation at the same KV depth (f16 KV, its default) — llamacpp-ctx-d*
 LLAMA_CTX = [(64, 5.48), (512, 5.23), (2048, 4.32), (4096, 3.43)]
-# Speculative k sweep on the Q4K default after the cheaper verify pass (ver1-ksweep_20261022_074459,
-# prompt64; tokens per pass are unchanged by it, output identical): k, tokens per pass, tok/s
-KSWEEP = [(0, 1.00, 7.94), (2, 2.63, 16.25), (3, 3.32, 18.23), (4, 3.94, 15.85)]
+# Speculative k sweep, fixed k, after the batched-kernels round (mm2-e2e-decode_20261022_140420, prompt64,
+# medians of 3; tokens per pass unchanged, output identical): k, tokens per pass, tok/s
+KSWEEP = [(0, 1.00, 7.88), (2, 2.63, 16.18), (3, 3.32, 18.15), (4, 3.94, 18.64)]
 
 
 def fig_decode(t: Theme, L: Layout) -> None:
@@ -82,9 +84,9 @@ def fig_decode(t: Theme, L: Layout) -> None:
     rows = sorted(ENGINES, key=lambda r: -r[1])
     fig, ax = new_fig(t, L, 460 if L.mobile else 410)
     style(ax, t, xlabel="tokens / s (higher is better)", grid="x")
-    ax.set_xlim(0, 21)
+    ax.set_xlim(0, 23)
     ax.set_xticks([0, 5, 10, 15, 20])
-    keys = [Patch(color=t.blue, label="plain greedy"), Patch(color=t.orange, label="speculative (MTP, k=3)")]
+    keys = [Patch(color=t.blue, label="plain greedy"), Patch(color=t.orange, label="speculative (exact)")]
     rect = header(fig, t, L, "Decode speed: pinfer vs standard runtimes",
                   "Qwen3.5-0.8B, Raspberry Pi 4 (4 GB), best thread count per engine, 64-token prompt + 64 tokens",
                   handles=keys if L.mobile else None, ncol=2)
@@ -145,7 +147,7 @@ def fig_speed_quality(t: Theme, L: Layout) -> None:
             _dot_key(t.blue, "pinfer, speculative", "^")]
     style(ax, t, ylabel="decode tokens / s", xlabel="perplexity, wikitext-2 (lower is better)")
     ax.set_xlim(*((17.6, 21.9) if L.mobile else (17.5, 22.5)))
-    ax.set_ylim(0, 21)
+    ax.set_ylim(0, 23)
     ax.set_yticks([0, 5, 10, 15, 20])
     rect = header(fig, t, L, "Speed vs quality",
                   "Perplexity on wikitext-2 (8 × 512 tokens, llama-perplexity protocol); pinfer Q4K sits at "
@@ -181,9 +183,9 @@ def fig_progress(t: Theme, L: Layout) -> None:
     ax.set_xticks(x, [p[1] if L.mobile else p[0] for p in PROGRESS])
     style(ax, t, ylabel="tokens / s")
     ax.set_xlim(-0.45, len(PROGRESS) - 0.55)
-    ax.set_ylim(0, 21)
+    ax.set_ylim(0, 23)
     ax.set_yticks([0, 5, 10, 15, 20])
-    keys = [line_key(t.blue, "plain greedy"), line_key(t.orange, "speculative (k=3)")]
+    keys = [line_key(t.blue, "plain greedy"), line_key(t.orange, "speculative (exact)")]
     rect = header(fig, t, L, "How the speed was built up",
                   "Each step verified against the fp32 reference (per-layer error ≤ 3e-6) and, for speculation, "
                   "token-identical to plain greedy", handles=keys if L.mobile else None, ncol=2)
@@ -255,7 +257,7 @@ def fig_kspeed(t: Theme, L: Layout) -> None:
     ks = [k for k, _, _ in KSWEEP]
     colors = [t.blue if k == 0 else t.orange for k in ks]  # plain = blue, speculative = orange, as in every figure
     for ax, head, top, yt in ((a1, "Tokens accepted per weight pass", 4.6, [0, 1, 2, 3, 4]),
-                              (a2, "Decode tokens / s", 21, [0, 5, 10, 15, 20])):
+                              (a2, "Decode tokens / s", 22, [0, 5, 10, 15, 20])):
         ax.set_xticks(ks, ["plain", "k=2", "k=3", "k=4"])
         style(ax, t)
         panel_title(ax, t, head)

@@ -1,0 +1,86 @@
+# 2026-10-22T14:02:40 pi@10.42.0.2
+$ df -h . | tail -1; free -m; ls; ls models engine venvs llama 2>/dev/null | head -60; nproc
+
+/dev/sda2       917G   19G  861G   3% /
+               total        used        free      shared  buff/cache   available
+Mem:            3794         247        1663           4        1953        3546
+Swap:           2047          76        1971
+baselines
+data
+engine
+examples
+gmon.out
+golden
+kbench
+kernel
+llama
+llama_bench.sh
+memband
+models
+tests
+tmp
+venvs
+wheels
+engine:
+chat_spec.sh
+core2_check.sh
+ctx_check.sh
+exptest_pi
+f16_check.sh
+ng
+pinfer_ppl_2b1
+pinfer_ppl_ctx
+pinfer_ppl_ctx2
+pinfer_ppl_ctx3
+pinfer_ppl_ctx4
+pinfer_ppl_ctx7
+pinfer_ppl_fast
+pinfer_ppl_fast.pre-ctx
+pinfer_ppl_fast.pre-merge4
+pinfer_ppl_hard2
+pinfer_ppl_merge
+pinfer_ppl_merge3
+pinfer_ppl_merge4
+pinfer_ppl_merge5
+pinfer_run
+pinfer_run_2b1
+pinfer_run_att4
+pinfer_run_core2
+pinfer_run_core2_noneon
+pinfer_run_ctx
+pinfer_run_ctx2
+pinfer_run_ctx4
+pinfer_run_ctx5
+pinfer_run_ctx6
+pinfer_run_ctx7
+pinfer_run_fast
+pinfer_run_fast.pre-ctx
+pinfer_run_fast.pre-merge4
+pinfer_run_hard2
+pinfer_run_kern
+pinfer_run_kern2
+pinfer_run_kern3
+pinfer_run_kern4
+pinfer_run_lin
+pinfer_run_lin2
+pinfer_run_lin3
+pinfer_run_lin4
+pinfer_run_m0p0
+pinfer_run_m0p16
+pinfer_run_m1p0
+pinfer_run_m1p16
+pinfer_run_m2p0
+pinfer_run_m2p16
+pinfer_run_merge
+pinfer_run_merge3
+pinfer_run_merge4
+pinfer_run_merge5
+pinfer_run_mm2
+pinfer_run_mm2nt
+pinfer_run_pg
+pinfer_run_pv1
+pinfer_run_pv2
+pinfer_run_spec
+4
+
+[exit 0]

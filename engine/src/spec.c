@@ -381,9 +381,10 @@ int pf_spec_decode(pinfer_ctx *ctx, int32_t *out, int n_max, const pinfer_spec_p
 }
 
 pinfer_spec_params pinfer_default_spec_params(void) {
-    /* adaptive k <= 3 with prompt-lookup drafts: within 0.98-1.06x of the best fixed k on every
-     * benchmark prompt, 7-27% faster on prose, long context and copied code (engine/DRAFT.md) */
-    pinfer_spec_params p = {3, 32768, 1, 7};
+    /* adaptive k <= 4 with prompt-lookup drafts: within 0.98-1.06x of the best fixed k on every
+     * benchmark prompt, faster on prose, long context and copied code (engine/DRAFT.md); with the
+     * single-pass n = 5 kernels, k <= 4 beats k <= 3 (kcap-merge6_20261022_145226.json) */
+    pinfer_spec_params p = {4, 32768, 1, 7};
     return p;
 }
 
