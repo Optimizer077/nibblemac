@@ -12,17 +12,17 @@ data_offset   tensor data; data_offset is a multiple of 4096, every tensor start
 ```
 
 ## Header (`pq_header`, see `engine/src/pq_format.h`)
-| field | type | value for Qwen3.5-0.8B |
+| field | type | value for Qwen3.5-0.8B (Qwen3.5-2B where different) |
 |---|---|---|
 | magic | char[8] | `"PINFERQ\0"` |
 | version | u32 | 1 |
-| n_tensors | u32 | |
+| n_tensors | u32 | 335 (both, with the MTP head) |
 | dir_offset, data_offset | u64 | |
 | arch | u32 | 1 = qwen3.5 hybrid |
-| hidden | u32 | 1024 |
+| hidden | u32 | 1024 (2B: 2048) |
 | n_layers | u32 | 24 |
 | vocab | u32 | 248320 |
-| ffn | u32 | 3584 |
+| ffn | u32 | 3584 (2B: 6144) |
 | n_heads, n_kv_heads, head_dim, rot_dim | u32 | 8, 2, 256, 64 |
 | lin_k_heads, lin_v_heads, lin_k_dim, lin_v_dim, conv_k | u32 | 16, 16, 128, 128, 4 |
 | full_attn_mask | u32 | bit i set ⇒ layer i is full attention (layers 3,7,…,23) |
@@ -76,6 +76,8 @@ HF prefix `model.language_model.` is dropped; vision tensors are not stored. `mt
 - Every other 2-D weight: BF16 (v1 converter) or a quantized dtype.
 
 ## Forward pass (reference semantics, from transformers 5.20.2 `modeling_qwen3_5.py`)
+The numbers below are 0.8B's; Qwen3.5-2B differs only in hidden (2048) and ffn (6144), so every
+attention / linear-attention width here is the same for it (`engine/MODEL2B.md`).
 Per token, `h = embed[token]`, then for each layer: `h += mix(norm_in(h))`, `h += mlp(norm_post(h))`;
 finally `logits = embed · norm(h)`.
 - **mlp**: `down(silu(gate(x)) * up(x))`.
