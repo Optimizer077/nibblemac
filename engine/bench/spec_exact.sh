@@ -2,24 +2,45 @@
 # Speculative decoding must generate exactly the plain greedy tokens. For each model x prompt
 # the md5 of the `generated:` line of --spec 0 is the reference; every other k must match.
 # Runs on the Pi from ~/pinfer:  bash kbench/spec_exact.sh ./engine/pinfer_run_kern3
-# One RESULT line per configuration (for harness/pi.py bench).
+# One RESULT line per configuration (for harness/pi.py bench). The first 20 rows are the
+# original set (comparable with earlier result files); with EXTRA=1 (default) they are
+# followed by the prompt-lookup / adaptive rows of engine/DRAFT.md, which add the copy-heavy
+# chat_edit prompt (data/chat_edit.ids, bench/common/make_copy_prompts.py).
 BIN=${1:-./engine/pinfer_run_fast}
 N=${2:-40}
+EXTRA=${EXTRA:-1}
 # A missing binary or a run without output must fail: two empty outputs have equal md5s.
 if [ ! -x "$BIN" ]; then
   echo "RESULT {\"bench\":\"spec_exact\",\"bin\":\"$BIN\",\"match\":false,\"error\":\"binary not found\"}"
   exit 1
 fi
+declare -A REF
+row() {   # model prompt spec-flags...: one RESULT row against REF[model/prompt]
+  local M=$1 P=$2; shift 2
+  local S="$*" out g m
+  out=$($BIN -m models/$M.pq -t 4 -n $N --ids-file data/$P.ids $S 2>/dev/null | grep '^generated:')
+  if [ -n "$out" ]; then g=$(printf '%s\n' "$out" | md5sum | cut -c1-8); else g=none; fi
+  [ -z "${REF[$M/$P]}" ] && REF[$M/$P]=$g
+  if [ "$g" != none ] && [ "$g" = "${REF[$M/$P]}" ]; then m=true; else m=false; fi
+  echo "RESULT {\"bench\":\"spec_exact\",\"bin\":\"$BIN\",\"model\":\"$M\",\"prompt\":\"$P\",\"n\":$N,\"spec\":\"$S\",\"md5\":\"$g\",\"match\":$m}"
+}
 for M in qwen35-0.8b-mix-headq4k qwen35-0.8b-q4k-headq4k; do
   for P in chat27 prompt64; do
-    ref=""
     for S in "--spec 0" "--spec 2 --draft-vocab 32768" "--spec 3 --draft-vocab 32768" \
              "--spec 4 --draft-vocab 32768" "--spec 1"; do
-      out=$($BIN -m models/$M.pq -t 4 -n $N --ids-file data/$P.ids $S 2>/dev/null | grep '^generated:')
-      if [ -n "$out" ]; then g=$(printf '%s\n' "$out" | md5sum | cut -c1-8); else g=none; fi
-      [ -z "$ref" ] && ref=$g
-      if [ "$g" != none ] && [ "$g" = "$ref" ]; then m=true; else m=false; fi
-      echo "RESULT {\"bench\":\"spec_exact\",\"bin\":\"$BIN\",\"model\":\"$M\",\"prompt\":\"$P\",\"n\":$N,\"spec\":\"$S\",\"md5\":\"$g\",\"match\":$m}"
+      row $M $P $S
+    done
+  done
+done
+[ "$EXTRA" = 1 ] || exit 0
+for M in qwen35-0.8b-mix-headq4k qwen35-0.8b-q4k-headq4k; do
+  for P in chat27 prompt64 chat_edit; do
+    [ $P = chat_edit ] && row $M $P --spec 0
+    for S in "--spec 3 --draft-vocab 32768 --ngram 8" "--spec 0 --ngram 8" \
+             "--spec 3 --draft-vocab 32768 --adaptive" \
+             "--spec 3 --draft-vocab 32768 --adaptive --ngram 8" "--spec 8 --ngram 8" \
+             "--spec 2 --draft-vocab 32768 --ngram 5 -b 2"; do
+      row $M $P $S
     done
   done
 done
