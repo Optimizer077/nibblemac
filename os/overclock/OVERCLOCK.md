@@ -74,3 +74,5 @@ Verdict: **2.0 GHz with `over_voltage=6` is not stable on this board** (Pi 4 Mod
 Nothing was measured at 2.0 GHz.
 A lower setting (for example 1.8 GHz with a smaller `over_voltage`) would be a new configuration and needs
 the owner's OK first.
+
+**Reverted (21:01 KST):** the owner took the boot medium out after the freeze; the restore was done on the PC with the boot partition mounted as F: (same steps as `oc_tryboot.sh restore`): `tryboot.txt` is the change-#4 custom-kernel file again, `cmdline-oc.txt` and the backup are gone, `config.txt` / `cmdline.txt` byte-identical (SHA-256). The Pi boots the standard 1.5 GHz profile.

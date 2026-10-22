@@ -12,6 +12,9 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Pi: overclock test reverted (21:01)
+- Boot partition edited on the PC (F:): `tryboot.txt` back to the custom-kernel test file, overclock files removed; `config.txt` / `cmdline.txt` unchanged; standard 1.5 GHz profile. `docs/pi-state.md` #5.
+
 ### Optimization agents, overclock test (lead, 16:55-18:20)
 - Added: `docs/network-audit.md` (merged): a Cerno decision is ~150 ms per prompt token, 93% Q4_0 matmul;
   ranked candidates; exact head screening for 0.8B measured as a dead end.
