@@ -124,35 +124,28 @@ static void delta_rule(float *S, const float *q, const float *k, const float *v,
     }
 }
 
-static float *lin_scratch;      /* one head's state for logged (verification) passes */
-static size_t lin_scratch_floats;
-
+/* Logged pass (pf_lin_rule contract, ops.h): the deferred commit first, token 0 in place,
+ * tokens 1.. on the per-context copy a->work of the head. */
 void pf_lin_rule(pf_pool *pool, const pf_lin_args *a) {
-    (void)pool;
     const int dk = a->dk, dv = a->dv, kd = (a->heads / a->rep) * dk;
     const size_t hs = (size_t)dk * dv, logw = (size_t)dk + dv + 1;
     float tmp[512];   /* delta scratch; lin_v_dim <= 512 (checked in pinfer.c) */
-    if (a->log && lin_scratch_floats < hs) {
-        free(lin_scratch);
-        lin_scratch = malloc(hs * sizeof(float));
-        lin_scratch_floats = lin_scratch ? hs : 0;
-        if (!lin_scratch) abort();
-    }
+    if (a->keep > 0) pf_lin_apply(pool, a->S, a->pend, a->keep, a->heads, dk, dv);
     for (int h = 0; h < a->heads; h++) {
         const int kh = h / a->rep;
         float *S = a->S + h * hs;
-        if (a->log) {
-            memcpy(lin_scratch, S, hs * sizeof(float));
-            S = lin_scratch;
-        }
         for (int t = 0; t < a->n; t++) {
+            if (a->log && t == 1) {
+                memcpy(a->work, S, hs * sizeof(float));
+                S = a->work;
+            }
             const float *qkv = a->qkv + (size_t)t * a->qkv_stride;
             const float *k = qkv + kd + kh * dk;
             const float decay = a->decay[(size_t)t * a->heads + h];
             delta_rule(S, qkv + kh * dk, k, qkv + 2 * kd + h * dv, decay,
                        a->beta[(size_t)t * a->heads + h], a->o + (size_t)t * a->o_stride + h * dv,
                        tmp, dk, dv);
-            if (a->log) {
+            if (a->log && t > 0) {
                 float *u = a->log + ((size_t)t * a->heads + h) * logw;
                 memcpy(u, k, (size_t)dk * sizeof(float));
                 memcpy(u + dk, tmp, (size_t)dv * sizeof(float));

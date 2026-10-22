@@ -214,8 +214,10 @@ int pf_spec_decode(pinfer_ctx *ctx, int32_t *out, int n_max, const pinfer_spec_p
         }
         if (rc != PINFER_OK) break;
 
-        /* 2. verify cur + ke drafts in ONE batched pass, states on scratch copies (the log
-         * covers one pf_linear_attn call, so the pass must not be split by a small -b) */
+        /* 2. verify cur + ke drafts in ONE batched pass; the linear-attention states take
+         * cur (always committed) and the previous round's deferred updates in place, the
+         * drafts run on copies (the log covers one pf_linear_attn call, so the pass must not
+         * be split by a small -b) */
         double t1 = now_sec();
         ctx->lin_log_on = 1;
         if (batch < ke + 1) pf_set_batch(ctx, ke + 1);
@@ -252,6 +254,9 @@ int pf_spec_decode(pinfer_ctx *ctx, int32_t *out, int n_max, const pinfer_spec_p
         if (rc != PINFER_OK || done) break;
     }
     if (rc == PINFER_OK) rc = flush_pending(ctx, nv);   /* pending plain rows, same reason */
+    const double tf = now_sec();
+    pf_lin_flush(ctx);   /* the last commit's deferred updates: states complete on return */
+    t.commit += now_sec() - tf;
     if (tm) {
         tm->mtp += t.mtp; tm->verify += t.verify; tm->commit += t.commit;
         tm->plain += t.plain; tm->plain_steps += t.plain_steps;

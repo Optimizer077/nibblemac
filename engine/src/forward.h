@@ -22,17 +22,25 @@
 enum { PF_KV_F32 = 0, PF_KV_F16 = 1, PF_KV_I8 = 2 };
 #define PF_KV_MAX_HD 512
 
-/* Rollback log for speculative verification (forward_lin.c). While ctx->lin_log_on is set,
- * pf_linear_attn runs the conv and recurrent states on scratch copies (the committed states
- * stay untouched) and records, per token, what pf_lin_commit needs to advance the committed
- * states by any prefix of the pass: the raw conv inputs and each head's rank-1 update. */
+/* Rollback log for speculative verification (forward_lin.c, engine/VERIFY.md). While
+ * ctx->lin_log_on is set, pf_linear_attn commits token 0 of the pass to the conv and
+ * recurrent states (the first token of a verify pass is always accepted), runs tokens 1..
+ * on private copies and records, per token, what pf_lin_commit needs to advance the states
+ * by any prefix of the pass: the raw conv inputs and each head's rank-1 update. The
+ * recurrent part of a commit is deferred: `keep` remembers how many logged updates each
+ * layer still owes, and the layer's next pass (verify or plain) applies them while the state
+ * is in cache. pf_lin_flush applies them at once; pf_spec_decode calls it before returning,
+ * so no update is pending outside the speculative loop. */
 typedef struct {
     int cap;          /* max tokens per logged pass */
-    int n;            /* tokens in the last logged pass */
-    float *S;         /* [lk_dim * lv_dim]: working copy of one head's state */
+    int n;            /* tokens in the last logged pass, 0 once committed */
+    int wr;           /* half of upd that the next logged pass writes; wr ^ 1 = pending */
+    float *S;         /* [lk_dim * lv_dim]: working copy of one head's state (matvec_ref.c) */
     float *conv;      /* [(conv_k-1) * conv_dim]: working copy of one layer's conv state */
-    float **xin;      /* per linear layer [cap][conv_dim]: raw conv inputs */
-    float **upd;      /* per linear layer [cap][lv_heads][lk_dim + lv_dim + 1]: k | delta | decay */
+    float **xin;      /* per linear layer [cap][conv_dim]: raw conv inputs (rows 1..) */
+    float **upd;      /* per linear layer [2][cap][lv_heads][lk_dim + lv_dim + 1]:
+                         k | delta | decay of tokens 1.. (row 0 unused) */
+    int *keep;        /* per layer: updates of the pending half (rows 1..keep) not applied */
 } pf_lin_log;
 
 struct pf_mtp;        /* MTP draft head (mtp.h) */
@@ -97,11 +105,13 @@ void pf_set_batch(pinfer_ctx *ctx, int batch);
 void pf_linear_attn(pinfer_ctx *ctx, int layer, int n);
 
 /* Rollback log (forward_lin.c). alloc: room for passes of up to `cap` tokens. commit:
- * advance the committed conv/recurrent states by the first `keep` tokens of the last logged
- * pass, bit-identical to having run only those tokens. */
+ * advance the committed conv/recurrent states by the first `keep` >= 1 tokens of the last
+ * logged pass, bit-identical to having run only those tokens (the recurrent part deferred
+ * to the next pass). flush: apply every deferred update now. */
 int pf_lin_log_alloc(pinfer_ctx *ctx, int cap);
 void pf_lin_log_free(pinfer_ctx *ctx);
 void pf_lin_commit(pinfer_ctx *ctx, int keep);
+void pf_lin_flush(pinfer_ctx *ctx);
 
 /* Building blocks shared with the MTP head (forward.c). All work on rows 0..n-1 of the
  * ctx scratch buffers: x = residual stream, xn = normed input, out = sublayer output. */

@@ -64,8 +64,9 @@ typedef void (*kern_task)(void *arg, int tid, int nthr);
 void kern_pool_run(pf_pool *pool, kern_task fn, void *arg, int max_threads);
 
 /* Gated DeltaNet recurrence of one layer over n tokens (kern_lin.c), the NEON + threaded
- * form of forward_lin.c's delta_rule, bit-identical to it (same per-element operations and
- * rounding: no fused multiply-add). Heads run in parallel on the pool. */
+ * form of matvec_ref.c's delta_rule, bit-identical to it (same per-element operations and
+ * rounding: no fused multiply-add), with the pf_lin_rule contract of ops.h (logged pass,
+ * deferred commit). Heads run in parallel on the pool. */
 typedef pf_lin_args kern_lin_args; /* defined in ops.h */
 void kern_lin_rule(pf_pool *pool, const kern_lin_args *a);
 

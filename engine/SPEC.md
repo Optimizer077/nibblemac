@@ -59,6 +59,9 @@ Rollback without snapshots:
   Cost per round: one read of the state during verification + one read/write in the commit
   (≈ 57 MB of traffic, vs 38 MB for one plain decode step and ~1.5 GB of weights) — no 19 MB
   snapshot copies, no second state buffer.
+  *2026-10-22, issue #5: superseded. The first verify token now runs in place, the drafts run on
+  per-thread stack copies, and the replay is deferred into the next pass (one read and write of
+  the state per round). See `engine/VERIFY.md`.*
 - `forward_lin.c` loop order changed to head-outer / token-inner (state in L2 across the
   chunk); heads are independent, so outputs are bit-identical (golden test A vs B: 0 error).
 

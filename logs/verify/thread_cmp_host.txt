@@ -1,0 +1,14 @@
+# thread_cmp (logs/verify/thread_cmp.c), host ref build: two contexts on two threads, k=3,
+# 24 tokens, 3 concurrent runs each; old = HEAD 3c2c887 sources, new = this work. 2026-10-22 08:54:04 KST
+18e9e7fe7fc910e8720aedfb0e929185  /mnt/c/Users/Optim/AppData/Local/Temp/claude/e--Personal-tries-Raspberry-Pi/01d39748-5989-4f40-bc4e-8c23e8b45e88/scratchpad/push/thread_cmp_new
+e6a5bb2cc0213cfcfc1f512c7e9aa9a8  /mnt/c/Users/Optim/AppData/Local/Temp/claude/e--Personal-tries-Raspberry-Pi/01d39748-5989-4f40-bc4e-8c23e8b45e88/scratchpad/push/thread_cmp_old
+== host ref, old
+context 0: 24 tokens alone, 2 of 3 concurrent runs differ
+context 1: 24 tokens alone, 2 of 3 concurrent runs differ
+RACE: outputs differ
+RESULT {"bench":"thread_cmp","reps":3,"threads_per_ctx":1,"mismatch0":2,"mismatch1":2,"identical":false}
+== host ref, new
+context 0: 24 tokens alone, 0 of 3 concurrent runs differ
+context 1: 24 tokens alone, 0 of 3 concurrent runs differ
+concurrent == alone
+RESULT {"bench":"thread_cmp","reps":3,"threads_per_ctx":1,"mismatch0":0,"mismatch1":0,"identical":true}
