@@ -88,3 +88,21 @@ that is 192 MB/token — comparable to the 437 MB of weights).
 - [x] Release 0.2.0 (github.com/Optimizer077/piquant/releases/tag/v0.2.0): release notes (`docs/release-0.2.0.md`), wheels (aarch64 NEON, x86-64), tag, GitHub release; model asset only if the owner wants it (issue #9)
 - [ ] Clean-up: Pi scratch binaries and data, finished agent worktrees and local branches, stale scratch files
 - [ ] Then: resume the Cerno agent (repo `cerno-pi`), and later Gemma 4 (llama.cpp check first)
+
+## Phase 8 — after 0.2.0: Cerno done, 4B speed, audit, overclock, README redesign (2026-10-22 16:55)
+Owner (16:55): "README needs major visual and structure updates, but first finalize the testing;
+look carefully into the network and see what can be further optimized to make it work faster."
+- [x] Cerno 4B on the Pi (repo `cerno-pi`, public, credit kept): decision median 27.6 s vs llama.cpp
+      112.4 s (4.5×), 2.4 vs 3.6 GB, scores within 0.011 of Cerno's engine; pushed `ac2a89f`
+- [x] Generic engine pieces merged into nibblepi: untied head, `linear_attn.A`, `eval_select`,
+      lossless GGUF import + synthetic test (`2a7fae1`, `fdd264d`)
+- [x] README data-flow animations (`0d49e00`); README links to cerno-pi (`2ebc642`)
+- [ ] P0 4B prefill speed (agent, branch `worktree-agent-aff7b9e370c62872c`): last-layer tail,
+      groups of 7s + 5s; gates + before/after at 1.5 GHz; 0.8B no regression → merge
+- [ ] P0 Overclock test 2.0 GHz / `over_voltage=6` (scripts `os/overclock/`, `d0d4e0c`): after the
+      4B measurements, when no agent is on the Pi (reboot drops the lock)
+- [ ] P1 Network audit (agent): `docs/network-audit.md`, time budgets per workload, ranked
+      candidates with exactness class; then implement the top items (new agents)
+- [ ] P1 README redesign (visual + structure) with the final numbers, after the tests above
+- [ ] P2 Owner decisions: Cerno sample set / Decision Index (7 GB, one gated dataset); PyPI name;
+      Gemma 4 (llama.cpp check first); social-preview upload
