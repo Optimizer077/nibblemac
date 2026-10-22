@@ -37,6 +37,27 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   Windows side with the GPU holding 24 fp32 layers; the run was stopped at 21:45 before two zero-value
   variants when the lead asked for the PC's model slot.
 
+
+### Compilers pilot (toolchain agent, 17:37–; branch `worktree-agent-a75a53a7559d5b274`)
+- Added `engine/TOOLCHAIN.md` (every compiler / flag set tried, with numbers and result files) and
+  `engine/PILOTS.md` (index of pilot verdicts; first entry "Compilers").
+- PC (WSL, apt): cross GCC 13.4 / 14.3 / 16.0.1 and clang 20.1.8 / 22.1.2 installed next to the shipping
+  GCC 15.2; the engine builds static for the Pi with all of them at the project flags.
+- Exactness under qemu (kbench `--check`, 880 configurations per build): GCC 13 / 14 / 15 / 16 and clang 22
+  produce the shipping build's output bytes on every row; **clang 20 rejected**: at `-O3` it miscompiles a
+  max-by-magnitude loop (kbench's Q4 fill, 1.7 % of blocks get a different maximum), i.e. it changes plain
+  C floating-point results. No compiler contracts multiply-adds (`-ffp-contract=off` honoured by all).
+- Dead end: `-fno-schedule-insns` on `kern_quant.c` removes every stack spill of the Q4 loops but is 6–15 %
+  slower on the Pi (speed4b's `cerno-speed-kb8-nosched_*`): instruction count is the wrong proxy on the
+  in-order A72.
+- Pi (1.5 GHz, `toolchain-kb-r1_*`, `toolchain-e2e4b-r1_*`): GCC 14 and 16 equal GCC 15 within noise on the
+  Q4_0 kernel (n = 5 / 7, 4B shapes) and on 4B prefill p256 (6.79 / 6.92 vs 6.92 tok/s); clang 22 is 5–15 %
+  slower on the kernel, clang 22 without its machine scheduler 12–22 % slower. **Verdict: no-go**, the
+  Makefile stays at GCC 15 `-O3 -mcpu=cortex-a72`; the `load` line of the 3.4 GB model is 6 ms (mmap), the
+  page-in happens in the warm-up. Pi scratch files removed (`engine/pinfer_run_tc*`, `tmp/tc`).
+- Scratchpad incident: three pre-existing files in the shared session scratchpad root overwritten (17:39–17:54)
+  and removed (18:18); nothing in the repo or on the Pi affected; details in the journal.
+
 ### Pi: overclock test reverted (21:01)
 - Boot partition edited on the PC (F:): `tryboot.txt` back to the custom-kernel test file, overclock files removed; `config.txt` / `cmdline.txt` unchanged; standard 1.5 GHz profile. `docs/pi-state.md` #5.
 
