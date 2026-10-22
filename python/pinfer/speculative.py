@@ -79,14 +79,17 @@ def iter_speculative(model: Model, ids: list[int], max_new_tokens: int, stop_ids
     if not cont:
         model._forget_state()  # the C call resets the context itself
     model._logits_valid = False
-    if lib.pinfer_generate_greedy_ex is not None:
-        fn = lib.pinfer_generate_greedy_cont if cont else lib.pinfer_generate_greedy_ex
-        yield from _iter_ex(model, fn, prompt, new_ids, len(ids), max_new_tokens, stop_ids,
-                            state, sp, stats)
-    else:
-        yield from _iter_blocking(model, prompt, ids, max_new_tokens, stop_ids, state, sp, stats)
-    state["spec_stats"] = {"k": sp.k, "rounds": stats.rounds, "drafted": stats.drafted,
-                           "accepted": stats.accepted}
+    try:
+        if lib.pinfer_generate_greedy_ex is not None:
+            fn = lib.pinfer_generate_greedy_cont if cont else lib.pinfer_generate_greedy_ex
+            yield from _iter_ex(model, fn, prompt, new_ids, len(ids), max_new_tokens,
+                                stop_ids, state, sp, stats)
+        else:
+            yield from _iter_blocking(model, prompt, ids, max_new_tokens, stop_ids, state, sp,
+                                      stats)
+    finally:  # also when the consumer closes the generator early
+        state["spec_stats"] = {"k": sp.k, "rounds": stats.rounds, "drafted": stats.drafted,
+                               "accepted": stats.accepted}
 
 
 def _iter_ex(model: Model, fn: Any, prompt: Any, ids: list[int], n_ctx: int,
@@ -142,13 +145,20 @@ def _iter_ex(model: Model, fn: Any, prompt: Any, ids: list[int], n_ctx: int,
         end = time.perf_counter()
         state["prefill_seconds"] = (first[0] or end) - t0
         state["decode_seconds"] = end - (first[0] or end)
+        # Settle the context bookkeeping here, so that it is right after an early close
+        # too: the engine fed the prompt and every returned token but the last (emitted,
+        # not fed). After an error the context is unknown: the next call starts afresh.
+        n_done = result.get("n")
+        if "error" in result or not isinstance(n_done, int) or n_done < 0:
+            model._forget_state()
+        else:
+            model._tokens = (model._tokens + list(ids)
+                             + [int(t) for t in out[:max(0, n_done - 1)]])
     if "error" in result:
         raise result["error"]
     n = result["n"]
     if n < 0:
         raise errors.from_code(n, "pinfer_generate_greedy_ex")
-    # The engine fed the prompt and every returned token but the last (emitted, not fed).
-    model._tokens = model._tokens + list(ids) + [int(t) for t in out[:max(0, n - 1)]]
     if status.value == errors.E_CTX_FULL or (n == n_max and n_max < max_new_tokens):
         state["finish_reason"] = "context"
     elif status.value != 0:

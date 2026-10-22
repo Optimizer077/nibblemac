@@ -220,3 +220,35 @@ are unchanged.
 | ctx2048 `--adaptive` | 9.31 / 8.82 / 9.33 (9.15) | 10.31 / 11.04 / 10.79 (**10.71**) | `ver-before-ctx2048_20261022_070717.json`, `ver3-ctx2048_20261022_082417.json` |
 | ctx2048 fixed k=3 / plain | 8.90 / 6.89 | 9.55 / 7.06 | same |
 | chat27 k=2 / k=3 (v1 binary) | 9.88 / 9.45 | 11.00 / 10.52 | `ver1-ksweep_20261022_074459.json` |
+
+## `pinfer serve` on the Pi 4 (2026-10-22 09:49–09:53, server agent; `docs/library.md` §10)
+Q4K model, 4 threads, max_ctx 4096, fp32 KV, greedy chat requests → speculative k=2, at most 64
+tokens per reply. Server and client (`bench/serve/serve_client.py`) both on the Pi, over localhost;
+all four server configurations in one locked call (`bench/serve/serve_bench.sh`, NEON
+`libpinfer.so` md5 `976b73eb…`). TTFT = request sent → first content delta, client side.
+File: `bench/results/serve_20261022_095259.json` (valid, throttled 0x0, 49.6 → 50.6 °C).
+
+Single request (system + user, 39-token prompt, 47-token answer): TTFT **1.33 s** streamed,
+**9.0 tok/s** decode (1.68 tokens/pass; client-side SSE rate 9.06 = server 9.04, so HTTP costs
+nothing measurable), 6.4 s total, blocking 6.35 s.
+
+4-turn conversation, each turn resending the whole history (cached / prompt tokens, TTFT):
+
+| turn | `--history generated` (default) | `--history template` | `--no-reuse` |
+|---|---|---|---|
+| 1 | 0 / 39, 1.34 s | 0 / 39, 1.24 s | 0 / 39, 1.25 s |
+| 2 | 86 / 111, **0.96 s** | 0 / 107, 3.21 s | 0 / 107, 3.09 s |
+| 3 | 147 / 169, **0.89 s** | 0 / 161, 4.82 s | 0 / 161, 4.58 s |
+| 4 | 232 / 256, **0.95 s** | 0 / 244, 7.08 s | 0 / 244, 6.90 s |
+
+- With the template's rendering (what a stateless server sends) **nothing** is reused: the prompt
+  diverges inside the first reply (no `<think>\n\n</think>\n\n` there) and the linear-attention
+  state cannot be rolled back to the common prefix. Building the history from the generated tokens
+  reuses the whole previous exchange (77–91% of the prompt), and TTFT stays flat at ~0.9 s
+  instead of growing with the conversation (7.4× faster at turn 4). Template mode is slightly
+  slower than no reuse (it saves a snapshot of the replaced context it never uses, ~0.1 s).
+- Two conversations interleaved (A1 B1 A2 B2): second turns start from their own snapshot,
+  97 / 120 and 99 / 121 tokens cached, TTFT **1.03 / 1.01 s** vs 3.56 / 3.50 s with
+  `--state-cache-mb 0`.
+- Decode speed matches `pinfer_run` at the same tokens/pass (chat-prompt table above, k=2:
+  1.76 → 9.85, 2.21 → 12.23 tok/s; server: 1.68 → 9.03, 2.25 → 12.34 tok/s).

@@ -12,6 +12,39 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### OpenAI-compatible server (server agent, 08:55–10:05; branch `worktree-agent-a344482719d7c5ce0`)
+- Added: `pinfer serve` (`python/pinfer/server/`, standard library only): `GET /health`,
+  `GET /v1/models`, `POST /v1/chat/completions`, `POST /v1/completions`; SSE streaming with
+  `stream_options.include_usage`; `usage.prompt_tokens_details.cached_tokens` and a `pinfer`
+  extension (cached tokens and source, prefill / decode seconds, tok/s, queue time,
+  speculative stats); OpenAI error JSON (400 incl. `context_length_exceeded`, 401, 404, 500);
+  `chat_template_kwargs.enable_thinking` → `reasoning_content`; optional `--api-key`.
+  One generation at a time (FIFO); a client that disconnects stops its generation.
+- Added: prefix reuse across requests — earlier replies are put back into the prompt as the
+  token ids that were generated (`--history generated`, default), and state snapshots
+  (`save_state`, LRU `--state-cache-mb 256`) keep replaced conversations and long system
+  prompts. Greedy requests use speculative decoding (k=2), sampled ones plain decoding.
+- Fixed (Python): closing a speculative stream that continued the context left
+  `Model.context_tokens` behind the engine (4 vs 11 tokens in the regression test), so the next
+  reuse would continue a wrong context; `TextStream.close()` / stop strings now end the C call
+  at once.
+- Added: `bench/serve/serve_client.py`, `bench/serve/serve_bench.sh`; `tests/python/test_server.py`
+  (31 tests); `docs/library.md` §10 "Server". CLI `-c/--ctx` gains the alias `--max-ctx`.
+- Measured (Pi 4, Q4K, greedy → speculative k=2, client on the Pi;
+  `bench/results/serve_20261022_095259.json`, valid): single chat request TTFT 1.33 s, 9.0 tok/s.
+  4-turn conversation: turns 2–4 reuse 86/111, 147/169, 232/256 prompt tokens, TTFT 0.96 / 0.89 /
+  0.95 s; with the template's history rendering nothing is reused (TTFT 3.21 / 4.82 / 7.08 s,
+  like `--no-reuse`). Interleaved conversations: second turns from snapshots in 1.03 / 1.01 s vs
+  3.56 / 3.50 s without. Pi pytest with the NEON library: 124 passed, 1 skipped, 1 failed
+  (`test_converter_is_available`: no `tools/convert.py` + `quant.py` in the scratch layout;
+  passes once copied) — `logs/runs/20261022_092846_run.log`, `..._100244_run.log`. From the PC
+  over the cable: openai SDK and curl (SSE) work, stream TTFT 0.83 s
+  (`logs/runs/20261022_095338_run.log`).
+- Decided: `pinfer serve` listens on 127.0.0.1 by default (`--host 0.0.0.0` for the network;
+  no TLS, optional `--api-key`).
+- Pi: scratch `~/pinfer/tmp/serve/` (package source, NEON `libpinfer.so` md5 `976b73eb…`,
+  scripts), removed at the end; nothing shared replaced.
+
 ### Hardening (issue #11, hardening agent, 07:00–; notebook `engine/HARDENING.md`)
 - Fixed (loader): every directory entry's `nbytes` must equal the size its dtype and shape
   imply, quantized dtypes included (rows % 4, cols % 256); unknown dtypes refused; header
