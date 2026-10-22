@@ -40,10 +40,11 @@ class Params(ctypes.Structure):
 
 
 class SpecParams(ctypes.Structure):
-    """Mirror of ``pinfer_spec_params`` (speculative decoding, optional API; ``adaptive``
-    added in 0.2, zero-initialised = fixed k)."""
+    """Mirror of ``pinfer_spec_params`` (speculative decoding, optional API; ``adaptive`` and
+    ``ngram`` added in 0.2, zero-initialised = fixed k, no prompt-lookup drafts)."""
 
-    _fields_ = [("k", ctypes.c_int), ("draft_vocab", ctypes.c_int), ("adaptive", ctypes.c_int)]
+    _fields_ = [("k", ctypes.c_int), ("draft_vocab", ctypes.c_int), ("adaptive", ctypes.c_int),
+                ("ngram", ctypes.c_int)]
 
 
 KV_DTYPES = {"fp32": 0, "fp16": 1, "int8": 2}
@@ -63,10 +64,11 @@ def parse_kv_dtype(kv_dtype: str | int) -> tuple[str, int]:
 
 
 class SpecStats(ctypes.Structure):
-    """Mirror of ``pinfer_spec_stats``."""
+    """Mirror of ``pinfer_spec_stats`` (the ``ngram_*`` counters added in 0.2)."""
 
     _fields_ = [("rounds", ctypes.c_int64), ("drafted", ctypes.c_int64),
-                ("accepted", ctypes.c_int64)]
+                ("accepted", ctypes.c_int64), ("ngram_rounds", ctypes.c_int64),
+                ("ngram_drafted", ctypes.c_int64), ("ngram_accepted", ctypes.c_int64)]
 
 
 _c_float_p = ctypes.POINTER(ctypes.c_float)

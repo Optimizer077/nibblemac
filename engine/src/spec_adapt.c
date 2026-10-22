@@ -1,108 +1,102 @@
-/* Adaptive speculation policy (spec.h): choose the number of drafts per round from measured
- * costs and acceptance, so that speculation never runs slower than plain decoding for long.
+/* Adaptive speculation policy (spec.h; validation and history: engine/DRAFT.md §2; Python
+ * mirror: engine/bench/draft_sim.py, class Simple).
  *
- * Model, per round with k drafts (times are EMAs of what pf_spec_decode measures):
- *   cost(k)  = t_step * (1 + cv * k) + k * t_draft + t_commit      cv = extra cost of each
- *              verified token as a fraction of a plain step, (t_verify / t_step - 1) / k
- *              averaged over the measured rounds
- *   yield(k) = 1 + p + p^2 + ... + p^k      p = per-draft acceptance, the same for every
- *              draft position (the per-position rates are close, SPEC.md 3.1), estimated as
- *              hits / trials over every verified draft with geometric decay DECAY per round
- *              and a prior of PRIOR_HITS / PRIOR_TRIALS: a round with a accepted of k drafts
- *              is a hits and a + (a < k) trials. (A first version used an EMA of "first draft
- *              accepted" whose first observation had full weight: one early miss set p = 0 and
- *              sent wikitext at 2048 context to plain mode, 6.96 vs 9.12 tok/s, CONTEXT.md §4.)
- * and the k in 0..k_max with the lowest cost / yield wins, with 3% hysteresis in favour of
- * the current k. The plain-step time comes from one calibration step at the start and one
- * every RECAL speculative rounds (the context grows, so do the step and the verify pass).
- * In plain mode p is unobservable: speculation is probed again after PROBE0 steps, doubling
- * up to PROBE_MAX while the probes keep losing. Output never depends on any of this. */
+ * 1. Chain length from the MTP head's confidence: d1 is always drafted (it comes free with
+ *    the MTP pass after a round); draft s+1 is chained only while the top-1 probability of
+ *    draft s is >= CONF_TAU, up to k. Replayed on the Pi traces this is within 0.98-1.10x of
+ *    the best fixed k on 20 of 21 prompts (held-out ones included), where the earlier cost
+ *    model reached 0.90-1.00x of fixed k = 2 on chat: it ran k = 3 in ~90% of the rounds of
+ *    chat answers and spent 7-8% of them on plain calibration steps (DRAFT.md §2b).
+ * 2. Plain mode protects machines where verifying costs about as much as decoding (the
+ *    scalar host build): after MIN_ROUNDS speculative rounds (2 when a 2-token verify pass
+ *    costs >= 1.5 plain steps), if the realized rate (decayed tokens / seconds of the
+ *    speculative rounds) is below MARGIN x the plain-step rate, take plain steps; after
+ *    PROBE0, 2x, .. PROBE_MAX plain steps, PROBE_ROUNDS speculative rounds are judged on
+ *    their own. The plain step's time is measured when plain steps were taken, else
+ *    extrapolated from the verify passes of widths 2 and 3 (2 tv(2) - tv(3): 129 ms on the
+ *    Pi vs 126 measured; no calibration step, one costs ~1% of a chat answer); without
+ *    either, only the sure case switches: a rate below 1 / (cheapest verify pass) is slower
+ *    than plain decoding on any machine, since a pass of n >= 2 tokens costs at least one
+ *    plain step.
+ * N-gram drafts follow the same rule with and without adaptive (spec.c ngram_pick).
+ * Output never depends on any of this. */
 #include <string.h>
 
 #include "spec.h"
 
-#define ALPHA 0.25     /* EMA weight of a new observation */
-#define RECAL 32       /* speculative rounds between plain-step calibrations */
-#define PROBE0 8       /* plain steps before the first probe */
+#define CONF_TAU 0.6f   /* chain on while the newest draft's top-1 probability is >= this */
+#define ALPHA 0.25      /* EMA weight of a new pass time */
+#define DECAY 0.95      /* rate memory per round (~20 rounds) */
+#define MARGIN 0.95     /* plain mode only if speculation is >= 5% slower than plain */
+#define MIN_ROUNDS 8    /* speculative rounds before plain mode can start */
+#define PROBE_ROUNDS 2  /* speculative rounds of a probe out of plain mode */
+#define PROBE0 8        /* plain steps before the first probe */
 #define PROBE_MAX 64
-#define HYST 0.97      /* a different k must be this much cheaper per token to take over */
-#define DECAY 0.9      /* acceptance memory per round (~10 rounds) */
-#define PRIOR_HITS 2.0 /* prior p = 2/3 with the weight of 3 drafts (SPEC.md 3.4 varied text) */
-#define PRIOR_TRIALS 3.0
 
 static double ema(double old, double x) { return old <= 0 ? x : old + ALPHA * (x - old); }
 
-void pf_adapt_init(pf_spec_adapt *a, int k_max) {
+void pf_adapt_init(pf_spec_adapt *a) {
     memset(a, 0, sizeof *a);
-    a->hits = PRIOR_HITS;
-    a->trials = PRIOR_TRIALS;
-    a->cv = -1.0;
-    a->k_cur = k_max;
     a->probe_after = PROBE0;
 }
 
-/* Expected seconds per emitted token at k drafts. */
-static double per_token(const pf_spec_adapt *a, int k) {
-    if (k == 0) return a->t_step;
-    const double cv = a->cv >= 0 ? a->cv : 0.1, p = a->hits / a->trials;
-    double y = 1.0, pk = 1.0;
-    for (int i = 1; i <= k; i++) {
-        pk *= p;
-        y += pk;
+int pf_adapt_plain_now(pf_spec_adapt *a) {
+    if (!a->plain_mode) return 0;
+    if (a->plain_run < a->probe_after) return 1;
+    if (!a->probing) {   /* a probe starts: judged on its own rounds */
+        a->probing = 1;
+        a->n_spec = 0;
+        a->r_tok = a->r_sec = 0.0;
     }
-    return (a->t_step * (1.0 + cv * k) + k * a->t_draft + a->t_commit) / y;
+    return 0;
 }
 
-static int choose(const pf_spec_adapt *a, int k_max) {
-    int best = 0;
-    double best_c = per_token(a, 0);
-    for (int k = 1; k <= k_max; k++) {
-        const double c = per_token(a, k);
-        if (c < best_c) { best = k; best_c = c; }
-    }
-    if (a->k_cur > 0 && a->k_cur <= k_max && best != a->k_cur &&
-        best_c > HYST * per_token(a, a->k_cur))
-        best = a->k_cur;
-    return best;
-}
-
-int pf_adapt_next(pf_spec_adapt *a, int k_max) {
-    if (a->t_step <= 0) { a->calib = 1; return 0; }          /* measure a plain step first */
-    if (a->rounds == 0) return k_max;                          /* no pass costs measured yet */
-    if (a->k_cur == 0) return a->plain_run >= a->probe_after ? k_max : 0;
-    if (a->since_cal >= RECAL) { a->calib = 1; return 0; }
-    return a->k_cur;
+int pf_adapt_chain_more(const pf_spec_adapt *a, float conf) {
+    (void)a;
+    return conf >= CONF_TAU;
 }
 
 void pf_adapt_plain(pf_spec_adapt *a, double sec) {
-    a->t_step = ema(a->t_step, sec);
-    a->since_cal = 0;
-    if (a->calib) { a->calib = 0; return; }   /* calibration only: the mode stays */
-    a->plain_run++;
+    a->t_plain = ema(a->t_plain, sec);
+    if (a->plain_mode) a->plain_run++;
 }
 
-void pf_adapt_round(pf_spec_adapt *a, int k_max, int k, int accepted, double t_mtp,
-                    double t_verify, double t_commit) {
-    if (k <= 0) return;
-    if (a->t_step > 0) {
-        double cv = (t_verify / a->t_step - 1.0) / k;
-        if (cv < 0) cv = 0;
-        a->cv = a->cv < 0 ? cv : a->cv + ALPHA * (cv - a->cv);
+/* Seconds of a plain step: measured, else extrapolated from verify widths 2 and 3, else 0. */
+static double t_step(const pf_spec_adapt *a) {
+    if (a->t_plain > 0) return a->t_plain;
+    if (a->tv[2] > 0 && a->tv[3] > 0) {
+        const double t = 2.0 * a->tv[2] - a->tv[3];
+        return t > 0.5 * a->tv[2] ? t : 0.5 * a->tv[2];
     }
-    a->t_draft = ema(a->t_draft, t_mtp / k);
-    a->t_commit = ema(a->t_commit, t_commit);
-    a->hits = DECAY * a->hits + accepted;
-    a->trials = DECAY * a->trials + accepted + (accepted < k ? 1 : 0);
-    a->rounds++;
-    a->since_cal++;
-    const int best = choose(a, k_max);
-    if (a->k_cur == 0) {   /* this round was a probe out of plain mode */
-        a->probe_after = best > 0 ? PROBE0 : (a->probe_after * 2 < PROBE_MAX ? a->probe_after * 2
-                                                                             : PROBE_MAX);
+    return 0.0;
+}
+
+void pf_adapt_round(pf_spec_adapt *a, int n, int emitted, double sec, double t_verify) {
+    if (n < 2 || n >= PF_SPEC_W) return;
+    a->tv[n] = ema(a->tv[n], t_verify);
+    a->r_tok = DECAY * a->r_tok + emitted;
+    a->r_sec = DECAY * a->r_sec + sec;
+    a->n_spec++;
+    double tv_min = 0.0;
+    for (int i = 2; i < PF_SPEC_W; i++)
+        if (a->tv[i] > 0 && (tv_min <= 0 || a->tv[i] < tv_min)) tv_min = a->tv[i];
+    const double ts = t_step(a);
+    /* rate r_tok / r_sec below MARGIN / tv_min (sure) or below MARGIN / ts (estimated) */
+    const int slow = a->r_tok * tv_min < MARGIN * a->r_sec ||
+                     (ts > 0 && a->r_tok * ts < MARGIN * a->r_sec);
+    if (a->plain_mode) {   /* a probe round */
+        if (a->n_spec < PROBE_ROUNDS) return;
+        a->probing = 0;
+        a->plain_mode = slow;
+        a->probe_after = !slow ? PROBE0 : a->probe_after * 2 < PROBE_MAX ? a->probe_after * 2
+                                                                          : PROBE_MAX;
         a->plain_run = 0;
-    } else if (best == 0) {
+        a->n_spec = 0;
+        if (slow) a->r_tok = a->r_sec = 0.0;
+    } else if (slow && (a->n_spec >= MIN_ROUNDS ||
+                        (ts > 0 && a->tv[2] >= 1.5 * ts && a->n_spec >= 2))) {
+        a->plain_mode = 1;   /* compute-bound machines (2-token verify >= 1.5 steps) early */
         a->plain_run = 0;
         a->probe_after = PROBE0;
     }
-    a->k_cur = best;
 }
