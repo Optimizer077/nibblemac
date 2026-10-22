@@ -1,0 +1,13 @@
+# 2026-10-22T17:51:24 pi@10.42.0.2
+$ ps -eo pid,ppid,etimes,args --sort=start_time | grep -E 'flock /tmp/pinfer-bench' | grep -v grep | sed 's/timeout --kill-after=30 1200 bash -c //' | cut -c1-140; vcgencmd measure_temp; vcgencmd get_throttled
+
+  63745   63744    2010 flock /tmp/pinfer-bench.lock bash tmp/csp/kbab2.sh tmp/csp/kbench_csp1,tmp/csp/kbench_ns 2
+  63910   63909    1634 flock /tmp/pinfer-bench.lock ./tmp/lut/ubench2
+  64385   64384    1089 flock /tmp/pinfer-bench.lock ./tmp/lut/ubench2b
+  64640   64639     833 flock /tmp/pinfer-bench.lock ./tmp/num/nbench --cols 1024,2560,9216 --batch 1,4,5,7 --time 0.25
+  64695   64694     802 flock /tmp/pinfer-bench.lock bash tmp/gpu/gpurun.sh hello.py
+  65016   65015     693 flock /tmp/pinfer-bench.lock bash os/overclock/oc_measure.sh ./engine/pinfer_run_csp1 3 cerno
+temp=54.0'C
+throttled=0x0
+
+[exit 0]

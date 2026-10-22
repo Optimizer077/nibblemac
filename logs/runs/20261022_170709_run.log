@@ -1,0 +1,60 @@
+# 2026-10-22T17:07:09 pi@10.42.0.2
+$ ls; ls data 2>/dev/null | head -40; ls tmp | head; cat engine/pv_ab.sh | head -40
+
+baselines
+data
+engine
+examples
+gmon.out
+golden
+kbench
+kernel
+llama
+llama_bench.sh
+memband
+models
+tests
+tmp
+venvs
+wheels
+chat27.ids
+chat_code_c.ids
+chat_code_py.ids
+chat_edit.ids
+chat_fix.ids
+chat_list.ids
+chat_math.ids
+chat_story.ids
+ctx2048.ids
+ctx2112.ids
+ctx4096.ids
+ctx512.ids
+ctx64.ids
+ctx8192.ids
+next2048.ids
+next4096.ids
+next8192.ids
+prompt64.ids
+tail2048_64.ids
+wikitext2-qwen35.tokens.bin
+ab
+cerno
+csp
+pyctx
+tools
+#!/bin/bash
+# Decode-only A/B of attention variants from one restored state (engine/CONTEXT.md §3c). From ~/pinfer:
+#   bash engine/pv_ab.sh <ctx> <state file> <kv dtype> bin0 bin1 ...
+# Each binary decodes 32 tokens after the next wikitext token, 3 rounds alternating; prints the
+# md5 of the generated tokens (must be equal for all: the variants are bit-identical) and RESULT.
+C=$1; S=$2; D=$3; shift 3
+M=models/qwen35-0.8b-q4k-headq4k.pq
+for r in 1 2 3; do
+  for B in "$@"; do
+    out=$($B -m $M -t 4 -n 33 -c $((C+64)) --ids-file data/next$C.ids --spec 0 --kv-dtype $D --no-warmup --load-state $S --bench 2>/dev/null)
+    g=$(echo "$out" | grep '^generated' | md5sum | cut -c1-8)
+    echo "$out" | grep RESULT | sed "s/^RESULT {/RESULT {\"bin\":\"$(basename $B)\",\"round\":$r,\"gen_md5\":\"$g\",/"
+  done
+done
+
+[exit 0]

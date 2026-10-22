@@ -1,0 +1,7 @@
+# 2026-10-22T17:54:29 pi@10.42.0.2
+$ ps -eo pid,etimes,args --sort=start_time | grep -E 'flock /tmp/pinfer-bench' | grep -v grep | sed 's/timeout --kill-after=30 1200 bash -c //' | cut -c1-120; vcgencmd measure_temp
+
+  65016     878 flock /tmp/pinfer-bench.lock bash os/overclock/oc_measure.sh ./engine/pinfer_run_csp1 3 cerno
+temp=59.9'C
+
+[exit 0]

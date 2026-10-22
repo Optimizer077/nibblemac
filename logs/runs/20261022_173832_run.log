@@ -1,0 +1,124 @@
+# 2026-10-22T17:38:32 pi@10.42.0.2
+$ cat tmp/csp/e2e4b.sh; echo ====; cat tmp/csp/e2e08.sh; echo ===; ls tmp/csp/ tmp/cerno/ids 2>&1 | head -40; md5sum engine/pinfer_run_fast engine/pinfer_run_csp*; ls -la models/ | head -30; free -m; ls engine/ | head -80
+
+#!/bin/bash
+# 4B prefill A/B: for each binary (comma list, in order) p64 / p256 / p512 with --bench (in-process
+# warm-up), one RESULT line per run tagged with bin and prompt (from ~/pinfer).
+# usage: e2e4b.sh BIN1,BIN2 ROUND [PROMPTS]
+BINS=${1//,/ }; R=$2; P=${3:-p64,p256,p512}
+M=models/cerno-4b-q4_0.pq
+for b in $BINS; do echo "bin $b md5 $(md5sum $b | cut -c1-8)"; done
+for b in $BINS; do
+  for p in ${P//,/ }; do
+    f0=$(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs)
+    $b -m $M -t 4 --ids-file tmp/csp/$p.ids -n 1 --bench 2>/dev/null \
+      | sed -n "s|^RESULT {|RESULT {\"ab_bin\":\"$b\",\"ab_round\":$R,\"ab_prompt\":\"$p\",\"freq_khz_before\":\"$f0\",|p"
+  done
+done
+echo "freq_after $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs) temp $(vcgencmd measure_temp 2>/dev/null)"
+====
+#!/bin/bash
+# Qwen3.5-0.8B regression A/B on prompt64: plain decode, default speculative (adaptive k <= 4,
+# draft vocab 32768, ngram 7), prefill (-n 1); ROUNDS rounds of the binaries in order.
+# usage: e2e08.sh BIN1,BIN2 ROUNDS
+BINS=${1//,/ }; R=${2:-3}
+M=models/qwen35-0.8b-q4k-headq4k.pq
+for b in $BINS; do echo "bin $b md5 $(md5sum $b | cut -c1-8)"; done
+for r in $(seq 1 $R); do
+  for b in $BINS; do
+    for mode in plain spec prefill; do
+      case $mode in
+        plain) a="-n 64";; spec) a="-n 64 --spec 4 --draft-vocab 32768 --adaptive --ngram 7";;
+        prefill) a="-n 1";;
+      esac
+      f0=$(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs)
+      $b -m $M -t 4 --ids-file data/prompt64.ids --bench $a 2>/dev/null \
+        | sed -n "s|^RESULT {|RESULT {\"ab_bin\":\"$b\",\"ab_round\":$r,\"ab_mode\":\"$mode\",\"freq_khz_before\":\"$f0\",|p"
+    done
+  done
+done
+echo "freq_after $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs) temp $(vcgencmd measure_temp 2>/dev/null)"
+===
+tmp/cerno/ids:
+p256.ids
+p64.ids
+p_long.ids
+p_mid.ids
+p_short.ids
+
+tmp/csp/:
+cerno
+cerno_check.sh
+decide_ab.sh
+e2e08.sh
+e2e4b.sh
+kb4.sh
+kbab2.sh
+kbab.sh
+kbench_c1
+kbench_c2
+kbench_c3
+kbench_c4
+kbench_c5
+kbench_csp1
+kbench_ns
+kbench_ref
+kbgate.sh
+kbsweep.sh
+kbvar.sh
+lbab.sh
+lbench4_csp1
+lbench4_f
+lbench4_ref
+lbench_ref
+lib_base
+lib_new
+p256.ids
+p512.ids
+p64.ids
+pinfer_run_csp1_noneon
+profile.sh
+py
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+537fb9a3baa8e949cbe6fe6618bc82c9  engine/pinfer_run_csp0
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+total 15347660
+drwxrwxr-x  4 pi pi       4096 Oct 22 15:41 .
+drwxrwxr-x 16 pi pi       4096 Oct 22 01:38 ..
+-rwxr-xr-x  1 pi pi 3362381824 Oct 22 14:08 cerno-4b-q4_0.pq
+drwxr-xr-x  2 pi pi       4096 Oct 22 14:15 cerno-4b-q4_0.tokenizer
+-rwxr-xr-x  1 pi pi 3373287808 Oct 22 13:58 cerno-4b-v1.1-q4_0.gguf
+-rwxr-xr-x  1 pi pi 1546749184 Oct 21 21:36 qwen35-0.8b-bf16.pq
+-rwxr-xr-x  1 pi pi  439391488 Oct 21 23:46 qwen35-0.8b-mix-headq4k.pq
+-rwxr-xr-x  1 pi pi  566531328 Oct 21 23:47 qwen35-0.8b-mix-headq8.pq
+-rwxr-xr-x  1 pi pi  512977920 Oct 21 21:26 Qwen3.5-0.8B-Q4_0.gguf
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:09 qwen35-0.8b-q4-headq4k.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 21 23:37 qwen35-0.8b-q4-headq4.pq
+-rwxr-xr-x  1 pi pi  436507904 Oct 22 00:08 qwen35-0.8b-q4k-headq4k.pq
+-rwxr-xr-x  1 pi pi  541903872 Oct 21 21:26 Qwen3.5-0.8B-Q4_K_M.gguf
+-rwxr-xr-x  1 pi pi  833592320 Oct 21 21:25 Qwen3.5-0.8B-Q8_0.gguf
+-rwxr-xr-x  1 pi pi  822678784 Oct 21 23:33 qwen35-0.8b-q8-headq8.pq
+-rwxr-xr-x  1 pi pi        358 Oct 21 21:26 Qwen3.5-0.8B.SHA256SUMS
+drwxrwxr-x  2 pi pi       4096 Oct 21 22:15 qwen35-0.8b-tokenizer
+-rwxr-xr-x  1 pi pi 1094714624 Oct 22 11:03 qwen35-2b-q4k-headq4k.pq
+-rwxr-xr-x  1 pi pi 1312164832 Oct 22 11:11 Qwen3.5-2B-Q4_K_M.gguf
+               total        used        free      shared  buff/cache   available
+Mem:            3794         343         161           3        3373        3451
+Swap:           2047          87        1960
+chat_spec.sh
+core2_check.sh
+ctx_check.sh
+f16_check.sh
+pinfer_ppl_fast
+pinfer_ppl_fast.pre-0.2.0
+pinfer_run_cerno1
+pinfer_run_cerno2
+pinfer_run_csp0
+pinfer_run_csp1
+pinfer_run_fast
+pinfer_run_fast.pre-0.2.0
+pv_ab.sh
+spec_exact.sh
+state_check.sh
+
+[exit 0]

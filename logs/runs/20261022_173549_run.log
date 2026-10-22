@@ -1,0 +1,17 @@
+# 2026-10-22T17:35:49 pi@10.42.0.2
+$ ps -eo pid,etimes,args | grep -E 'flock|pinfer|kbench|ubench|bench' | grep -v grep | cut -c1-200
+
+  61780    2880 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/e2e4b.sh ./engine/pinfer_run_csp0,./engine/pinfer_run_csp1 3
+  61838    2878 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/decide_ab.sh base,new support_triage,agent_guardrail,intent_smart_home,nli,medical_triage
+  63080    1616 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_08b.sh
+  63243    1464 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab.sh tmp/csp/kbench_ref,tmp/csp/kbench_csp1 2 --dtypes q4 --shapes c4qkv,c4z,c4out,c4gate,c4down,c4kv 
+  63745    1076 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab2.sh tmp/csp/kbench_csp1,tmp/csp/kbench_ns 2
+  63910     701 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2
+  64043     346 timeout --kill-after=30 1200 bash -c bash tmp/csp/e2e4b.sh ./engine/pinfer_run_csp0,./engine/pinfer_run_csp1 3
+  64044     346 bash tmp/csp/e2e4b.sh ./engine/pinfer_run_csp0,./engine/pinfer_run_csp1 3
+  64303     273 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_cerno.sh
+  64385     155 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2b
+  64400      65 ./engine/pinfer_run_csp1 -m models/cerno-4b-q4_0.pq -t 4 --ids-file tmp/csp/p256.ids -n 1 --bench
+  64401      65 sed -n s|^RESULT {|RESULT {"ab_bin":"./engine/pinfer_run_csp1","ab_round":3,"ab_prompt":"p256","freq_khz_before":"1500000 1500000 1500000 1500000",|p
+
+[exit 0]

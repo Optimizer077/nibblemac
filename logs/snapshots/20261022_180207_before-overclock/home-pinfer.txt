@@ -1,0 +1,21 @@
+total 1108
+drwxrwxr-x 17 pi pi   4096 Oct 22 17:39 .
+drwx------  6 pi pi   4096 Oct 21 21:56 ..
+drwxrwxr-x  5 pi pi   4096 Oct 21 21:58 baselines
+drwxrwxr-x  3 pi pi   4096 Oct 22 17:39 data
+drwxrwxr-x  2 pi pi   4096 Oct 22 16:44 engine
+drwxrwxr-x  2 pi pi   4096 Oct 21 22:20 examples
+-rw-rw-r--  1 pi pi 264259 Oct 22 00:27 gmon.out
+drwxrwxr-x  3 pi pi   4096 Oct 21 22:15 golden
+drwxrwxr-x  2 pi pi   4096 Oct 22 14:18 kbench
+drwxrwxr-x  3 pi pi   4096 Oct 22 01:24 kernel
+drwxrwxr-x  2 pi pi   4096 Oct 21 21:27 llama
+-rwxr-xr-x  1 pi pi    461 Oct 21 21:26 llama_bench.sh
+-rwxr-xr-x  1 pi pi 792232 Oct 21 20:47 memband
+drwxrwxr-x  4 pi pi   4096 Oct 22 15:41 models
+drwxrwxr-x  3 pi pi   4096 Oct 22 17:39 os
+drwxrwxr-x  3 pi pi   4096 Oct 22 00:07 .pytest_cache
+drwxrwxr-x  3 pi pi   4096 Oct 21 22:15 tests
+drwxrwxr-x 11 pi pi   4096 Oct 22 17:37 tmp
+drwxrwxr-x  7 pi pi   4096 Oct 22 17:37 venvs
+drwxrwxr-x  6 pi pi   4096 Oct 21 22:15 wheels

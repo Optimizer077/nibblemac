@@ -1,0 +1,9 @@
+# 2026-10-22T17:47:36 pi@10.42.0.2
+$ ps -o pid,ppid,args -p 64303 | cut -c1-120; kill 64303 && echo killed-64303; sleep 1; pgrep -af 'audit_cerno' | grep -v pgrep || echo 'no audit_cerno left'
+
+    PID    PPID COMMAND
+  64303       1 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_cerno.sh
+killed-64303
+no audit_cerno left
+
+[exit 0]

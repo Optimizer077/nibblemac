@@ -1,0 +1,13 @@
+# 2026-10-22T17:34:54 pi@10.42.0.2
+$ ps -eo pid,etimes,args | grep -E 'flock' | grep -v grep | cut -c1-120
+
+  61780    2823 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/e2e4b.sh ./engine/pinfer_
+  61838    2821 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/decide_ab.sh base,new sup
+  63080    1559 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_08b.sh
+  63243    1407 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab.sh tmp/csp/kbench_re
+  63745    1020 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab2.sh tmp/csp/kbench_c
+  63910     644 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2
+  64303     216 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_cerno.sh
+  64385      98 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2b
+
+[exit 0]

@@ -1,0 +1,23 @@
+# 2026-10-22T17:39:29 pi@10.42.0.2
+$ mkdir -p data/cerno && cp tmp/csp/p64.ids tmp/csp/p256.ids data/cerno/ && md5sum os/overclock/*.sh data/cerno/*.ids engine/pinfer_run_csp1 engine/pinfer_run_fast tmp/csp/lib_new/libpinfer.so; pgrep -af 'pinfer|kbench|python' | grep -v pgrep | head
+
+5f8aa8b1544ed49ecf8fdc64a19cfcf9  os/overclock/oc_measure.sh
+0e42e9e279be8a89f804fd640588648d  os/overclock/oc_soak.sh
+fd150ccdd10e1c1043271d02ac248ee3  os/overclock/oc_tryboot.sh
+81850129c40efc4472eb8cc10ee1941b  data/cerno/p256.ids
+ff738ff7406ca17db077e463a4f1d3ef  data/cerno/p64.ids
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+ba600f512f97351c31b6bb0acc35c1eb  tmp/csp/lib_new/libpinfer.so
+61838 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/decide_ab.sh base,new support_triage,agent_guardrail,intent_smart_home,nli,medical_triage
+63080 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_08b.sh
+63243 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab.sh tmp/csp/kbench_ref,tmp/csp/kbench_csp1 2 --dtypes q4 --shapes c4qkv,c4z,c4out,c4gate,c4down,c4kv --batch 1,7,9,12,14,48,64 --reps 3 --time 0.03
+63745 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab2.sh tmp/csp/kbench_csp1,tmp/csp/kbench_ns 2
+63910 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2
+64303 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_cerno.sh
+64385 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2b
+64640 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/num/nbench --cols 1024,2560,9216 --batch 1,4,5,7 --time 0.25
+64695 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/gpu/gpurun.sh hello.py
+64854 venvs/pinfer/bin/python tmp/csp/cerno/bench/decide_bench.py -m models/cerno-4b-q4_0.pq --request tmp/csp/cerno/requests/correctness.json --warmup --only support_triage,agent_guardrail,intent_smart_home,nli,medical_triage
+
+[exit 0]

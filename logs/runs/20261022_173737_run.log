@@ -1,0 +1,39 @@
+# 2026-10-22T17:37:37 pi@10.42.0.2
+$ ls ~/pinfer/tmp/csp/ 2>&1 | head -30; ls ~/pinfer/engine/ | grep -E 'csp|cerno'
+
+cerno
+cerno_check.sh
+decide_ab.sh
+e2e08.sh
+e2e4b.sh
+kb4.sh
+kbab2.sh
+kbab.sh
+kbench_c1
+kbench_c2
+kbench_c3
+kbench_c4
+kbench_c5
+kbench_csp1
+kbench_ns
+kbench_ref
+kbgate.sh
+kbsweep.sh
+kbvar.sh
+lbab.sh
+lbench4_csp1
+lbench4_f
+lbench4_ref
+lbench_ref
+lib_base
+lib_new
+p256.ids
+p512.ids
+p64.ids
+pinfer_run_csp1_noneon
+pinfer_run_cerno1
+pinfer_run_cerno2
+pinfer_run_csp0
+pinfer_run_csp1
+
+[exit 0]

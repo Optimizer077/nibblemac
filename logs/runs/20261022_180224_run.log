@@ -1,0 +1,5 @@
+# 2026-10-22T18:02:24 pi@10.42.0.2
+$ sudo reboot '0 tryboot'
+
+
+[exit 0]

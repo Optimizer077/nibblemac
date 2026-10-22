@@ -1,0 +1,10 @@
+# 2026-10-22T17:52:08 pi@10.42.0.2
+$ ps -eo pid,etimes,args --sort=start_time | grep -E 'flock /tmp/pinfer-bench' | grep -v grep | sed 's/timeout --kill-after=30 1200 bash -c //' | cut -c1-120
+
+  63910    1678 flock /tmp/pinfer-bench.lock ./tmp/lut/ubench2
+  64385    1133 flock /tmp/pinfer-bench.lock ./tmp/lut/ubench2b
+  64640     877 flock /tmp/pinfer-bench.lock ./tmp/num/nbench --cols 1024,2560,9216 --batch 1,4,5,7 --time 0.25
+  64695     846 flock /tmp/pinfer-bench.lock bash tmp/gpu/gpurun.sh hello.py
+  65016     737 flock /tmp/pinfer-bench.lock bash os/overclock/oc_measure.sh ./engine/pinfer_run_csp1 3 cerno
+
+[exit 0]

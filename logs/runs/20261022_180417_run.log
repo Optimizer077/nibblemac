@@ -1,0 +1,6 @@
+# 2026-10-22T18:04:17 pi@10.42.0.2
+$ ls -la data/ctx2048.ids os/overclock/; uptime; vcgencmd measure_clock arm; vcgencmd get_throttled
+
+ssh: connect to host 10.42.0.2 port 22: Connection timed out
+
+[exit 255]

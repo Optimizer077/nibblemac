@@ -1,0 +1,45 @@
+# 2026-10-22T17:07:15 pi@10.42.0.2
+$ find tmp -maxdepth 3 -name '*state*' -size +1M -exec ls -la {} \; 2>/dev/null | head -20; ls tmp/cerno | head; ls tmp/csp | head -30; uptime
+
+bench
+cerno_pi
+ids
+lib
+llama-server
+llama_server.log
+py
+requests
+results
+cerno
+cerno_check.sh
+decide_ab.sh
+e2e08.sh
+e2e4b.sh
+kb4.sh
+kbench_c1
+kbench_c2
+kbench_c3
+kbench_c4
+kbench_c5
+kbench_csp1
+kbench_ref
+kbgate.sh
+kbsweep.sh
+kbvar.sh
+lbab.sh
+lbench4_csp1
+lbench4_f
+lbench4_ref
+lbench_ref
+lib_base
+lib_new
+p256.ids
+p512.ids
+p64.ids
+pinfer_run_csp1_noneon
+profile.sh
+py
+test_prefill_tail.py
+ 17:07:15 up 15:32,  9 users,  load average: 4.21, 4.08, 3.60
+
+[exit 0]

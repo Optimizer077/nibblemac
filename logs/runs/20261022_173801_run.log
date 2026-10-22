@@ -1,0 +1,15 @@
+# 2026-10-22T17:38:01 pi@10.42.0.2
+$ bash tmp/gpu/gpurun.sh hello.py
+
+Traceback (most recent call last):
+  File "/home/pi/pinfer/tmp/gpu/hello.py", line 4, in <module>
+    from videocore6.driver import Driver
+  File "/home/pi/pinfer/tmp/gpu/pyvc6/src/videocore6/driver/__init__.py", line 1, in <module>
+    from _videocore6.driver import Array, Driver, Memory
+  File "/home/pi/pinfer/tmp/gpu/pyvc6/src/_videocore6/driver.py", line 56, in <module>
+    class Array(npt.NDArray[T]):
+    ...<13 lines>...
+            ).reshape(self.shape)
+TypeError: typealias() takes exactly 2 positional arguments (3 given)
+
+[exit 1]

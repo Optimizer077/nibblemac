@@ -1,0 +1,31 @@
+# 2026-10-22T17:07:05 pi@10.42.0.2
+$ ls -la engine/pinfer_run_fast engine/pinfer_run_cerno2 models/*.pq bench/common/ 2>&1 | head -40; md5sum engine/pinfer_run_fast engine/pinfer_run_cerno2; ls engine/*.sh | head; ./engine/pinfer_run_fast --help 2>&1 | head -60
+
+ls: cannot access 'bench/common/': No such file or directory
+-rwxr-xr-x 1 pi pi     934784 Oct 22 15:04 engine/pinfer_run_cerno2
+-rwxr-xr-x 1 pi pi     934696 Oct 22 14:55 engine/pinfer_run_fast
+-rwxr-xr-x 1 pi pi 3362381824 Oct 22 14:08 models/cerno-4b-q4_0.pq
+-rwxr-xr-x 1 pi pi 1546749184 Oct 21 21:36 models/qwen35-0.8b-bf16.pq
+-rwxr-xr-x 1 pi pi  439391488 Oct 21 23:46 models/qwen35-0.8b-mix-headq4k.pq
+-rwxr-xr-x 1 pi pi  566531328 Oct 21 23:47 models/qwen35-0.8b-mix-headq8.pq
+-rwxr-xr-x 1 pi pi  436507904 Oct 22 00:09 models/qwen35-0.8b-q4-headq4k.pq
+-rwxr-xr-x 1 pi pi  436507904 Oct 21 23:37 models/qwen35-0.8b-q4-headq4.pq
+-rwxr-xr-x 1 pi pi  436507904 Oct 22 00:08 models/qwen35-0.8b-q4k-headq4k.pq
+-rwxr-xr-x 1 pi pi  822678784 Oct 21 23:33 models/qwen35-0.8b-q8-headq8.pq
+-rwxr-xr-x 1 pi pi 1094714624 Oct 22 11:03 models/qwen35-2b-q4k-headq4k.pq
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+537fb9a3baa8e949cbe6fe6618bc82c9  engine/pinfer_run_cerno2
+engine/chat_spec.sh
+engine/core2_check.sh
+engine/ctx_check.sh
+engine/f16_check.sh
+engine/pv_ab.sh
+engine/spec_exact.sh
+engine/state_check.sh
+usage: pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] [-b batch] (--ids 1,2,3 | --ids-file f)
+                  [--dump-logits f] [--dump-hidden f] [--bench]
+                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]
+                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]
+                  [--save-state f] [--load-state f] [--ngram N]
+
+[exit 0]

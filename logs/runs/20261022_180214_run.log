@@ -1,0 +1,17 @@
+# 2026-10-22T18:02:14 pi@10.42.0.2
+$ sudo bash os/overclock/oc_tryboot.sh arm 2000 6
+
+backed up tryboot.txt -> /boot/firmware/tryboot.txt.pre-oc
+== tryboot.txt vs config.txt
+54a55,60
+> 
+> # --- pinfer overclock test (os/overclock/oc_tryboot.sh, 2026-10-22T18:02:14+09:00) ---
+> [all]
+> arm_freq=2000
+> over_voltage=6
+> cmdline=cmdline-oc.txt
+== cmdline-oc.txt
+console=serial0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR panic=10
+armed. Next: sudo reboot '0 tryboot'
+
+[exit 0]

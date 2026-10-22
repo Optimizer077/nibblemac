@@ -1,0 +1,24 @@
+# 2026-10-22T17:39:08 pi@10.42.0.2
+$ cat tmp/csp/decide_ab.sh; ls tmp/csp/lib_new tmp/csp/cerno | head
+
+#!/bin/bash
+# Cerno decisions with two libpinfer builds, one after the other (from ~/pinfer).
+# usage: decide_ab.sh ORDER ONLY   ORDER: e.g. base,new or new,base ; ONLY: request names (commas)
+set -o pipefail
+ORDER=${1//,/ }; ONLY=$2
+for v in $ORDER; do
+  L=tmp/csp/lib_$v/libpinfer.so
+  echo "== lib $v md5 $(md5sum $L | cut -c1-8) freq $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs)"
+  PYTHONPATH=tmp/csp/py PINFER_LIB=$L venvs/pinfer/bin/python tmp/csp/cerno/bench/decide_bench.py \
+    -m models/cerno-4b-q4_0.pq --request tmp/csp/cerno/requests/correctness.json --warmup --only "$ONLY"
+done
+echo "freq_after $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs)"
+tmp/csp/cerno:
+bench
+cerno_pi
+requests
+
+tmp/csp/lib_new:
+libpinfer.so
+
+[exit 0]

@@ -1,0 +1,7 @@
+# 2026-10-22T17:37:27 pi@10.42.0.2
+$ md5sum tmp/num/nbench; ls tmp/num
+
+e924427318bbf40e7a23e2407f15e5df  tmp/num/nbench
+nbench
+
+[exit 0]

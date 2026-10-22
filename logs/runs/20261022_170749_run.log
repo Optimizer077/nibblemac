@@ -1,0 +1,20 @@
+# 2026-10-22T17:07:49 pi@10.42.0.2
+$ head -c 300 data/prompt64.ids; echo; wc -c data/prompt64.ids; cat tmp/csp/profile.sh
+
+2064,557,279,1786,314,2942,11,424,557,279,11447,314,2942,11,424,557,279,4092,314,22662,11,424,557,279,4092,314,43728,2022,11,424,557,279,15862,314,15915,11,424,557,279,15862,314,9365,355,477,11,424,557,279,3098,314,8394,11,424,557,279,3098,314,51895,11,424,557,279,10151,314
+
+276 data/prompt64.ids
+#!/bin/bash
+# 4B prefill profile: PF_FWD_STATS + PF_KERN_STATS on p64 / p256 after an untimed warm-up run.
+set -o pipefail
+BIN=${1:-./engine/pinfer_run_csp0}
+M=models/cerno-4b-q4_0.pq
+echo "bin $BIN md5 $(md5sum $BIN | cut -c1-8)"
+$BIN -m $M -t 4 --ids-file tmp/csp/p64.ids -n 1 --no-warmup 2>&1 | grep -E '^load'
+for f in ${PROMPTS:-p64 p256}; do
+  echo "== $f freq $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs)"
+  PF_FWD_STATS=1 PF_KERN_STATS=1 $BIN -m $M -t 4 --ids-file tmp/csp/$f.ids -n 1 --bench --no-warmup 2>&1 | grep -E 'RESULT|^load|STATS'
+done
+echo "freq_after $(cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq | xargs)"
+
+[exit 0]

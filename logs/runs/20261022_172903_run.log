@@ -1,0 +1,30 @@
+# 2026-10-22T17:29:03 pi@10.42.0.2
+$ ls -la /dev/dri/ 2>&1; dpkg -l | grep -iE 'mesa-vulkan|libvulkan|vulkan-tools|mesa-opencl|clinfo|libdrm' | awk '{print $2, $3}'; which vulkaninfo clinfo glslc glslangValidator 2>/dev/null; vcgencmd measure_clock v3d; vcgencmd measure_clock core; vcgencmd get_mem gpu; groups; lsmod | grep -E 'v3d|vc4' 
+
+total 0
+drwxr-xr-x  3 root root        120 Oct 22 01:34 .
+drwxr-xr-x 17 root root       4020 Oct 22 02:20 ..
+drwxr-xr-x  2 root root        100 Oct 22 01:34 by-path
+crw-rw----  1 root video  226,   0 Oct 22 01:34 card0
+crw-rw----  1 root video  226,   1 Oct 22 02:21 card1
+crw-rw----  1 root render 226, 128 Oct 22 01:34 renderD128
+libdrm-common 2.4.134-3~bpo13+1+rpt1
+libdrm2:arm64 2.4.134-3~bpo13+1+rpt1
+frequency(46)=499987808
+frequency(1)=499987808
+gpu=76M
+pi adm dialout cdrom sudo audio video plugdev games users netdev gpio i2c spi render input
+vc4                   421888  4
+drm_exec               16384  1 vc4
+v3d                   188416  0
+drm_display_helper     32768  1 vc4
+gpu_sched              61440  1 v3d
+drm_shmem_helper       32768  1 v3d
+drm_dma_helper         24576  2 vc4
+drm_client_lib         12288  1 vc4
+drm_kms_helper        229376  4 drm_dma_helper,vc4,drm_shmem_helper,drm_client_lib
+snd_soc_core          299008  2 vc4,snd_soc_hdmi_codec
+snd_pcm               163840  6 vc4,snd_bcm2835,snd_soc_hdmi_codec,snd_compress,snd_soc_core,snd_pcm_dmaengine
+drm                   716800  10 gpu_sched,drm_kms_helper,drm_exec,drm_dma_helper,v3d,vc4,drm_shmem_helper,drm_display_helper,drm_client_lib
+
+[exit 0]

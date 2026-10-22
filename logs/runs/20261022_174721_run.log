@@ -1,0 +1,15 @@
+# 2026-10-22T17:47:21 pi@10.42.0.2
+$ ps -eo pid,ppid,etimes,stat,args --sort=start_time | grep -E 'flock /tmp/pinfer-bench|kbab|audit_cerno|kbench|ubench|nbench|gpurun|oc_measure|pinfer_run' | grep -v grep | cut -c1-170
+
+  63745   63744    1767 Ss   flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab2.sh tmp/csp/kbench_csp1,tmp/csp/kbench_ns 2
+  63910   63909    1391 Ss   flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2
+  64303       1     964 Ss   flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/audit/audit_cerno.sh
+  64385   64384     846 Ss   flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/lut/ubench2b
+  64640   64639     590 Ss   flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c ./tmp/num/nbench --cols 1024,2560,9216 --batch 1,4,5,7 --time 0.25
+  64695   64694     560 Ss   flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash tmp/gpu/gpurun.sh hello.py
+  65016   65015     450 Ss   flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash os/overclock/oc_measure.sh ./engine/pinfer_run_csp1 3 cerno
+  65171   63745      72 S    timeout --kill-after=30 1200 bash -c bash tmp/csp/kbab2.sh tmp/csp/kbench_csp1,tmp/csp/kbench_ns 2
+  65172   65171      72 S    bash tmp/csp/kbab2.sh tmp/csp/kbench_csp1,tmp/csp/kbench_ns 2
+  65181   65172      72 Rl   tmp/csp/kbench_csp1 --variant kbench_csp1 --threads 4 --dtypes q4,q4k --shapes c4qkv,c4gate,c4down,c4out,qkv,down --batch 1,4,5,6,7,64 --reps
+
+[exit 0]
