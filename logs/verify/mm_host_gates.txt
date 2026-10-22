@@ -1,0 +1,29 @@
+# host gates 2026-10-22T13:44:02+09:00 in /mnt/e/Personal_tries/Raspberry_Pi/.claude/worktrees/agent-a6d5914c435068003
+## build host (ref)
+build host exit 0
+## test_golden
+4. greedy generation
+   ours: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   gold: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   32/32 match -> PASS
+
+OVERALL: PASS
+## test_spec
+           k4    121     464      222       0.478       2.835
+     k3v32768    151     432      192       0.444       2.272
+      k3adapt    299      79       44       0.557       1.147
+         k3b2    133     388      210       0.541       2.579
+
+OVERALL: PASS
+## test_state
+    bench64 split 40 adaptive: state 21348424 B, save 14.4 ms load 0.0 ms size 21348424 bytes | ok
+     long74 split 64    plain: state 21774408 B, save 18.0 ms load 0.0 ms size 21774408 bytes | ok
+     long74 split 64    spec3: state 22036552 B, save 13.5 ms load 0.0 ms size 22036552 bytes | ok
+     long74 split 64 adaptive: state 22036552 B, save 12.8 ms load 0.0 ms size 22036552 bytes | ok
+
+OVERALL: PASS
+## pytest
+........................................................................ [ 57%]
+......................................................                   [100%]
+126 passed in 220.11s (0:03:40)
+## done 2026-10-22T13:54:49+09:00

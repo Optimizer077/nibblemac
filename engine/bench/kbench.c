@@ -9,8 +9,14 @@
  *   kbench [--dtypes f32,bf16,q8,q4,q4k] [--shapes qkv,z,...] [--threads 1,2,3,4]
  *          [--batch 1,2,4,8] [--time 0.15] [--reps 2] [--prefetch BYTES] [--variant NAME]
  *          [--golden FILE] [--check] [--head-f32] [--hot] [--auto] [--dirty KB] [--group N]
+ *          [--gvecs N]
  * --dirty KB: write a KB buffer before every timed call (as the delta-rule recurrence
  * leaves ~1 MB of dirty state in L2 right before out_proj in the engine).
+ * --group N / --gvecs N: pf_matmul splits n > N vectors into groups of at most gvecs
+ * vectors for the quantized dtypes (kern_act_group / kern_group_vecs; --group 0: never).
+ * Every RESULT carries `yhash`, an FNV-1a hash of the batched output bytes: the inputs are
+ * seeded, so two kbench builds with different kernels must print the same hashes for the
+ * same configuration if their outputs are bit-identical (KERNELS.md Part 3).
  * Prints one `RESULT {json}` line per configuration (for harness/pi.py bench).
  * Exit code 1 if any correctness check fails.
  */
@@ -139,8 +145,16 @@ static void parse_args(int argc, char **argv) {
         else if (!strcmp(a, "--auto")) opt.autothr = 1; /* library thread policy */
         else if (!strcmp(a, "--dirty")) opt.dirty_kb = atoi(v), i++; /* dirty L2 before calls */
         else if (!strcmp(a, "--group")) kern_act_group = atoi(v), i++; /* 0 = no grouping */
+        else if (!strcmp(a, "--gvecs")) kern_group_vecs = atoi(v), i++; /* quantized group size */
         else { fprintf(stderr, "unknown option %s\n", a); exit(2); }
     }
+}
+
+static unsigned long long fnv1a(const void *p, size_t n) {
+    const unsigned char *b = p;
+    unsigned long long h = 1469598103934665603ull;
+    for (size_t i = 0; i < n; i++) h = (h ^ b[i]) * 1099511628211ull;
+    return h;
 }
 
 static float max_rel(const float *y, const float *ref, int n, int nrow) {
@@ -186,6 +200,7 @@ static int bench_one(const dtype_t *dt, const shape_t *sh, pf_pool **pools) {
         for (int bi = 0; bi < opt.nbatch; bi++) {
             const int n = opt.batch[bi];
             pf_matmul(pool, &W0, X, Y, n);
+            const unsigned long long yhash = fnv1a(Y, (size_t)n * rows * sizeof(float));
             for (int v = 0; v < n; v++)
                 for (int k = 0; k < nrow; k++) ys[v * nrow + k] = Y[(size_t)v * rows + idx[k]];
             float e_fp = max_rel(ys, rfp, n, nrow), e_k = quant ? max_rel(ys, rq, n, nrow) : e_fp;
@@ -215,12 +230,12 @@ static int bench_one(const dtype_t *dt, const shape_t *sh, pf_pool **pools) {
             printf("RESULT {\"bench\":\"kbench\",\"variant\":\"%s\",\"dtype\":\"%s\",\"shape\":\"%s\","
                    "\"rows\":%d,\"cols\":%d,\"threads\":%d,\"n\":%d,\"bytes\":%zu,\"us\":%.2f,"
                    "\"gbs\":%.3f,\"rel_err_fp\":%.3e,\"rel_err_kernel\":%.3e,\"prefetch\":%d,"
-                   "\"iters\":%ld,\"hot\":%d,\"auto_threads\":%d,\"dirty_kb\":%d,\"group\":%d,\"exact\":%s,\"noisy\":%s,"
-                   "\"foreign_cpu_s\":%.3f,\"ok\":%s}\n",
+                   "\"iters\":%ld,\"hot\":%d,\"auto_threads\":%d,\"dirty_kb\":%d,\"group\":%d,\"gvecs\":%d,"
+                   "\"exact\":%s,\"yhash\":\"%016llx\",\"noisy\":%s,\"foreign_cpu_s\":%.3f,\"ok\":%s}\n",
                    opt.variant, dt->name, sh->name, rows, cols, pf_pool_threads(pool), n, bytes,
                    us, gbs, e_fp, e_k, kern_prefetch, iters, opt.hot, opt.autothr, opt.dirty_kb,
-                   kern_act_group, exact ? "true" : "false", tm.noisy ? "true" : "false", tm.foreign,
-                   ok ? "true" : "false");
+                   kern_act_group, kern_group_vecs, exact ? "true" : "false", yhash,
+                   tm.noisy ? "true" : "false", tm.foreign, ok ? "true" : "false");
             fflush(stdout);
         }
     }
