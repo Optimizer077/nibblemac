@@ -12,6 +12,12 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Merged (lead, 16:00): GGUF import pieces from the Cerno work
+- `2a7fae1`: untied output head (`lm_head.weight`), `linear_attn.A`, `pinfer_eval_select` /
+  `Model.eval_select`, `tools/gguf_to_pq.py` (lossless GGUF Q4_0 / Q8_0 → `.pq`). Host gates on the
+  merged tree all pass (pytest 130, malformed 43/43); the Pi build is byte-identical to the gated
+  `pinfer_run_cerno2` (`spec_exact` 58/58, `ctx_check` 5/5). Qwen3.5-0.8B output is unchanged.
+
 ### Renamed (lead, 15:35): piquant → **nibblepi**
 - Owner asked for a better name; a naming review checked meaning, collisions (GitHub, PyPI, npm, web)
   and trademark: `nibblepi` (a nibble = 4 bits, the weight size; pi = the board) was the only candidate
