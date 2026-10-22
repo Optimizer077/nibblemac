@@ -52,6 +52,8 @@ struct pinfer_ctx {
     int max_ctx;
     int n_past;
     int batch;          /* current prefill chunk size, 1..PF_MAX_BATCH (pf_set_batch) */
+    int xn_last;        /* row of ctx->xn holding the last pf_forward token's final-normed
+                           state (pf_forward_select reads it) */
     int kv_dtype;       /* PF_KV_* storage format of every KV cache (main and MTP) */
     int mtp_rows;       /* MTP KV rows [0, mtp_rows) hold values the MTP head computed for
                            the committed tokens (spec.c maintains it; state.c saves them) */
@@ -126,8 +128,11 @@ void pf_add_rows(pinfer_ctx *ctx, int n);                     /* x += out */
 void pf_mlp(pinfer_ctx *ctx, const pf_layer *L, int n);
 
 /* Gated full attention for n tokens at positions pos0.. (forward_attn.c): ctx->xn ->
- * ctx->out. kc / vc: the layer's K and V caches (the main model's or the MTP head's). */
-void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0);
+ * ctx->out. kc / vc: the layer's K and V caches (the main model's or the MTP head's). Every
+ * row stores its K / V; only rows q0..n-1 compute their attention output (rows q0.. of
+ * ctx->out; q0 = 0: all rows). Each output row is bit-identical whatever q0 and n are. */
+void pf_full_attn(pinfer_ctx *ctx, const pf_layer *L, float *kc, float *vc, int n, int pos0,
+                  int q0);
 
 /* KV-cache rows (forward_kv.c). pf_kv_bytes: size of one layer's K (or V) cache in bytes;
  * store converts one row (g, p) of `cache` from fp32; widen writes the fp32 values of its

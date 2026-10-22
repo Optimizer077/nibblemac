@@ -5,7 +5,7 @@
  *              (--ids 1,2,3 | --ids-file f) [--dump-logits out.bin] [--dump-hidden out.bin]
  *              [--bench] [--warmup | --no-warmup] [--spec k [--draft-vocab N]]
  *              [--dump-mtp out.bin] [--kv-dtype 0|1|2] [--adaptive]
- *              [--save-state f] [--load-state f] [--ngram N]
+ *              [--save-state f] [--load-state f] [--ngram N] [--dump-last f]
  *
  * Token ids only: tokenization lives in the Python package. --dump-* write raw little-endian
  * fp32 for the PROMPT tokens: logits [T][vocab], hidden [n_layers+1][T][hidden] (same layout
@@ -33,6 +33,9 @@
  *   run A: --ids-file full.ids      run B: --ids-file head.ids --save-state s -n 1
  *   run C: --load-state s --ids-file tail.ids
  * must generate the same tokens in A and C (the state round trip is exact).
+ * --dump-last f: the prefill's last-token logits, fp32 [vocab] (plain path). Without the other
+ * --dump-* options the prefill computes only what those logits need (forward.c, "tail"), so
+ * comparing this file with the last row of --dump-logits checks that path bit for bit.
  */
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
@@ -144,7 +147,8 @@ static void usage(void) {
                     "                  [--dump-logits f] [--dump-hidden f] [--bench]\n"
                     "                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n"
                     "                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n"
-                    "                  [--save-state f] [--load-state f] [--ngram N]\n");
+                    "                  [--save-state f] [--load-state f] [--ngram N]\n"
+                    "                  [--dump-last f]\n");
 }
 
 /* --dump-mtp: see the header comment. normed = the prompt's final-normed hiddens [T][H]. */
@@ -184,7 +188,7 @@ static int dump_mtp(pinfer_ctx *ctx, const char *path, const int32_t *prompt, in
 int main(int argc, char **argv) {
     const char *model = NULL, *ids_arg = NULL, *ids_file = NULL;
     const char *dump_logits = NULL, *dump_hidden = NULL, *dump_mtp_f = NULL;
-    const char *save_state = NULL, *load_state = NULL;
+    const char *save_state = NULL, *load_state = NULL, *dump_last = NULL;
     int threads = 4, n_gen = 32, max_ctx = 0, batch = PF_MAX_BATCH, bench = 0;
     int spec_k = -1, draft_vocab = 0, warmup = -1, kv_dtype = 0, adaptive = 0, ngram = 0;
     for (int i = 1; i < argc; i++) {
@@ -206,6 +210,7 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--save-state") && v) save_state = v;
         else if (!strcmp(a, "--load-state") && v) load_state = v;
         else if (!strcmp(a, "--ngram") && v) ngram = atoi(v);
+        else if (!strcmp(a, "--dump-last") && v) dump_last = v;
         else if (!strcmp(a, "--adaptive")) { adaptive = 1; used = 0; }
         else if (!strcmp(a, "--bench")) { bench = 1; used = 0; }
         else if (!strcmp(a, "--warmup")) { warmup = 1; used = 0; }
@@ -215,7 +220,8 @@ int main(int argc, char **argv) {
     }
     if (!model || (!ids_arg == !ids_file) || n_gen < 0 || spec_k > PINFER_SPEC_MAX_K ||
         ngram < 0 || ngram > PINFER_SPEC_MAX_K || (ngram > 0 && spec_k < 0) ||
-        (spec_k >= 0 && (n_gen < 1 || dump_logits || dump_hidden || dump_mtp_f)) ||
+        (spec_k >= 0 &&
+         (n_gen < 1 || dump_logits || dump_hidden || dump_mtp_f || dump_last)) ||
         (load_state && (dump_logits || dump_hidden || dump_mtp_f))) {
         usage();
         return 2;
@@ -303,6 +309,7 @@ int main(int argc, char **argv) {
         if (rc != PINFER_OK) { fprintf(stderr, "prefill failed: %d\n", rc); return 1; }
         if (save_state && state_save(ctx, save_state, &ms_save)) return 1;
         if (all && write_f32(dump_logits, all, (size_t)n_prompt * V)) return 1;
+        if (dump_last && write_f32(dump_last, logits, (size_t)V)) return 1;
         if (hid && write_f32(dump_hidden, hid, (size_t)(L + 1) * n_prompt * H)) return 1;
         if (normed && dump_mtp(ctx, dump_mtp_f, prompt, n_prompt, normed,
                                pinfer_argmax(logits, V), 4)) return 1;
