@@ -24,12 +24,12 @@ Contents: [scoreboard](#1-scoreboard) · [formats](#2-pinfer-by-weight-format) �
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/decode_speed-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="figures/decode_speed-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/decode_speed-dark.png">
-  <img alt="Decode speed on the Pi 4: pinfer Q4K 7.9 tokens/s plain and 16.5 tokens/s with exact speculative decoding; MNN int4 6.7, llama.cpp 4.1 to 5.6, ONNX Runtime GenAI int4 3.1." src="figures/decode_speed.png">
+  <img alt="Decode speed on the Pi 4: pinfer Q4K 7.9 tokens/s plain and 18.4 tokens/s with exact speculative decoding; MNN int4 6.7, llama.cpp 4.1 to 5.6, ONNX Runtime GenAI int4 3.1." src="figures/decode_speed.png">
 </picture>
 
 | Engine | Format | File size | Decode, plain | Decode, speculative | Prefill | PPL (8×512) | Result files |
 |---|---|---|---|---|---|---|---|
-| **pinfer** | Q4K_G32, Q4K head | 437 MB | **7.88** | **16.49** (k=3) | **37.4** | 18.50 | `pinfer-final2-q4k_20261022_023950`, `pinfer-ppl-c8-final2-q4k_20261022_024414` |
+| **pinfer** | Q4K_G32, Q4K head | 437 MB | **7.89** | **18.43** (k=3) | **37.1** | 18.50 | `speed-ab-merge4_20261022_103609` (3 rounds, medians; merged build `23a76242`), `pinfer-ppl-c8-final2-q4k_20261022_024414` |
 | MNN 3.6.1 | int4 HQQ, block 64 | ~450 MB | 6.67 (2 threads) | — | 30.9 | — | `mnn-qwen35-0.8b-int4_20261021_221038` |
 | llama.cpp v0.7.0 | Q4_0 | 513 MB | 5.59 | — | 15.7 | 21.25 | `llamacpp-qwen35-0.8b-Q4_0_20261021_213343` |
 | llama.cpp v0.7.0 | Q4_K_M | 542 MB | 5.41 | — | 14.8 | 18.59 | `llamacpp-qwen35-0.8b-Q4_K_M_20261021_213929` |
@@ -83,7 +83,7 @@ by 0.2 and costs 11% of the speculative speed.
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/speculative_k-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="figures/speculative_k-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/speculative_k-dark.png">
-  <img alt="Tokens per verification pass rise from 2.63 at k=2 to 3.94 at k=4, while decode speed peaks at k=3 with 16.5 tokens/s." src="figures/speculative_k.png">
+  <img alt="Tokens per verification pass rise from 2.63 at k=2 to 3.94 at k=4, while decode speed peaks at k=3 with 18.2 tokens/s." src="figures/speculative_k.png">
 </picture>
 
 **Per k, default model, final engine** (`pinfer-final2-q4k_20261022_023950`; plain step = 1000 / 7.876 =
@@ -95,6 +95,12 @@ by 0.2 and costs 11% of the speculative speed.
 | 2 | 14.51 | 1.84× | 2.63 | 0.81 | 16.8 | 150.8 | 1.19 | 13.3 |
 | 3 | **16.49** | **2.09×** | 3.32 | 0.77 | 25.2 | 162.1 | 1.28 | 13.8 |
 | 4 | 15.65 | 1.99× | 3.94 | 0.76 | 32.9 | 204.5 | 1.61 | 14.3 |
+
+**After the cheaper verify pass** (`engine/VERIFY.md`; `ver1-ksweep_20261022_074459`, one run per cell;
+tokens per pass are unchanged because the output is identical): plain 7.94, k=2 16.25, **k=3 18.23**,
+k=4 15.85 tok/s. Per k=3 round, verify 159.5 → 152.9 ms and commit 14.3 → 1.9 ms, so (verify + commit) /
+plain fell from 1.37 to 1.22. On chat answers k=2 is the fastest (`notes.md` "Speculative decoding on
+chat prompts": 1.25–1.71× plain), and stays the library default.
 
 The verify / plain-step ratio at k=3 fell from 1.65 (`pinfer-kstats-q4k-spec3_20261022_003024`) to 1.48
 (bit-exact kernels + NEON recurrence) to 1.24–1.28 (vectorized per-token ops) (`engine/bench/KERNELS.md`
@@ -229,9 +235,20 @@ llama.cpp Q4_K_M at the same KV depth (`llama-bench -d`, f16 KV): 5.48 / 5.23 / 
 0 / 512 / 2048 / 4096 (`llamacpp-ctx-d0-512-2048-q4km_20261022_032910`, `llamacpp-ctx-d4096-q4km_20261022_033523`);
 8192 exceeds the 20-minute lock.
 
-- Decode at 4096 is 81% of decode at 64 with fp32 KV, 84% with fp16. Streaming the fp32 cache alone puts
-  the fp32 ceiling at ~84.5%, so the 85% target (issue #1) is out of reach with fp32; fp16 reaches 84.4%,
-  just short of it.
+- **Attention round 3** (`engine/CONTEXT.md` §9; decode = medians of 3 rounds from saved states, old →
+  new binary, `att3-final-ab-ctx{64,2048-4096,8192}_20261022_10*`):
+
+  | ctx | fp32 decode | fp16 decode | fp32 / fp16 prefill |
+  |---|---|---|---|
+  | 64 | 7.862 → 7.874 | 7.879 → 7.878 | 34.8 → 36.3 / 35.3 → 36.4 |
+  | 2048 | 6.889 → 7.097 | 7.210 → 7.361 | 32.4 → 32.7 / 30.7 → 33.3 |
+  | 4096 | 6.290 → 6.427 | 6.592 → **6.863** | 27.5 → 29.9 / 27.8 → 28.9 |
+  | 8192 | 5.304 → 5.340 | 5.666 → 6.065 | 22.7 → 24.3 / 22.0 → 24.3 |
+
+  The merged build (`ctx4096-merge4_20261022_104543`, single runs): 6.40 (fp32) / 6.92 (fp16) tok/s at
+  4096 tokens.
+- Decode at 4096 is 82% of decode at 64 with fp32 KV and **87–88% with fp16, which meets the 85% target
+  (issue #1)**. Streaming the fp32 cache caps fp32 at about 83% at the 3.95 GB/s this access pattern gets.
 - KV dtype quality (`pinfer_ppl --kv-dtype`, 8 chunks): perplexity at 512-token chunks 18.5041 / 18.5257 /
   18.5007 and at 2048-token chunks 13.9852 / 13.9828 / 13.9892 for fp32 / fp16 / int8 (`pinfer-ppl-c8-kv*`,
   `pinfer-ppl-c2048x8-kv*`), all within noise. Greedy output at 4096 tokens diverges from fp32 at token 11
@@ -280,7 +297,7 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="figures/progress-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="figures/progress-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="figures/progress-dark.png">
-  <img alt="Decode speed after each verified optimization step, from 1.55 tokens/s in scalar C to 7.88 plain and 16.49 speculative." src="figures/progress.png">
+  <img alt="Decode speed after each verified optimization step, from 1.55 tokens/s in scalar C to 7.89 plain and 18.43 speculative." src="figures/progress.png">
 </picture>
 
 | Step | Plain | Speculative | File |
@@ -290,6 +307,7 @@ streams 424.9 MB of weights (tensor directory of the `.pq` file, `tools/make_fig
 | Q4K weights | 6.83 | 11.57 (k=3) | `pinfer-fast-q4k-headq4k_20261022_001957` |
 | Bit-exact kernels + NEON recurrence (`af06041`) | 7.26 | 13.35 (k=3) | `pinfer-final-q4k_20261022_011230` |
 | Vectorized per-token ops (`fba8a1a`) | 7.88 | 16.49 (k=3) | `pinfer-final2-q4k_20261022_023950` |
+| Cheaper verify pass (`181d195`, merged with attention round 3 as `e1a8d2c`) | 7.89 | 18.43 (k=3) | `speed-ab-merge4_20261022_103609` |
 
 ## 8. Kernels and memory bandwidth
 

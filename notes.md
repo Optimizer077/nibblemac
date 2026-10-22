@@ -78,7 +78,7 @@ tool cross-checked on 2 chunks: 15.1743 vs llama.cpp 15.1695).
 | Engine | Format | File | Decode tok/s plain | Decode tok/s MTP spec | Prefill tok/s | PPL (c8) |
 |---|---|---|---|---|---|---|
 | pinfer | Q4_G32 + Q4 head | 437 MB | **6.88** | **12.56** (k=3, dv 32768) | 21.3 | **21.61** (as bad as Q4_0) |
-| pinfer | **Q4K_G32 everywhere + Q4K head** | 437 MB | **7.88** | **16.49** (k=3, dv 32768) | 37.4 | **18.50** (18.48 before the NEON expf; difference 0.02 ≪ ±1.25) ← default (vectorized engine `fba8a1a`, `bench/results/pinfer-final2-q4k_20261022_023950.json`; earlier: 7.26 / 13.35 / 26.1 at `af06041`, 6.83 / 11.57 / 19.3 before the kernel follow-up) |
+| pinfer | **Q4K_G32 everywhere + Q4K head** | 437 MB | **7.89** | **18.43** (k=3, dv 32768) | 37.1 | **18.50** (18.48 before the NEON expf; difference 0.02 ≪ ±1.25) ← default (merged build `e1a8d2c` with the cheaper verify pass, `bench/results/speed-ab-merge4_20261022_103609.json`, 3 rounds, medians; earlier: 7.88 / 16.49 / 37.4 at `fba8a1a`, 7.26 / 13.35 / 26.1 at `af06041`, 6.83 / 11.57 / 19.3 before the kernel follow-up) |
 | pinfer | Q4_G32 layers + Q4K head | 437 MB | — | — | — | 21.58 (loss is in the layers) |
 | pinfer | Q4K (v_proj, mtp.fc Q8) + Q4K head | 439 MB | **6.88** | 10.98 (k=3, dv 32768) | 16.3 | **18.50** |
 | pinfer | same + Q8 head | 567 MB | 5.72 | 9.77 (k=3) | 13.7 | 18.29 |

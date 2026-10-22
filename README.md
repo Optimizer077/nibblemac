@@ -1,4 +1,4 @@
-# piquant — Qwen3.5-0.8B at 16 tokens/s on a Raspberry Pi 4
+# piquant — Qwen3.5-0.8B at 18 tokens/s on a Raspberry Pi 4
 
 **pinfer** is a C inference engine and Python package written for one board: the Raspberry Pi 4
 (Cortex-A72, NEON only, 4 GB, ~4.2 GB/s of memory bandwidth). It runs the hybrid Qwen3.5-0.8B
@@ -11,13 +11,14 @@ Repository: private, `github.com/Optimizer077/piquant` · engine and package: `p
 | | pinfer (Q4K) | llama.cpp Q4_K_M | MNN int4 |
 |---|---|---|---|
 | Decode, plain greedy | **7.9 tok/s** | 5.4 | 6.7 |
-| Decode, speculative (exact) | **16.5 tok/s** | — | — |
+| Decode, speculative (exact), prose continuation | **18.4 tok/s** | — | — |
+| Decode, speculative (exact), chat answers | **9.9–13.5 tok/s** | — | — |
 | Prefill (prompt reading) | **37 tok/s** | 15 | 31 |
-| Decode after a 4096-token context, plain | **6.4 tok/s** | 3.4 | n/a |
+| Decode after a 4096-token context, plain | **6.4 tok/s** (6.9 with fp16 KV) | 3.4 | n/a |
 | Perplexity, wikitext-2 | 18.50 | 18.59 | n/a |
 
 *Raspberry Pi 4 Model B Rev 1.1, stock Raspberry Pi OS kernel, 64-token prompt, 64 generated tokens (the
-4096-token row: 32), each engine at its best thread count (4 for pinfer; MNN's 6.7 is at 2 threads, 6.3 at
+4096-token row: 32; chat answers: 6 chat-templated prompts, 96 tokens, k=2), each engine at its best thread count (4 for pinfer; MNN's 6.7 is at 2 threads, 6.3 at
 4). Every number has a result file in `bench/results/`: all of them with sources in
 [docs/RESULTS.md](docs/RESULTS.md).*
 
@@ -25,7 +26,7 @@ Repository: private, `github.com/Optimizer077/piquant` · engine and package: `p
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/decode_speed-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="docs/figures/decode_speed-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/decode_speed-dark.png">
-  <img alt="On a Raspberry Pi 4, pinfer Q4K decodes 7.9 tokens/s plain and 16.5 tokens/s with exact speculative decoding, ahead of MNN int4 (6.7), llama.cpp (4.1–5.6) and ONNX Runtime GenAI int4 (3.1)." src="docs/figures/decode_speed.png">
+  <img alt="On a Raspberry Pi 4, pinfer Q4K decodes 7.9 tokens/s plain and 18.4 tokens/s with exact speculative decoding, ahead of MNN int4 (6.7), llama.cpp (4.1–5.6) and ONNX Runtime GenAI int4 (3.1)." src="docs/figures/decode_speed.png">
 </picture>
 
 ## Contents
@@ -121,8 +122,8 @@ accumulators per row (no gain). Lab notebook: `engine/bench/KERNELS.md`.
   <img alt="In one speculative round the MTP head drafts 3 tokens, the full model checks all 4 positions in a single weight pass, and the matching prefix plus one of its own tokens is kept: 3.3 tokens per round on average, identical to plain greedy output." src="docs/figures/speculative_schematic.png">
 </picture>
 
-Because the Pi is bandwidth-bound, scoring four positions in one pass costs 1.24× scoring one
-(160 ms vs 128 ms). Qwen3.5's MTP head drafts 3 tokens for 25–27 ms; the full model verifies all of them
+Because the Pi is bandwidth-bound, scoring four positions in one pass costs 1.20× scoring one
+(153 ms vs 128 ms). Qwen3.5's MTP head drafts 3 tokens for 25–27 ms; the full model verifies all of them
 in one batched pass and keeps the longest correct prefix plus one token of its own. Every kept token is
 the full model's own greedy choice, so the output is token-for-token identical to plain decoding.
 
@@ -137,14 +138,16 @@ Two details matter in practice. The draft step only considers the first 32,768 t
 English and code live). That costs some acceptance on varied text — first-draft acceptance 87% → 76%,
 2.86 → 2.37 tokens per pass at k=3 over 7 prompts (`engine/SPEC.md` §3) — but each draft becomes ~5× cheaper
 and the net speed was best on all three test prompts. And rejected drafts must
-roll back the 19 MB recurrent state exactly — pinfer logs each rank-1 state update during the verify
-pass and replays only the accepted ones, instead of copying state.
+roll back the 19 MB recurrent state exactly. pinfer never copies the state: the first position of a
+verify pass is always kept, so it updates the state in place; the drafts run on 16 KB per-thread copies
+of each state chunk; and the accepted updates are folded into the layer's next pass, so a round reads
+and writes the state once, like a plain step (`engine/VERIFY.md`).
 
 <picture>
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/speculative_k-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="docs/figures/speculative_k-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/speculative_k-dark.png">
-  <img alt="More drafts per round raise tokens per weight pass from 2.63 at k=2 to 3.94 at k=4, but decode speed peaks at k=3 with 16.5 tokens/s." src="docs/figures/speculative_k.png">
+  <img alt="More drafts per round raise tokens per weight pass from 2.63 at k=2 to 3.94 at k=4, but decode speed peaks at k=3 with 18.2 tokens/s." src="docs/figures/speculative_k.png">
 </picture>
 
 ### 2.4 Where the remaining time goes
@@ -152,7 +155,7 @@ pass and replays only the accepted ones, instead of copying state.
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/step_breakdown-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="docs/figures/step_breakdown-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/step_breakdown-dark.png">
-  <img alt="A plain decode step takes 128 ms, 119 ms of it streaming weights, and a speculative verify pass over 4 positions takes 160 ms, only 1.24× one token." src="docs/figures/step_breakdown.png">
+  <img alt="A plain decode step takes 128 ms, 119 ms of it streaming weights, and a speculative verify pass over 4 positions takes 153 ms, only 1.20× one token." src="docs/figures/step_breakdown.png">
 </picture>
 
 After vectorizing the recurrence (a NEON gated-delta-rule kernel, chunk-major so a 16 KB state chunk
@@ -165,7 +168,7 @@ step is 119 ms of weight streaming plus 10 ms of everything else — about 12% f
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/progress-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="docs/figures/progress-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/progress-dark.png">
-  <img alt="Each verified optimization step raised decode speed, from 1.6 tokens/s in scalar C to 7.9 tokens/s plain and 16.5 tokens/s speculative after vectorizing the per-token ops." src="docs/figures/progress.png">
+  <img alt="Each verified optimization step raised decode speed, from 1.6 tokens/s in scalar C to 7.9 tokens/s plain and 18.4 tokens/s speculative after making the verify pass cheaper." src="docs/figures/progress.png">
 </picture>
 
 <picture>
@@ -182,6 +185,22 @@ step is 119 ms of weight streaming plus 10 ms of everything else — about 12% f
   <img alt="pinfer reads a 64-token prompt at 37.4 tokens/s, ahead of MNN int4 (30.9), llama.cpp (14.8–17.1) and ONNX Runtime GenAI int4 (9.9)." src="docs/figures/prefill_speed.png">
 </picture>
 
+**Speculation depends on the text.** The 18.4 tok/s above is a prose continuation, where the MTP head
+is right 3.3 times per pass. On chat answers it is right less often (1.8–2.6 tokens per pass), so the gain
+is 1.25–1.7× and **k=2 beats k=3 on every chat prompt** (k=2 is the library default):
+
+| chat answer | plain | speculative k=2 | k=3 |
+|---|---|---|---|
+| explain (chat27) | 8.0 | **9.9** | 9.2 |
+| Python code | 7.9 | **11.7** | 11.2 |
+| C code | 7.9 | **12.2** | 12.0 |
+| list of 10 items | 7.7 | **11.2** | 10.4 |
+| step-by-step math | 7.9 | **13.5** | 13.2 |
+| short story | 7.7 | **10.0** | 9.2 |
+
+*Tokens/s, 96 generated tokens, measured before the cheaper verify pass (`notes.md` "Speculative decoding
+on chat prompts"); a full-vocabulary draft gains only 0–9% acceptance and is 30% slower overall.*
+
 **Standard runtimes on the same board** (`bench/BASELINES.md`): MNN 3.6.1 is the strongest, 6.67 tok/s
 decode and 30.9 prefill; llama.cpp v0.7.0 reaches 5.4–5.6 decode; ONNX Runtime GenAI 0.18 int4 3.1;
 LiteRT-LM's prebuilt wheels abort on the A72 (they require ARMv8.2 features); PyTorch fp32 runs but
@@ -193,7 +212,7 @@ needs 4.8 GB of RAM.
   <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="docs/figures/context_length-mobile-dark.png">
   <source media="(max-width: 600px)" srcset="docs/figures/context_length-mobile.png">
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/context_length-dark.png">
-  <img alt="After the attention rewrite, plain decode at a 4096-token context is 6.4 tokens/s with the exact fp32 KV cache and 6.7 with fp16 (5.6 before; llama.cpp 3.4), and prefill of a 4096-token prompt is 28 tokens/s (18 before)." src="docs/figures/context_length.png">
+  <img alt="After the attention rewrites, plain decode at a 4096-token context is 6.4 tokens/s with the exact fp32 KV cache and 6.9 with fp16 (5.6 before; llama.cpp 3.4), and prefill of a 4096-token prompt is 30 tokens/s (18 before)." src="docs/figures/context_length.png">
 </picture>
 
 Only 6 of the 24 layers keep a KV cache (24 KB per token in fp32), so memory grows slowly: 528 MB of
@@ -201,24 +220,25 @@ RAM at 4096 tokens, 625 MB at 8192. The first sweep still lost 29% of decode spe
 cause was not the cache's size but how it was read: the attention loop streamed a group's whole K and V
 from DRAM once per query head and once per token (26.5 ms per step at 2048 tokens). The rewrite
 (`engine/src/forward_attn.c`) reads each K/V row once per block of 8 tokens and shares it among the
-4 query heads of its group. The arithmetic per element is unchanged, so the output is bit-identical.
+4 query heads of its group. A second round split P·V by columns (each V value read once for all 4 heads),
+removed a register spill in the fp16 dot and gave softmax its own pass. The arithmetic per element is
+unchanged, so the output is bit-identical.
 
-| context | plain decode, fp32 / fp16 KV | prefill | speculative k=3, fixed / adaptive | llama.cpp Q4_K_M decode |
-|---|---|---|---|---|
-| 64 | 7.9 / 7.9 | 37 | 16.8 / 16.4 | 5.5 |
-| 512 | 7.7 / 7.7 | 37 | 15.2 | 5.2 |
-| 2048 | 7.1 | 32 | 9.1 / **9.6** | 4.3 |
-| 4096 | 6.4 / 6.7 | 28 | 7.4 / **7.5** | 3.4 |
-| 8192 | 5.3 / 5.7 | 22 | 7.2 | — |
+| context | plain decode, fp32 / fp16 KV | prefill | llama.cpp Q4_K_M decode |
+|---|---|---|---|
+| 64 | 7.9 / 7.9 | 36 | 5.5 |
+| 512 | 7.7 / 7.7 | 37 | 5.2 |
+| 2048 | 7.1 / 7.4 | 33 | 4.3 |
+| 4096 | 6.4 / **6.9** | 30 | 3.4 |
+| 8192 | 5.3 / 6.1 | 24 | — |
 
-*Tokens/s, wikitext prompt of N tokens; at 2048 and 4096 the speculative columns are the 64-token
-runs. Sources: `engine/CONTEXT.md` Summary.*
+*Tokens/s, wikitext prompt of N tokens, 32 generated; medians of 3 rounds (`engine/CONTEXT.md` §9;
+512: first rewrite). Speculation at 2048 tokens: 9.6 tok/s fixed k=3, 10.7 adaptive.*
 
-- **The 4096-token target (at least 85% of short-context speed) is narrowly missed:** fp32 reaches 81%
-  and fp16 84.4%. With fp32, streaming the cache alone caps it at ~84.5%, so only a smaller cache can
-  get there.
+- **The 4096-token target (at least 85% of short-context speed) is met with an fp16 cache: 87–88%.**
+  The default fp32 cache reaches 82%; streaming it caps fp32 at about 83% on this board.
 - **KV cache precision is opt-in** (`kv_dtype="fp16"` / `"int8"`, `--kv-dtype`). fp16 matches fp32
-  perplexity (13.983 vs 13.985 on 8 × 2048 tokens), halves the cache and is 5–8% faster from 4096
+  perplexity (13.983 vs 13.985 on 8 × 2048 tokens), halves the cache and is 7–14% faster from 4096
   tokens up. fp32 stays the default because fp16 changes greedy output at the first near-tie.
 - **Saved state for chat and long documents.** `save_state()` / `load_state()` snapshot the KV cache and
   the recurrent state. A 2048-token context saves to 70.5 MB and restores in 0.1 s, against 63 s to
@@ -297,7 +317,28 @@ for q in ("Summarize it.", "List the warnings."):
 The C API (`engine/include/pinfer.h`) takes token ids and returns logits or generated ids; the Python
 package adds the tokenizer, sampling, the Qwen chat template, streaming, `generate(speculative=True)`
 and state snapshots.
-Full guide: [docs/library.md](docs/library.md). Not published yet; no license chosen.
+
+**As a local OpenAI-compatible server** (`pinfer serve`; streaming, `/v1/chat/completions`,
+`/v1/completions`, `/v1/models`), any OpenAI client can use the Pi:
+
+```bash
+# Pi
+pinfer serve -m models/qwen35-0.8b-q4k-headq4k.pq --tokenizer models/qwen35-0.8b-tokenizer     --host 0.0.0.0 --port 8080 --api-key "$PINFER_API_KEY"     # default host 127.0.0.1
+```
+
+```python
+# any machine on the network
+from openai import OpenAI
+client = OpenAI(base_url="http://<pi-address>:8080/v1", api_key="<the same key>")
+reply = client.chat.completions.create(model="qwen35-0.8b-q4k-headq4k",
+                                       messages=[{"role": "user", "content": "Hi!"}])
+```
+
+The server keeps each reply as the exact tokens it generated, so the next turn of a conversation only
+reads the new message: turn 4 of a chat starts after **0.95 s instead of 6.9 s** when the history is
+re-read, and a memory-bounded cache of saved states keeps alternating conversations fast (1.0 vs 3.5 s).
+
+Full guide: [docs/library.md](docs/library.md) (§10: server). Not published yet; no license chosen.
 
 ## 7. Methodology and records
 
@@ -327,9 +368,9 @@ engine/include/pinfer.h   public C API              engine/src/      loader, for
 engine/FORMAT.md          .pq format + exact math                     decoding, NEON kernels and per-token ops
 engine/tools/             pinfer_run (CLI, bench), pinfer_ppl (perplexity)
 engine/bench/             kbench, lbench, spec_exact.sh, KERNELS.md
-python/                   pip package `pinfer` (ctypes, tokenizer, chat, streaming, CLI)
+python/                   pip package `pinfer` (ctypes, tokenizer, chat, streaming, CLI, OpenAI server)
 tools/                    convert.py, quant.py, make_figures*.py
-ref/                      fp32 golden reference    tests/           golden, spec, state, Python suite (85 tests)
+ref/                      fp32 golden reference    tests/           golden, spec, state, malformed input, long context, Python suite (126 tests)
 bench/                    llama.cpp / MNN / ORT / LiteRT / PyTorch baselines, perplexity, results/*.json
 harness/pi.py             PC-side control of the Pi, auto-logged
 os/stock/  os/pc/         flashing + headless first boot; direct-cable network
@@ -339,8 +380,10 @@ docs/                     design, library guide, journal, pi-state, figures
 
 ## 9. Status and roadmap
 - Done: engine, kernels, exact speculative decoding, Python package and CLI, baselines, OS experiment,
-  context window (attention rewrite, fp16/int8 KV cache, state snapshots, keep-state chat, adaptive k).
-- Next: engine hardening before a release (issue #11); a cheaper verify pass (#5); n-gram drafting next
-  to the MTP head (#6); a bounded-context mode for unbounded chats (`engine/CONTEXT.md` §7).
-- Open decisions: license; public release.
+  context window (two attention rewrites, fp16/int8 KV cache, state snapshots, keep-state chat, adaptive k),
+  hardening for malformed input (version 0.2.0), a cheaper verify pass (18.4 tok/s), `pinfer serve`.
+- Next: n-gram / prompt-lookup drafting next to the MTP head for chat and code (#6); adaptive k that is
+  never below the best fixed k on chat (#2); Qwen3.5-2B (#7); a bounded-context mode for unbounded chats
+  (`engine/CONTEXT.md` §7).
+- Open decisions: license (#8); public release and release assets (#9); overclocking (#10).
 - Reproducing everything from a blank SD card / SSD: [docs/REPRODUCE.md](docs/REPRODUCE.md).

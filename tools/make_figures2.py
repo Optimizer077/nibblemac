@@ -47,11 +47,13 @@ from figstyle import (
 
 logger = logging.getLogger(__name__)
 
-# Per-token time, ms, Q4K, 4 threads (engine/CORE.md final profile; verify pass = k=3, 4 positions)
+# Per-token time, ms, Q4K, 4 threads (plain: engine/CORE.md final profile; verify pass = k=3, 4 positions,
+# after the cheaper verify pass: 152.9 ms per pass, recurrence 13.7, other 8.5 — engine/VERIFY.md "Result" and §5,
+# ver3-profile_20261022_081052; the deferred commit adds 1.9 ms per round)
 STEP_PLAIN = [("weight streaming (matmul)", 118.6), ("recurrent state (18 linear-attn layers)", 6.5),
               ("everything else (norms, SiLU, attention, argmax)", 3.2)]
-STEP_VERIFY = [("weight streaming (matmul)", 129.0), ("recurrent state (18 linear-attn layers)", 22.8),
-               ("everything else (norms, SiLU, attention, argmax)", 8.4)]
+STEP_VERIFY = [("weight streaming (matmul)", 130.7), ("recurrent state (18 linear-attn layers)", 13.7),
+               ("everything else (norms, SiLU, attention, argmax)", 8.5)]
 # Kernel weight-streaming speed, GB/s, cold weights, real shapes (KERNELS.md v9/v11)
 KERNEL_GBS = [("Q8 (8.5 bit)", 4.33, 1), ("Q4K (4.5 bit)", 3.91, 3), ("Q4 (4.5 bit)", 3.91, 3),
               ("bf16", 3.94, 2), ("fp32", 3.86, 2)]
@@ -93,7 +95,7 @@ def fig_step_breakdown(t: Theme, L: Layout) -> None:
     ax.set_xlim(0, 166 if L.mobile else 200)
     keys = [Patch(color=c, label=n) for (n, _), c in zip(STEP_PLAIN, colors)]
     rect = header(fig, t, L, "Where a token's time goes",
-                  "Reading 437 MB of weights dominates; verifying 3 drafts (4 positions) costs only 1.24× one token",
+                  "Reading 437 MB of weights dominates; verifying 3 drafts (4 positions) costs only 1.20× one token",
                   handles=keys, ncol=1 if L.mobile else 2)
     unit, name_h = hbar_axis(ax, L, names, rect)
     for i, (_, parts) in enumerate(rows):
