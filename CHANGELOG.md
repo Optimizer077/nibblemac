@@ -12,6 +12,28 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Network audit (audit agent, 16:55–17:50; branch `worktree-agent-a4e27a8ffe358907e`)
+- Added `docs/network-audit.md`, Cerno 4B first (owner's focus): the network walk-through (32 layers,
+  shapes, bytes, cost per prefill token, how a decision drives it); per-operation time budgets for the 4B
+  prefill token and one Cerno decision, and for Qwen3.5-0.8B (plain step, k = 4 round, prefill, 4096
+  context), with bytes, operations, achieved rate and % of roof; gaps (Amdahl); 25 Cerno and 13 0.8B
+  candidates with exactness class, derivation, effort and prior attempts, and a ranked list for Cerno
+  decision time that includes the other agents' board findings; Cerno memory budget; 2.0 GHz estimates.
+- Findings: a Cerno decision is ~150 ms per token, 93% of it the Q4_0 kernel running compute-bound at
+  93–98% of its kernel-alone rate (50–55% of the int8 instruction peak); 38% of the set's time is the
+  shared prefix, 61% the question rows, ~2% snapshots, restores and Python. 44% of a question's tokens
+  are template but none can move into the snapshot exactly. Exact head screening for 0.8B is dead
+  (bounds keep 100% of the rows on real hidden states). SDRAM overclocking is not supported on the Pi 4
+  (Raspberry Pi documentation).
+- Recommendation: the approved 2.0 GHz test (est. decision 27.6 → 20.8–21.7 s), merge speed4b (−4.4%
+  measured), a C-side state checkpoint (−1 to −1.5%, long states fit), then lut's dispatch-pairing
+  question; class (b) only as measured opt-ins. Exact path: 19.6–20.5 s per decision.
+- Added `tools/audit/` (budget, kbtable, cerno_rows, shapes, head_screen, cerno_ids, audit_08b.sh,
+  audit_cerno.sh). Pi: scripts and id files pushed to `~/pinfer/tmp/audit/`; the two queued profile
+  benches (`audit-08b-profile`, `audit-cerno-profile`) never got the lock before the overclock window
+  (17:39) and were cancelled, so no result files. No binary, clock or configuration change; no engine
+  code changed. Board: `plan/board/audit.md` and the answer in `plan/board/lead.md` (main checkout).
+
 ### README animations (figures agent, 15:08–16:25; branch `worktree-agent-a1fae4999a86b0632`)
 - Added: `tools/make_animations.py` (helpers in `tools/animkit.py`) and two looping GIFs in four variants
   each (desktop 1676 px / phone 1080 px × light / dark, 12.5 frames/s, 0.45–0.92 MB each):
