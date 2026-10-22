@@ -12,6 +12,13 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-22
 
+### Published (lead, 13:30)
+- The repository is public at `github.com/Optimizer077/piquant` under **Apache-2.0** (`LICENSE`).
+  The history was rewritten before publishing: the Wi-Fi network name and the router and Pi MAC
+  addresses are placeholders (`<wifi-ssid>`, `<router-mac>`, `<pi-mac>`), and commits use the
+  GitHub no-reply address. The previous private repository is `piquant-archive`.
+- Issues #1–#11 recreated in the public repository; #8 (license) closed.
+
 ### OpenAI-compatible server (server agent, 08:55–10:05; branch `worktree-agent-a344482719d7c5ce0`)
 - Added: `pinfer serve` (`python/pinfer/server/`, standard library only): `GET /health`,
   `GET /v1/models`, `POST /v1/chat/completions`, `POST /v1/completions`; SSE streaming with

@@ -1,0 +1,32 @@
+# 2026-10-22T13:16:48 pi@10.42.0.2
+$ rm -f models/qwen35-2b-q4k-mtpq8.pq && rm -rf tmp/m2b && ls -la models/qwen35-2b-q4k-headq4k.pq models/Qwen3.5-2B-Q4_K_M.gguf engine/pinfer_run_2b1 engine/pinfer_ppl_2b1 && du -ch models/qwen35-2b-q4k-headq4k.pq models/Qwen3.5-2B-Q4_K_M.gguf engine/pinfer_run_2b1 engine/pinfer_ppl_2b1 | tail -1 && ls tmp/ models/ | head -40 && df -h ~ | tail -1 && md5sum engine/pinfer_run_fast
+
+-rwxr-xr-x 1 pi pi     935800 Oct 22 11:03 engine/pinfer_ppl_2b1
+-rwxr-xr-x 1 pi pi     934216 Oct 22 11:03 engine/pinfer_run_2b1
+-rwxr-xr-x 1 pi pi 1094714624 Oct 22 11:03 models/qwen35-2b-q4k-headq4k.pq
+-rwxr-xr-x 1 pi pi 1312164832 Oct 22 11:11 models/Qwen3.5-2B-Q4_K_M.gguf
+2.3G	total
+models/:
+qwen35-0.8b-bf16.pq
+qwen35-0.8b-mix-headq4k.pq
+qwen35-0.8b-mix-headq8.pq
+Qwen3.5-0.8B-Q4_0.gguf
+qwen35-0.8b-q4-headq4k.pq
+qwen35-0.8b-q4-headq4.pq
+qwen35-0.8b-q4k-headq4k.pq
+Qwen3.5-0.8B-Q4_K_M.gguf
+Qwen3.5-0.8B-Q8_0.gguf
+qwen35-0.8b-q8-headq8.pq
+Qwen3.5-0.8B.SHA256SUMS
+qwen35-0.8b-tokenizer
+qwen35-2b-q4k-headq4k.pq
+Qwen3.5-2B-Q4_K_M.gguf
+
+tmp/:
+ab
+pyctx
+tools
+/dev/sda2       917G   19G  861G   3% /
+23a7624250b8445343b2322eb0014749  engine/pinfer_run_fast
+
+[exit 0]
