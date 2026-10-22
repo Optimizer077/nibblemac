@@ -78,6 +78,14 @@ scratch; not committed):
   signature of a different Q4 *matrix fill* (kbench_util.c's quantizer compiled by clang 20), not of a
   different kernel. Decided by the mixed link and the real-model dumps in §3.1.
 
+**Real-model dumps under qemu** (`qe_seq.sh`; 4 threads; per build: prompt64 batched hidden states +
+logits on `qwen35-0.8b-q4k-headq4k.pq` and on the Q4_0 `qwen35-0.8b-q4-headq4k.pq`, token-by-token
+logits of its first 16 tokens, 12 generated tokens plain and `--spec 3 --draft-vocab 32768`, and the
+Cerno 4B `cerno-4b-q4_0.pq` logits of the first 16 prompt tokens): **GCC 15 and clang 22 give the same
+md5 on all 8 dumps** (h64k fe836caf, h64q cdd5ff61, l64k bb05dee8, l64q c4bd60be, l1k b0876251,
+l16c df702b57, generated 080f184c plain = spec). GCC 14 / 16 and clang 22 + misched-off: run twice,
+killed twice by the WSL restarts of 21:27 and 21:45 (see the journal); the Pi gates cover them.
+
 ### 3.1 clang 20 is rejected: it miscompiles a max-by-magnitude loop at -O3
 
 Mixed links (`scratchpad/toolchain-agent/mix.sh`): clang 20's kernel objects linked with GCC's
@@ -140,4 +148,70 @@ Builds pushed as `engine/pinfer_run_tcN` / `tmp/tc/kbench_tcN` on the Pi:
 | tc2 | c22 | 772a20d0 | 3e47ca1f |
 | tc3 | c22 + `-mllvm -enable-misched=false` on kern_quant.c | b0e4c47d | f9a73bdd |
 
-(results follow)
+(tc14 = clang 20 was staged but not run: rejected in §3.1.)
+
+### 4.1 Q4_0 batched kernel, kbench (`bench/results/toolchain-kb-r1_20261022_220248.json`, valid)
+
+`tmp/tc/tc_kb.sh`: cold weights (every call reads a different copy from a 64 MB arena), 4 threads,
+the 4B shapes, one register pass of n = 5 and n = 7 vectors (the sizes the prefill group plan uses);
+plus hot 1-thread kv / c4kv. 3 rounds, build order rotated per round; medians; 1.5 GHz; 54 -> 50 C.
+c/bv = cycles per block-vector (4 rows x 32 columns x 1 vector = 128 MACs) = us x 1.5e9 x threads /
+(rows/4 x cols/32 x n). **The yhash of every build is identical on every row** (and `exact` / `ok`).
+
+| shape, n | GCC 15 us (c/bv) | GCC 16 | GCC 14 | clang 22 | clang 22, misched off |
+|---|---|---|---|---|---|
+| c4qkv 8192x2560, n=7 | 5494.6 (28.7) | 5393.4 (28.2) -1.8 % | 5317.4 (27.8) -3.2 % | 5882.6 (30.8) +7.1 % | 6641.4 (34.7) +20.9 % |
+| c4gate 9216x2560, n=7 | 6015.9 (28.0) | 5884.1 (27.4) -2.2 % | 6350.9 (29.5) +5.6 % | 6916.7 (32.2) +15.0 % | 7364.7 (34.2) +22.4 % |
+| c4down 2560x9216, n=7 | 6485.1 (30.2) | 6449.4 (30.0) -0.6 % | 6547.0 (30.4) +1.0 % | 6834.0 (31.8) +5.4 % | 7740.9 (36.0) +19.4 % |
+| c4out 2560x4096, n=7 | 2763.8 (28.9) | 2712.6 (28.4) -1.9 % | 2768.6 (29.0) +0.2 % | 3035.5 (31.8) +9.8 % | 3256.5 (34.1) +17.8 % |
+| c4qkv, n=5 | 4035.2 (29.6) | 4028.8 (29.5) -0.2 % | 4032.1 (29.5) -0.1 % | 4194.9 (30.7) +4.0 % | 4663.7 (34.2) +15.6 % |
+| c4gate, n=5 | 4543.5 (29.6) | 4509.9 (29.4) -0.7 % | 4467.0 (29.1) -1.7 % | 4600.8 (30.0) +1.3 % | 5151.0 (33.5) +13.4 % |
+| c4down, n=5 | 5041.3 (32.8) | 4984.8 (32.5) -1.1 % | 5062.2 (33.0) +0.4 % | 4856.4 (31.6) -3.7 % | 5628.5 (36.6) +11.6 % |
+| c4out, n=5 | 2128.7 (31.2) | 2200.2 (32.2) +3.4 % | 2133.7 (31.3) +0.2 % | 2194.8 (32.2) +3.1 % | 2448.8 (35.9) +15.0 % |
+| hot 1 thr c4kv, n=7 | 2586.7 (27.1) | 2620.9 (27.4) +1.3 % | 2630.7 (27.5) +1.7 % | 2919.7 (30.5) +12.9 % | 3165.5 (33.1) +22.4 % |
+| hot 1 thr c4kv, n=5 | 1933.2 (28.3) | 1935.0 (28.3) +0.1 % | 1979.6 (29.0) +2.4 % | 1978.5 (29.0) +2.3 % | 2293.2 (33.6) +18.6 % |
+| hot 1 thr kv, n=7 | 507.2 (26.5) | 499.7 (26.1) -1.5 % | 508.7 (26.6) +0.3 % | 569.6 (29.8) +12.3 % | 605.8 (31.7) +19.4 % |
+| hot 1 thr kv, n=5 | 373.7 (27.4) | 373.6 (27.4) 0.0 % | 373.1 (27.3) -0.2 % | 382.8 (28.0) +2.4 % | 446.9 (32.7) +19.6 % |
+
+Reading: GCC 14 / 15 / 16 are the same compiler for this loop (identical instruction counts in §2,
+within the +-3 % run-to-run noise here; GCC 16's -0.6..-2.2 % at n = 7 cold is the most consistent
+difference and still inside the noise band). clang 22 is 5-15 % slower at n = 7, and **clang 22 with
+the machine scheduler off, the build with the fewest instructions and no spills (210 per block), is
+12-22 % slower on every row**: the second time today that the shortest code lost (speed4b's
+`-fno-schedule-insns`, +6-15 %). The A72's in-order dispatch rewards the scheduler's interleaving of
+the SMLALs with the reductions and the float update, not the instruction count.
+
+### 4.2 Cerno 4B prefill p256 (`bench/results/toolchain-e2e4b-r1_20261022_220708.json`, valid)
+
+`tmp/tc/tc_e2e4b.sh`: `pinfer_run -m models/cerno-4b-q4_0.pq -t 4 --ids-file tmp/csp/p256.ids -n 1
+--bench` (in-process warm-up of p64 + 4 tokens, then the timed 256-token prefill), one run per build
+(the owner cut the pilot to one round at 21:56), 1.5 GHz, 47 -> 61 C. The result file names the Cerno
+model, so it stays out of the public repository like every `cerno-*` result (owner decision,
+`.gitignore`); it is cited here by path.
+
+| build | prefill p256 tok/s | vs GCC 15 | `load` line | warm-up |
+|---|---|---|---|---|
+| GCC 15 (shipping) | 6.915 | — | 0.006 s | 38.6 s |
+| GCC 16 | 6.921 | +0.1 % | 0.005 s | 38.0 s |
+| GCC 14 | 6.789 | -1.8 % | 0.006 s | 38.5 s |
+
+(The same tree measured 6.80 / 6.87 tok/s on p256 in speed4b's 3-round A/B, `cerno-speed-e2e4b-r2`.)
+The `load` line is the mmap and header checks only (6 ms for the 3.4 GB file); the model's first
+touch is the warm-up's page-in, ~38 s with a warm page cache included in that number, and it does
+not depend on the compiler. A cold-cache measurement (`tc_load.sh`, prepared, `dd iflag=nocache` to
+evict the file) was not run under the shortened scope.
+
+### 4.3 Verdict
+
+**No-go.** No compiler at the project's exactness flags is >= 3 % faster than GCC 15 on the Q4_0
+kernel or on 4B prefill: GCC 16 and GCC 14 are the same code within noise, clang 22 is slower
+(5-15 % on the kernel at n = 7), clang 22 without the machine scheduler and GCC without the first
+scheduling pass are much slower, and clang 20 is wrong. `engine/Makefile` stays as it is (GCC 15,
+`-O3 -mcpu=cortex-a72 -std=c11 -ffp-contract=off`). The gate (spec_exact / ctx_check / Cerno logits
+against `engine/pinfer_run_fast`) was therefore not run on the Pi for any build; the exactness
+evidence per build is §3 (kbench yhash under qemu, 880 rows) and, for clang 22, the 8 real-model dumps.
+
+Not measured (scope cut, PC-side builds exist and are exact under qemu): GCC 15 + LTO, `-O2`,
+`-funroll-loops`, clang 22 + LTO; PGO (a `-fprofile-generate` build was proposed and declined). For the
+compiler question, the decisive lever is in the kernel's instruction order (lut's asm passes, -3..-11 %
+per block-vector in `lut-tbench-r1`), not in the compiler.

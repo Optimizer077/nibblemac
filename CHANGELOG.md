@@ -24,7 +24,11 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Dead end: `-fno-schedule-insns` on `kern_quant.c` removes every stack spill of the Q4 loops but is 6–15 %
   slower on the Pi (speed4b's `cerno-speed-kb8-nosched_*`): instruction count is the wrong proxy on the
   in-order A72.
-- Pi: (pending) kbench Q4 n = 5 / 7 on the 4B shapes and 4B prefill p256 per compiler.
+- Pi (1.5 GHz, `toolchain-kb-r1_*`, `toolchain-e2e4b-r1_*`): GCC 14 and 16 equal GCC 15 within noise on the
+  Q4_0 kernel (n = 5 / 7, 4B shapes) and on 4B prefill p256 (6.79 / 6.92 vs 6.92 tok/s); clang 22 is 5–15 %
+  slower on the kernel, clang 22 without its machine scheduler 12–22 % slower. **Verdict: no-go**, the
+  Makefile stays at GCC 15 `-O3 -mcpu=cortex-a72`; the `load` line of the 3.4 GB model is 6 ms (mmap), the
+  page-in happens in the warm-up. Pi scratch files removed (`engine/pinfer_run_tc*`, `tmp/tc`).
 - Scratchpad incident: three pre-existing files in the shared session scratchpad root overwritten (17:39–17:54)
   and removed (18:18); nothing in the repo or on the Pi affected; details in the journal.
 

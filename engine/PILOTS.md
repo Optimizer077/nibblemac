@@ -27,6 +27,13 @@ removes every stack spill of the Q4 loops (232 -> 217 instructions per block) an
 on every Q4 shape (speed4b's `cerno-speed-kb8-nosched_20261022_175206.json`): on the in-order A72
 the interleaving of the multiplies with the reductions is worth more than the instruction count.
 
-**Speed (Pi).** (pending: kbench Q4 n = 5 / 7 on the 4B shapes, 4B prefill p256 x 3 rounds)
+**Speed (Pi, 1.5 GHz, `bench/results/toolchain-kb-r1_20261022_220248.json`,
+`toolchain-e2e4b-r1_20261022_220708.json`).** Q4_0 kernel, cold 4 threads, 4B shapes, medians of
+3 rounds vs GCC 15: GCC 16 -2..+3 % and GCC 14 -3..+6 % (noise band), clang 22 +5..+15 % at n = 7,
+clang 22 with the machine scheduler off +12..+22 %; every build's output hash identical on every row.
+4B prefill p256 (one run each, owner's scope cut): GCC 15 6.915 tok/s, GCC 16 6.921 (+0.1 %),
+GCC 14 6.789 (-1.8 %).
 
-**Verdict.** (pending)
+**Verdict: no-go.** No compiler or flag set is >= 3 % faster; the shortest code (no spills) loses
+twice; clang 20 is excluded for correctness. `engine/Makefile` unchanged. The remaining lever for
+this loop is instruction order inside the kernel (lut's asm passes), not the compiler.
