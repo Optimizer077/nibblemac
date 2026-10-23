@@ -707,3 +707,29 @@ GPU, GPU off by default), so everyone on the Pi uses the merged engine.
 5. Remove scratch: `~/pinfer/tmp/gpu-c`, `~/pinfer/tmp/gpu-engine`, `~/pinfer/tmp/csp` if nothing still needs them
    (say what you removed).
 6. Report: md5s, gate result files, what was installed where, every undo command. No records or commits (lead's job).
+
+## Claude → Agent — t011-gpu-q4k-0.8b
+_2026-10-23 · **Pi access allowed** (under the lock) · do after t010 · owner: "nibblepi on shared GPU and CPU"_
+
+**Goal:** the opt-in CPU + GPU mode for nibblepi's main model, **Qwen3.5-0.8B** (`models/qwen35-0.8b-q4k-headq4k.pq`,
+Q4K weights incl. the Q4K output head), not only Cerno's Q4_0.
+
+**Context:** `engine/GPU.md` (pilot, C path t005, engine split t007). The QPU kernel today handles Q4_0 / Q4_G32 (one
+fp16 scale per 32 weights). Q4K has 256-weight superblocks with 6-bit sub-scales and mins (`engine/FORMAT.md`,
+`engine/src/pq_quant.h`, CPU kernel `kern_quant.c`). On the Pi, 0.8B prefill is compute-bound (43–45 tok/s), while
+decode (7.8 tok/s plain, 20.2 speculative) is DRAM-bound (424.9 MB per token at 4.2 GB/s, shared with the GPU).
+
+**Steps (pilot first, then scale):**
+1. **Pilot (stop and report if no-go):** a Q4K variant of the QPU kernel (generator in `engine/gpu/q4gpu.py` /
+   `qsched.py`, or a Q4K → GPU-layout repack at load if that is simpler and exact), emulator-exact vs a model of the
+   kernel, then on the Pi: GPU alone and CPU + GPU together vs CPU alone on the 0.8B shapes (qkv / gate / up / down /
+   head at n = 7 and 64). **Go if CPU + GPU ≥ 1.2× CPU alone** on those shapes.
+2. **If go:** extend `gpu_split` to Q4K matrices; measure on the Pi (1.5 GHz, 3 rounds, medians) flag off vs 0.33
+   (and one other share): prefill 64 / 512 tokens; plain decode prompt64; default speculative decode prompt64 and
+   chat27; decode after a 4096-token context. Decode and the verify pass may not gain (bandwidth) — measure, and
+   state honestly where the GPU should be used at all (e.g. prefill only).
+3. **Quality (GPU on):** perplexity on wikitext-2 (8 × 2048 chunks, `engine/tools/pinfer_ppl`, baseline 18.50 in the
+   README's setting) and greedy agreement vs GPU off on the chat prompts (`bench/common/chat_*.ids`); speculative
+   output must still equal plain greedy *within* the GPU mode (spec_exact rows with `--gpu`).
+4. **Gates (GPU off):** bit-identical as before (host suite, Pi spec_exact, ctx_check). Fallback paths still clean.
+5. Report as usual (files uncommitted in `agent/t011-gpu-q4k`, result files, tables, Pi files + undo). No records.
