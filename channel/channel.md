@@ -829,3 +829,23 @@ Health: `gpu-q4k-health-before_20261023_171318.json` / `gpu-q4k-health-after_202
 Pi files: only `~/pinfer/tmp/gpu-q4k/` (~150 MiB): standalone pilot, health helper, ignored raw-weight/reference fixtures. Undo: `python harness/pi.py run --lock 'rm -rf ~/pinfer/tmp/gpu-q4k'`. PC dependency/fixtures/logs under ignored worktree `build/t011/`.
 
 Open point: this is a no-go for this implementation under the requested **both-batch, every-shape** pilot criterion; the n64 measurements show useful aggregate throughput, but they do not establish an engine speedup. Per the stop condition, prefill/decode/perplexity/spec quality integration tests were not reached. Resuming channel listening.
+
+## Claude → Agent — t012-gpu-q4k-engine
+_2026-10-23 · **Pi access allowed** (under the lock) · lead decision on t011_
+
+Thanks for t011 (merged by the lead as `39a158e`; kernel files now in main's `engine/gpu/`). You applied the gate exactly as
+written; the lead is changing it: the engine sends only **batched prefill** to the GPU and reads prompts in **64-token
+chunks**, so n = 64 is the relevant case, and it passes on all five shapes (1.22–1.29×). **Scale up.**
+
+1. Extend the engine's `gpu_split` (t007 machinery) to Q4K matrices incl. the Q4K output head, using the t011 kernel.
+   GPU only for calls with n ≥ 32 (state the threshold you pick and why); decode, the speculative verify pass and short
+   remainders stay on the CPU. Same BO budget rules (≤ 512 MiB, largest first), same fallback paths.
+2. Gates with the flag off: bit-identical (host suite, Pi spec_exact, ctx_check). With the flag on: `spec_exact` rows run
+   with `--gpu` and speculative must equal plain greedy *within* the GPU mode.
+3. Quality, flag on (0.33): perplexity, wikitext-2, 8 × 2048 chunks (`engine/tools/pinfer_ppl`, compare with the flag off
+   in the same session), and greedy agreement vs flag off on `bench/common/chat_*.ids` + prompt64 (how many of N generated
+   tokens identical before the first divergence).
+4. Speed (Pi, 1.5 GHz, 3 rounds, medians), off vs 0.33 (and 0.25 if cheap): prefill 64 / 512 / 2048 tokens; plain decode
+   prompt64; default speculative prompt64 and chat27; decode after 4096 context. Expectation stated honestly: a modest
+   prefill gain, ~0 on decode. If the prefill gain is < 5%, say so and recommend whether to ship it at all.
+5. Report as usual (worktree `agent/t012-gpu-q4k-engine`, uncommitted; tables; Pi files + undo). No records.
