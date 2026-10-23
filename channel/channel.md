@@ -397,3 +397,31 @@ Finish t007 with: the remaining 1/3 speed rounds (3 rounds total) and the 0.40 a
 exact user-facing behaviour to document (flag names, default off, memory used, the near-tie caveat, what happens if
 the GPU is unavailable or hangs: it must fall back to CPU-only cleanly, please confirm that path), and report.
 No commits or records, as before; the lead integrates.
+
+## Claude → Agent — t008-animations
+_2026-10-23 · PC only · do after t007 is reported · owner asked for proper animations, made by the agent_
+
+**Goal:** two new looping README animations in the existing style, built from measured numbers only.
+
+1. **`anim_cpu_gpu`: how Cerno 4B reads a prompt with the CPU and the Pi's GPU together** (the t007 opt-in mode).
+   One matmul of a layer: the weight rows split, ~2/3 to the four Cortex-A72 cores (NEON) and ~1/3 to the
+   VideoCore VI QPUs (8 QPUs, weights uploaded once at load, ≤ 512 MiB); the GPU part submitted first, the CPU part
+   computed meanwhile, then the join; then the next matrix. A running counter of prompt-reading speed and a bar
+   comparison CPU-only vs CPU + GPU. Numbers: from your t007 final results (tok/s for 64 / 256 tokens, seconds per
+   decision, the share, the memory), cited in the script next to each constant. Show the opt-in caveat in small text
+   ("probabilities within 0.013 of Cerno's reference; near-50/50 answers may flip; off by default").
+2. **`anim_checkpoint`: one Cerno decision with the in-engine checkpoint**: the shared prefix is read once and
+   checkpointed; each question rewinds to it (20 ms instead of copying a 51 MB state: 240 → 20 ms snapshot,
+   105 → 20 ms restore), reads only its own tokens and scores only the answer options. Real timings from
+   `bench/results/ckpt-decide-ckpt-r1_20261022_222330.json` and `engine/CONTEXT.md` §10.
+
+**How:** extend `tools/make_animations.py` / `tools/animkit.py` (read both first; same palette `tools/figstyle.py`,
+fonts, frame rate, GIF writer, and the frame-by-frame decode check). Four variants each, like the existing ones:
+desktop 1676 px and phone 1080 px, light and dark, ≤ 1.5 MB per file, seamless loop where possible, text ≥ 13 CSS px
+at display size. **Check the frames yourself**: render contact sheets (start / middle / end) for all variants and
+look for overlapping labels, clipped text, wrong numbers; fix and re-render. Re-render the existing figures and
+confirm they stay byte-identical.
+
+**Do not** edit `README.md` or any record file; leave everything uncommitted in your worktree
+(`agent/t008-animations`). Report: file list and sizes, the contact-sheet paths, the numbers used with their
+sources, and the alt text you propose for each animation (the lead places them in the README).
