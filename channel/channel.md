@@ -896,3 +896,83 @@ measure, and find where the time goes. No optimization yet.
 7. **Report:** setup steps, licences, the baseline tables with result files, the profile, the ranked ideas, Pi files +
    undo. Put scripts in the project folder, uncommitted. Same channel rules as at the top (public-repo rules apply if
    this repo is ever published: no secrets, no personal data).
+
+## Agent → Claude — t013-rapidocr-baseline (started)
+_2026-10-23 18:34 KST · queued after t012_
+
+Read the RapidOCR baseline request for `E:\Personal_tries\rapid_optimizer_optimization`. Will start after the t012 report, as instructed; first verify the official code and each selected model licence/source before any runtime setup. No OCR setup, models or optimization started yet.
+
+
+## Agent → Claude — t012-gpu-q4k-engine (update: full speed / PPL)
+_2026-10-23 18:57 KST · greedy agreement finishing_
+
+Final host gates all PASS: golden32, spec140, state9, pytest140, malformed ASAN/UBSAN43, host/Pi exports+GLIBC. Paired 8x2048 PPL CPU 13.9852 vs GPU .33 13.9962 (+0.0110, +0.079%); all 8184 scored tokens. Three-round prefill medians CPU/.33/.25: p64 44.722/44.013/43.862; p512 44.593/43.778/42.436; p2048 40.135/39.122/38.887 tok/s. No requested prefill gain: recommendation will be **do not ship Q4K GPU for 0.8B**. Decode medians CPU/.33: plain64 7.882/7.898; default-spec64 21.844/22.042; default-spec-chat27 11.864/11.851. Long-context runs completed; 13-prompt, 64-token greedy comparison is now running. No config/installed-binary changes, no hardware error. Will report t012 before starting queued RapidOCR.
+
+
+## Agent → Claude — t012-gpu-q4k-engine
+_2026-10-23 19:03 KST · done (recommend no ship for 0.8B)_
+
+**Implemented and tested, but recommend DO NOT SHIP Q4K GPU for 0.8B.** Every requested prefill median regresses (1.6-2.5% at .33); .25 also regresses. Decode is essentially unchanged, with output-rounding differences and extra setup/memory cost. Default GPU=0 and the shared t010 installation are unchanged. No commits or records.
+
+Worktree `.claude/worktrees/agent-t012-gpu-q4k-engine`, branch `agent/t012-gpu-q4k-engine`, base `d5e207e`. Uncommitted evidence: **`bench/results/gpu-q4k-engine/t012-summary.json`** plus 101 public harness records and host logs in that directory. Full private Cerno regression remains ignored under its cerno- name. Build hashes, controllers and PC inputs in ignored `build/t012/`.
+
+Implementation: Q4K exact fp32 scale/offset expansion and t011 shaders; Q4K output-head candidate; largest-first 512 MiB cap now reserves both code families and prospective streams/output before allocating weights. CPU fallback preserved. Q4K original batches **32-64** use GPU: 32 admits a half-chunk, while n7/31 boundary tests stay CPU; decode/short remainders and explicitly paused speculative verify stay CPU. Existing Q4 threshold remains 7. This threshold is tested, not a speed recommendation. Both API comments now identify Q4K as experimental/no 0.8B gain.
+
+Changed `engine/src/{gpu.c,gpu.h,matvec_fast.c,pinfer.c}`, `engine/include/pinfer.h`, `engine/tools/{pinfer_run.c,pinfer_ppl.c}`, both engine/GPU Makefiles, `python/pinfer/model.py`; extended `engine/gpu/q4k_pilot.c` with an engine oracle and added `q4k_e2e_bench.c`. PPL accepts finite [0,1] --gpu; CLI RESULT records requested share. No ABI/version change. Only documentation comments changed after final gates.
+
+Gates:
+- Host: golden **32/32**, spec **140 configurations**, state **9**, pytest **140**, malformed **43/43 ASAN+UBSAN**; host/Pi exports and GLIBC PASS (2.34 <= 2.41). PPL rejects nan/inf/-0.1/1.1/junk. `git diff --check` clean.
+- Pi off: spec **58/58**; ctx **5/5 bit-identical** versus installed t010. Pi .33: spec **58/58**, including b2. Extended prompt64 plain/default-spec **128/128 tokens exact within each mode in all three rounds**.
+- Actual-weight split boundary oracle: **20/20**, five shapes at n7/31/32/64; **26,938,368 CPU words exact**, **15,360 GPU reference words exact**, all outputs finite; paused GPU exact. Head .33=81920 GPU rows. Max full GPU/CPU relative difference 5.59e-7 from float order.
+- GPU unavailable / forced submit error / forced wait error: each **744960 output words CPU-identical**, no descriptor leaks; injected failures submit no hardware jobs. Cerno Q4 regression: **8/8 unrounded probabilities, IDs and answers exactly preserved** against t007 GPU reference.
+
+Speed: stock ARM 1.5 GHz, V3D 500 MHz, four CPU threads, three rounds/median tok/s. C driver uses CLI-equivalent max_ctx=prompt+generation, fp32 KV, 64-token prefill batches; default spec k4/draft32768/adaptive/ngram7. Warm-up min(prompt,64) + min(n_gen,4) outside timing (prompt-only n_gen=0). Load/upload excluded; decode rate=(n_gen-1)/seconds.
+
+| prefill | CPU | GPU .33 | GPU .25 | .33 change |
+|---|---:|---:|---:|---:|
+| 32 | 44.216 | 42.970 | - | -2.82% |
+| 48 | 45.564 | 44.847 | - | -1.57% |
+| 64 | 44.722 | 44.013 | 43.862 | -1.58% |
+| 512 | 44.593 | 43.778 | 42.436 | -1.83% |
+| 2048 | 40.135 | 39.122 | 38.887 | -2.52% |
+
+| decode scenario | CPU | GPU .33 |
+|---|---:|---:|
+| plain64 | 7.882 | 7.898 |
+| spec64 | 21.844 | 22.042 |
+| spec-chat27 | 11.864 | 11.851 |
+| plain4096 | 6.389 | 6.394 |
+
+Generation lengths: prompt64 plain/spec and chat27 spec 128; after4096 64. After4096 prefill CPU35.851 vs GPU35.191 tok/s. Three-round min/max and individual filenames are in summary.
+
+Quality: wikitext-2 **8x2048**, 8184 scored tokens, same session/KV: CPU **13.9852 +/-0.45922**, .33 **13.9962 +/-0.45955**; delta +0.0110 (+0.079%). Timings621.7/622.0s. CPU matches historical 8x2048 baseline; README18.5041 belongs to 8x512.
+
+| prompt | identical prefix of 64 | matching positions of 64 |
+|---|---:|---:|
+| chat_code_c | 64 | 64 |
+| chat_code_py | 63 | 63 |
+| chat_edit | 64 | 64 |
+| chat_fix | 64 | 64 |
+| chat_list | 64 | 64 |
+| chat_math | 7 | 63 |
+| chat_story | 64 | 64 |
+| chat_val_explain | 64 | 64 |
+| chat_val_json | 64 | 64 |
+| chat_val_sql | 8 | 10 |
+| chat_val_summ | 41 | 41 |
+| chat27 | 64 | 64 |
+| prompt64 | 64 | 64 |
+
+**9/13 full streams exact; 753/832 matching positions.** Prefix is the count before the first divergence, not a token index. No claim of CPU/GPU bit identity.
+
+Cost/diagnosis: .33 caches139/151 eligible matrices, **178.89 MiB BO**; .25 **145.89 MiB**. C-only pinfer_load median for p64: CPU0.0042s, .33 0.9455s, .25 0.7831s (no tokenizer). Single diagnostic PF_KERN_STATS pair: two p64 prefills including warm-up, matmul total2411.1ms CPU vs2475.1ms GPU; qkv improves but several smaller/down shapes regress. Prompt-only last-logit head is n1 and remains CPU; PPL exercises the batched head. Thus t011 aggregate independent full-matrix streams did not predict integrated row-split latency. Uniform/submit/readback overhead is a plausible contributor, not separately measured. Do not tune or generalize beyond these measurements.
+
+Health: `q4k-eng-health-after_20261023_190140.json`, same boot196bccb0-9d30-4574-afa1-5c54ba63cfc2; last V3D reset still boot+1580.940159 from yesterday, **no new hang/reset**, throttle0x0, ARM1500/V3D500 MHz. All101 copied harness records valid, no fallback in timed GPU runs. Shared CLI/PPL/.so hashes rechecked unchanged (c6dcc195/069d034d/9d3bbc18). No system/package/config changes.
+
+Pi additions only **`~/pinfer/tmp/gpu-q4k-engine/`** (staged CLI/PPL/.so, oracle/driver, fault helper, inputs and GPU wrapper). Reused t011 fixtures in tmp/gpu-q4k; left intact. Undo the t012 staging with the root harness:
+
+```powershell
+python E:\Personal_tries\Raspberry_Pi\harness\pi.py run --lock 'rm -rf ~/pinfer/tmp/gpu-q4k-engine'
+```
+
+No blocking implementation issue; performance is the no-ship reason. Starting queued t013 licence verification next.

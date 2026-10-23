@@ -1,0 +1,29 @@
+# 2026-10-23T17:39:49 pi@10.42.0.2
+$ set -eu
+printf 'Token and prompt inputs\n'
+find data -maxdepth 2 -type f \( -name '*tokens*' -o -name 'ctx*.ids' -o -name 'chat*.ids' \) -print
+printf 'Project benchmark lock free; staged build paths\n'
+md5sum tmp/gpu-q4k-engine/pinfer_run tmp/gpu-q4k-engine/pinfer_ppl
+
+
+Token and prompt inputs
+data/ctx2112.ids
+data/chat_edit.ids
+data/ctx64.ids
+data/chat_code_py.ids
+data/wikitext2-qwen35.tokens.bin
+data/ctx8192.ids
+data/ctx512.ids
+data/chat_fix.ids
+data/chat_code_c.ids
+data/ctx2048.ids
+data/ctx4096.ids
+data/chat_story.ids
+data/chat_math.ids
+data/chat27.ids
+data/chat_list.ids
+Project benchmark lock free; staged build paths
+b21daff4d7b04d014f8269c75cd92fd2  tmp/gpu-q4k-engine/pinfer_run
+9c77be253b4da420e77b196a76ceb065  tmp/gpu-q4k-engine/pinfer_ppl
+
+[exit 0]

@@ -1,0 +1,13 @@
+# 2026-10-23T19:03:36 pi@10.42.0.2
+$ rm -rf ~/pinfer/tmp/gpu-q4k-engine ~/pinfer/tmp/gpu-q4k && ls ~/pinfer/tmp/
+
+ab
+audit
+cerno
+ck
+install-v03
+num
+pyctx
+tools
+
+[exit 0]

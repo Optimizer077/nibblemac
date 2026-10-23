@@ -1,0 +1,5 @@
+# 2026-10-23T18:05:57 pi@10.42.0.2
+$ mv tmp/gpu-q4k-engine/prompt32.ids tmp/gpu-q4k-engine/inputs/prompt32.ids && mv tmp/gpu-q4k-engine/prompt48.ids tmp/gpu-q4k-engine/inputs/prompt48.ids
+
+
+[exit 0]

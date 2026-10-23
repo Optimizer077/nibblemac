@@ -1,0 +1,8 @@
+# 2026-10-23T19:01:40 pi@10.42.0.2
+$ md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so
+
+c6dcc1953fd7fb5e20a672a94e651f61  engine/pinfer_run_fast
+069d034d5ad18ccc3cf7a316c79dab1d  engine/pinfer_ppl_fast
+9d3bbc18cdb8aaf41c9492f406e0573a  venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so
+
+[exit 0]

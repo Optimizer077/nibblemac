@@ -31,6 +31,10 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - `engine/pinfer_run_fast` `d48ffda1` → `508f1d74` (prefill tail + groups of 7s + 5s; Cerno decisions −4.4%, bit-identical);
   spec_exact 58/58 on the installed binary; old builds kept as `*.pre-csp`. `docs/pi-state.md` "Files we placed".
 
+### Decided: no GPU mode for Qwen3.5-0.8B
+- A Q4K GPU kernel (exact) and its engine split were built and gated, but 0.8B prefill got 1.6–2.8% slower and decode
+  did not change: not merged (`engine/GPU.md`). The GPU mode stays for Cerno 4B.
+
 ### Added (GPU in the engine, 0.3)
 - **Opt-in CPU + GPU prefill** (`gpu_split`, `pinfer_run --gpu`, `Model.load(gpu_split=)`; recommended 0.33): Cerno 4B
   decisions 20.67 → 17.26 s (**−16.5%**, 3 rounds); off by default (bit-identical, all gates pass); with it on,

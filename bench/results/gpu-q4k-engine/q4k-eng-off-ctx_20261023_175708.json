@@ -1,0 +1,75 @@
+{
+  "name": "q4k-eng-off-ctx",
+  "command": "bash engine/ctx_check.sh ./tmp/gpu-q4k-engine/pinfer_run ./engine/pinfer_run_fast",
+  "timestamp": "2026-10-23T17:57:08",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "bench": "ctx_check",
+      "dump": "h64",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "l64",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "h1",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "l1",
+      "identical": true
+    },
+    {
+      "bench": "ctx_check",
+      "dump": "l512",
+      "identical": true
+    }
+  ],
+  "unparsed": [],
+  "stdout": "  p64 b64 new: load 0.005 s | warm-up 0.000 s | prefill 64 tok in 2.114 s = 30.278 tok/s | decode 1 tok in 0.127 s = 7.868 tok/s | peak RSS 498.8 MB | matvec=fast threads=4\n  p64 b1 new: load 0.005 s | warm-up 0.000 s | prefill 64 tok in 8.223 s = 7.783 tok/s | decode 1 tok in 0.127 s = 7.884 tok/s | peak RSS 494.8 MB | matvec=fast threads=4\n  ctx512 new: load 0.004 s | warm-up 0.000 s | prefill 512 tok in 17.064 s = 30.005 tok/s | decode 1 tok in 0.193 s = 5.182 tok/s | peak RSS 927.5 MB | matvec=fast threads=4\n  p64 b64 old: load 0.007 s | warm-up 0.000 s | prefill 64 tok in 2.162 s = 29.608 tok/s | decode 1 tok in 0.193 s = 5.183 tok/s | peak RSS 498.9 MB | matvec=fast threads=4\n  p64 b1 old: load 0.005 s | warm-up 0.000 s | prefill 64 tok in 8.320 s = 7.692 tok/s | decode 1 tok in 0.127 s = 7.878 tok/s | peak RSS 495.0 MB | matvec=fast threads=4\n  ctx512 old: load 0.003 s | warm-up 0.000 s | prefill 512 tok in 16.711 s = 30.638 tok/s | decode 1 tok in 0.253 s = 3.959 tok/s | peak RSS 927.5 MB | matvec=fast threads=4\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h1_new.bin\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h1_old.bin\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h64_new.bin\nfe836cafa9e72d1628b5a4585a6b8416  tmp/ctx/h64_old.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l1_new.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l1_old.bin\n2cdfaf44449a5e447d6b520df3c0b945  tmp/ctx/l512_new.bin\n2cdfaf44449a5e447d6b520df3c0b945  tmp/ctx/l512_old.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l64_new.bin\nbb05dee85a5d58224fa906cc6dc0db90  tmp/ctx/l64_old.bin\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"h64\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"l64\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"h1\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"l1\",\"identical\":true}\nRESULT {\"bench\":\"ctx_check\",\"dump\":\"l512\",\"identical\":true}\n",
+  "stderr": "",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 21:36:59",
+    "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "53.5'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3605",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 21:36:59",
+    "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "49.6'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3588",
+    "python": "Python 3.13.5"
+  }
+}

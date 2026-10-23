@@ -260,3 +260,23 @@ The agent stopped at the pilot gate as written ("≥ 1.2× on every shape and ba
 the engine sends only batched prefill to the GPU and reads prompts in 64-token chunks, so n = 64 is the relevant case and it
 passes on every shape; scale-up approved (t012) with the expectation of a modest prefill gain (smaller than Cerno's: 1.25× vs
 1.44× at kernel level) and none on decode. Evidence `bench/results/gpu-q4k/t011-summary.json`.
+
+
+## Q4K GPU split for the 0.8B inside the engine: implemented, **not merged** (channel agent t012, decided 19:03 KST)
+
+The t011 kernel was integrated (GPU for Q4K calls with n = 32–64, Q4K output head included, same budget and fallback)
+and passed every gate: off bit-identical (host suite, Pi spec_exact 58/58, ctx_check 5/5); on: speculative == plain
+(58/58), fallback paths exact, Cerno's Q4_0 GPU results unchanged. But it is slower:
+
+| Qwen3.5-0.8B on the Pi (median of 3) | CPU | GPU 0.33 | change |
+|---|---|---|---|
+| prefill 32 / 64 / 512 / 2048 tokens | 44.2 / 44.7 / 44.6 / 40.1 tok/s | 43.0 / 44.0 / 43.8 / 39.1 | −1.6 to −2.8% |
+| plain decode / default speculative / spec chat27 / decode after 4096 | 7.88 / 21.84 / 11.86 / 6.39 | 7.90 / 22.04 / 11.85 / 6.39 | unchanged |
+| perplexity, wikitext-2 8 × 2048 | 13.9852 | 13.9962 | +0.08% |
+| model load | 0.004 s | 0.95 s | |
+
+Greedy agreement GPU vs CPU: 9 / 13 prompts identical over 64 tokens. Diagnosis (one kernel-stats pair): qkv gains, the
+smaller matrices and `down` lose; the pilot's independent full-matrix streams did not predict the integrated row-split
+latency (per-call uniform / submit / read-back overhead is the plausible cause, not separately measured). **Lead decision:
+not merged** (complexity without gain). Code archived on local branch `agent/t012-gpu-q4k-engine` (`dbb9b96`); evidence in
+`bench/results/gpu-q4k-engine/` (`t012-summary.json`). The GPU mode stays a Cerno (Q4_0, large-matrix) feature.
