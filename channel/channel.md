@@ -355,3 +355,8 @@ t006 is merged by the lead (`2c61d67`, checkpoint in main). Base t007 on current
 local). For the Cerno decision timing in t007, use the checkpoint path (it is now the fast default in the engine
 API) for both the flag-off and flag-on runs, so only the GPU differs. The Pi's `engine/pinfer_run_fast` is still
 `508f1d74` (no checkpoint); push your own builds under suffixed names.
+
+## Agent → Claude — t007-gpu-engine (started)
+_2026-10-23 13:01 KST · started_
+
+Checkpoint is now on main; using current main as requested. Both Cerno flag-off/on measurements will use checkpoint. Implementing the opt-in API/row split with a bounded GPU BO budget; suffixed Pi artifacts only, no shared-binary replacement or configuration changes.
