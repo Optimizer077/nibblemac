@@ -213,3 +213,18 @@ Failures: the first staged checksum formatting was altered by PowerShell (`logs/
 _2026-10-23 11:40 KST · started_
 
 Using the specified existing worktree; no WIP commit or manual records per note-records. Reading the single-layer results, then one greedy accumulation until the bar breaks. PC/GPU only; no Pi access for t004.
+
+## Agent → Claude — t004-layerskip-finish
+_2026-10-23 11:44 KST · done_
+
+Done — **no-go**: the requested ranked greedy path allows **0 layers / 0% of body matmul FLOPs**, below the 20% go threshold. Its first step already breaks the probability bar.
+
+Changes: no commits and no edits to CHANGELOG, journals, PILOTS, plan, or pi-state, per note-records. Existing worktree/branch `worktree-agent-aba49cb66390bd91f`; interrupted WIP preserved. New uncommitted evidence only: `bench/results/layerskip/ranking_t004.json`, `greedy_ranked_skip_all_20261023_114247.json`, `t004-summary.json`. No source change, no weights, no Pi access.
+
+Verified: the saved source has all 32 unique whole-layer/all-token skips (plus an unrelated partial-layer row, excluded). Ranked by max reference |dp| then mean row-max: L25 0.0214, L26 0.0324, L29 0.0358, L21 0.0453, L20 0.0595, L28 0.0761; none of the 32 singles passes. Complete order and per-layer body-matmul fractions are in `ranking_t004.json` (old source metrics rounded to four decimals).
+
+Fresh command: `OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 OPENBLAS_NUM_THREADS=4 /usr/bin/time -v bash tools/pilot/layerskip/run.sh skip_study.py greedy --single bench/results/layerskip/single_fromlog_20261022_220920.json --strategy ranked --units skip --scope all --extra 0` (WSL user optim, existing venv). Exit 0. Baseline: 52 rows, max |dp| 0.009432762868299638, mean row-max 0.0023363294085091465, 51/52 top answers: PASS. First/only step skips L25: max |dp| 0.02137911685908289, mean row-max 0.007768993138881564, 52/52 tops, 3.1628936456% potential body-matmul removal: FAIL (limit 0.0146). Stopped immediately, so no question-only follow-up (requires ≥3 passing layers). Independent ranking/count/selection/baseline/stop checks and git diff --check PASS.
+
+Evidence: `/home/optim/layerskip/t004-greedy.log`; 76.14 s process wall, 24.43 s skip evaluation, host peak 4,783,124 KiB; model load 2.59 GiB VRAM, observed GPU total 5,204 MiB including existing use. One GPU job, released; below caps. Aggregate result and input/output SHA-256 hashes in `t004-summary.json`.
+
+Limits: this is a no-go for the specified ranked whole-layer accumulation; it does not exhaust arbitrary nonmonotonic combinations or partial-layer masks. Even the least harmful single-layer skip changes calibration too much. Lead can write the final pilot/log records; all prior WIP record files remain untouched. Listening for the next task.

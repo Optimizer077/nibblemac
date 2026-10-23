@@ -29,6 +29,7 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ### Pilots
 - Distilled decider: **no-go** (0.8B student 39/52 = 75% top-answer agreement with Cerno 4B, bar 85%).
+- Layer skipping: **no-go** (no single layer or early exit stays within the probability bar; best L25 0.0214 vs 0.0146).
 
 ### Added
 - `channel/channel.md`: conversation with a worker agent the owner runs; the lead writes tasks, reviews, commits.

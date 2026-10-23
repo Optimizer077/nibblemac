@@ -217,3 +217,146 @@ training/dev rows, but both sets cover similar domains. No Pi speedup is claimed
 weight repositories carry no LICENSE file (`cerno-pi/NOTICE`); the teacher is used locally only and
 the distilled student stays local (`/root/distill/student-0.8b*`, not committed) until the owner
 decides. The synthetic requests are original templates (no copied dataset, no real person).
+
+## Layer skipping (2026-10-22, branch `worktree-agent-aba49cb66390bd91f`)
+
+**Question.** Can Cerno 4B skip layers (residual passthrough), skip only the MLP or only the mixer of
+a layer, skip layers only for the question tokens, or exit early, and still give the same decisions?
+A decision costs ~150 ms per prompt token on the Pi, 93% of it in the matmuls (`docs/network-audit.md`
+§1–2); the token count and the layer count are the only linear levers left. **Go if ≥ 20% of the
+matmul MACs can be removed within the bar**: max |Δp| ≤ 0.0146 and the same top answer on ≥ 51 of 52
+rows against Cerno's own llama.cpp reference (`cerno-pi/results/ref_llama_pc.jsonl`; pinfer on the Pi
+scores 0.0108 / 51).
+
+### Method
+- **Harness** `tools/pilot/layerskip/` (`run.sh`, `cerno_gpu.py`, `skip_study.py`, `pqread.py`):
+  transformers 5.20.2 `Qwen3_5ForCausalLM` in **exact fp32** on the PC GPU (RTX 5060 Ti, WSL CUDA,
+  torch 2.11.0+cu128 in the uv venv `~/.venvs/layerskip`). The weights are the engine's file
+  `models/cerno-4b/cerno-4b-q4_0.pq`: the Q4_0 body stays packed on the GPU (nibbles + fp16 block
+  scales, 2.0 GB) and every matrix is dequantized per call (`d · (u − 8)` is exact in fp32); the Q8
+  head is dequantized in row chunks, the Q8 embedding sits on the CPU. 2.6 GiB of VRAM in all (the GPU
+  and the PC were shared with other agents' jobs: one 4B torch job at a time, host threads ≤ 4).
+- **Rows and readout** as `tools/compress/cerno.py` (compress agent): the 52 question rows (18 requests,
+  sets A + B) with the token ids llama-server received; each request's common prefix is prefilled
+  once and its cache deep-copied per row; `p = softmax(label logits / 1.534)`, a label outside the
+  top 260 of the vocabulary counts as 0 (`cerno_pi/decide.py`). Positions and the causal mask are
+  passed explicitly (HF derives both from the first attention layer's cache, which a skipped layer
+  leaves empty).
+- **Checks** (`skip_study.py check`, 21:40 KST): explicit positions / mask vs the plain HF path
+  max |Δh| 5.7e-6; prefix cache + suffix vs one full forward 6.2e-6; the full model vs the reference
+  is in the table below (same numbers as the compress agent's CPU fp32 emulation, 0.0094 / 51).
+- **Variants.** The decoder-layer forward is replaced by one with a per-layer mode: `skip` (the
+  layer's input is its output), `nomlp` (mixer only), `nomix` (MLP only). Scope `all` = every token
+  (prefix and question); scope `q` = question tokens only, the shared prefix state computed in full
+  (its cache is reused across variants). **Early exit** after layer k: final norm + head on layer k's
+  output, captured by a forward hook (= skipping layers k+1..31 for every token).
+  **Accumulation:** units ranked by their single-unit max |Δp|; at each step the best of the
+  `--shortlist 6` least harmful remaining units is added (greedy with re-evaluation); stops one step
+  after the bar breaks. Units = whole layers, or MLP / mixer parts.
+- **MACs saved** = the removed layers' share of the body's 3569 MMAC per token (`docs/network-audit.md`
+  §1.1: MLP 70.78, DeltaNet mixer 42.11, full-attention mixer 36.70 MMAC per layer). For scope `q`
+  the saving applies to the question rows only, 61% of a decision's time (§2.2), so the decision-level
+  saving is 0.61 × the fraction; for scope `all` it is ~0.99 ×.
+- Results: `bench/results/layerskip/{base,single,greedy_*}_<stamp>.json` (per-row probabilities
+  in `base_*`; per-variant summaries elsewhere). `skip_study.py table FILE...` prints the tables.
+
+### Results
+**Full model (the harness itself)**, `base_20261022_214806.json`, 21:48 KST: max |Δp| **0.0094**, mean
+0.0023, same top **51/52** (the miss is the reference's 0.006 near-tie sentiment_review / price_complaint;
+the compress agent's CPU fp32 emulation gives the same 0.0094 / 0.0023 / 51). The worst row (favours) is
+within the reference's own llama.cpp-vs-pinfer noise (0.0108). Every variant below is measured against
+the reference (`ref`) and against this full model (`base`).
+
+**Early exit** (final norm + head on layer k's output; the same file). Fails at every k: the top answer
+often survives (52/52 at k = 25 and 30) but the probabilities move by 0.17–0.22 on average — the head's
+calibration (T = 1.534 fitted to the last layer) does not transfer to earlier layers.
+
+| exit after layer k | layers removed | MACs saved | max \|Δp\| ref | mean \|Δp\| ref | same top ref | max \|Δp\| base | same top base |
+|---|---|---|---|---|---|---|---|
+| 24 | 25–31 (7) | 21.8% | 0.689 | 0.217 | 48 | 0.689 | 47 |
+| 25 | 26–31 (6) | 18.7% | 0.511 | 0.193 | 52 | 0.510 | 51 |
+| 26 | 27–31 (5) | 15.5% | 0.511 | 0.195 | 51 | 0.510 | 52 |
+| 27 | 28–31 (4) | 12.5% | 0.472 | 0.170 | 47 | 0.472 | 46 |
+| 28 | 29–31 (3) | 9.3% | 0.469 | 0.179 | 50 | 0.468 | 49 |
+| 29 | 30–31 (2) | 6.2% | 0.477 | 0.180 | 50 | 0.476 | 49 |
+| 30 | 31 (1) | 3.0% | 0.509 | 0.209 | 52 | 0.509 | 51 |
+| 31 | none (= full) | 0 | 0.0094 | 0.0023 | 51 | 0 | 52 |
+
+**Single-layer skips, every token** (`single_fromlog_*.json`, parsed from the run log of
+`skip_study.py all`, 21:48–22:08 KST; 27–72 s per 52-row evaluation on the shared GPU). Sorted by
+max |Δp|. One layer = 3.0% (full attention, layers 3, 7, …, 31) or 3.2% (DeltaNet) of the body's MACs.
+**No layer passes**: the best, layer 25, is 1.5× over the bar; layers 0–15 are 0.30–0.99.
+
+| skipped layer | kind | MACs saved | max \|Δp\| ref | mean \|Δp\| ref | same top ref | max \|Δp\| base | same top base | pass |
+|---|---|---|---|---|---|---|---|---|
+| 25 | DeltaNet | 3.2% | 0.0214 | 0.0078 | 52 | 0.0206 | 51 | no |
+| 26 | DeltaNet | 3.2% | 0.0324 | 0.0070 | 51 | 0.0338 | 52 | no |
+| 29 | DeltaNet | 3.2% | 0.0358 | 0.0124 | 51 | 0.0399 | 50 | no |
+| 21 | DeltaNet | 3.2% | 0.0453 | 0.0141 | 51 | 0.0466 | 52 | no |
+| 20 | DeltaNet | 3.2% | 0.0595 | 0.0166 | 50 | 0.0689 | 49 | no |
+| 28 | DeltaNet | 3.2% | 0.0761 | 0.0161 | 50 | 0.0711 | 51 | no |
+| 22 | DeltaNet | 3.2% | 0.1013 | 0.0200 | 51 | 0.0988 | 50 | no |
+| 30 | DeltaNet | 3.2% | 0.1084 | 0.0486 | 50 | 0.1060 | 51 | no |
+| 17 | DeltaNet | 3.2% | 0.1127 | 0.0367 | 50 | 0.1221 | 51 | no |
+| 23 | attention | 3.0% | 0.1178 | 0.0335 | 51 | 0.1228 | 50 | no |
+| 18 | DeltaNet | 3.2% | 0.1283 | 0.0334 | 49 | 0.1251 | 50 | no |
+| 24 | DeltaNet | 3.2% | 0.1589 | 0.0119 | 51 | 0.1602 | 52 | no |
+| 19 | attention | 3.0% | 0.1745 | 0.0469 | 49 | 0.1839 | 50 | no |
+| 27 | attention | 3.0% | 0.1858 | 0.0235 | 49 | 0.1808 | 50 | no |
+| 16 | DeltaNet | 3.2% | 0.2079 | 0.0582 | 50 | 0.2090 | 51 | no |
+| 3 | attention | 3.0% | 0.3044 | 0.0800 | 48 | 0.3014 | 47 | no |
+| 5 | DeltaNet | 3.2% | 0.3195 | 0.0631 | 45 | 0.3289 | 46 | no |
+| 14 | DeltaNet | 3.2% | 0.3274 | 0.0882 | 49 | 0.3209 | 50 | no |
+| 15 | attention | 3.0% | 0.3292 | 0.0978 | 48 | 0.3387 | 49 | no |
+| 9 | DeltaNet | 3.2% | 0.3362 | 0.0709 | 48 | 0.3335 | 47 | no |
+| 13 | DeltaNet | 3.2% | 0.3368 | 0.0693 | 46 | 0.3338 | 47 | no |
+| 10 | DeltaNet | 3.2% | 0.3402 | 0.0868 | 46 | 0.3496 | 45 | no |
+| 4 | DeltaNet | 3.2% | 0.3457 | 0.0531 | 47 | 0.3466 | 46 | no |
+| 1 | DeltaNet | 3.2% | 0.3609 | 0.0661 | 45 | 0.3579 | 44 | no |
+| 8 | DeltaNet | 3.2% | 0.3678 | 0.0613 | 49 | 0.3714 | 48 | no |
+| 7 | attention | 3.0% | 0.3708 | 0.0731 | 47 | 0.3720 | 46 | no |
+| 6 | DeltaNet | 3.2% | 0.3726 | 0.0986 | 46 | 0.3710 | 45 | no |
+| 12 | DeltaNet | 3.2% | 0.4579 | 0.0592 | 47 | 0.4615 | 48 | no |
+| 31 | attention | 3.0% | 0.5092 | 0.2088 | 52 | 0.5089 | 51 | no |
+| 2 | DeltaNet | 3.2% | 0.5712 | 0.0841 | 48 | 0.5647 | 47 | no |
+| 11 | attention | 3.0% | 0.6115 | 0.1027 | 43 | 0.6126 | 44 | no |
+| 0 | DeltaNet | 3.2% | 0.9902 | 0.5085 | 14 | 0.9902 | 15 | no |
+
+Reading: the deviations are not noise — they are the same against the reference and against the
+harness's own full model (columns `base`), so they are the effect of the skip, not of the emulation.
+The late DeltaNet layers (20–29) are the most redundant; the full-attention layers, the first 16
+layers and the last layer are not.
+
+### Verdict
+(pending)
+
+### If scaled up: how a skip mask would go into pinfer
+Class (b), opt-in, never default: the output changes.
+1. **`pinfer_params.layer_skip`** (u32 bit mask, bit l = skip layer l for every token) and
+   `layer_skip_q` (the same, applied only after `pinfer_eval_select` / a state restore marks the
+   prefix as done — i.e. for the tokens that follow the snapshot), zero-initialised = off; plus
+   `mlp_skip` / `mix_skip` masks if parts win over whole layers. Validated at `pinfer_load` against
+   `n_layers`. Alternative: a header field in the `.pq` (`pq_header` has no reserved space in
+   version 1; a new version 2 field would do) — the params route needs no file change and keeps one
+   `.pq` per model, so prefer it.
+2. **`forward_chunk` (`engine/src/forward.c`)**: inside `for (l …)`, `if (skip & (1u << l)) continue;`
+   before `pf_norm_rows`; for part masks, wrap the mixer half (`pf_norm_rows` + `pf_full_attn` /
+   `pf_linear_attn` + `pf_add_rows`) and the MLP half separately. A skipped layer leaves its KV
+   rows / conv / recurrent state untouched (never read again for those tokens). ~15 lines.
+3. **State blobs** (`state.c`): unchanged; a `q`-scope skip applies after `load_state`, so the
+   fingerprint and the restore logic stay. Record the masks in the result JSON and in `cerno-pi`'s
+   `decide.py` call (`eval_select`), gated by a `decider_config.json` field.
+4. **Gates**: the 52-row check on the Pi (`cerno-pi/bench/compare.py` vs `ref_llama_pc.jsonl`)
+   with the exact mask found here, bit-for-bit vs this pilot's probabilities; then the decision
+   timing (`tmp/csp/decide_ab.sh`).
+
+**Greedy accumulation (channel agent, t004, 2026-10-23 11:42 KST)**, `greedy_ranked_skip_all_20261023_114247.json`:
+the first step (skip L25, the least harmful single layer, 3.2% of the body matmuls) already fails the bar
+(max |Δp| 0.0214 > 0.0146, 52/52 top answers), so the ranked whole-layer accumulation allows **0 layers**. The
+question-tokens-only follow-up was not run (it required ≥ 3 passing layers). Ranking: `ranking_t004.json`;
+aggregate and file hashes: `t004-summary.json`.
+
+**Verdict: no-go.** Cerno's probabilities are calibrated through every layer: no whole layer, and no early exit,
+stays within the probability bar. Note: skipping L25 keeps the top answer on 52/52; only a looser bar (same top
+answer instead of the same probabilities) would admit layer skipping, and that is the owner's decision.
+

@@ -1,0 +1,298 @@
+{
+    "source":  "bench/results/layerskip/single_fromlog_20261022_220920.json",
+    "source_precision":  "metrics recovered from log and rounded to 4 decimals",
+    "scope":  "all tokens",
+    "rank_order":  "maximum reference probability error, then mean per-row maximum error",
+    "single_whole_layers":  32,
+    "passing_single_layers":  0,
+    "ranking":  [
+                    {
+                        "rank":  1,
+                        "layer":  25,
+                        "max_dp_ref":  0.0214,
+                        "mean_row_max_dp_ref":  0.0078,
+                        "same_top_ref":  52,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  2,
+                        "layer":  26,
+                        "max_dp_ref":  0.0324,
+                        "mean_row_max_dp_ref":  0.007,
+                        "same_top_ref":  51,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  3,
+                        "layer":  29,
+                        "max_dp_ref":  0.0358,
+                        "mean_row_max_dp_ref":  0.0124,
+                        "same_top_ref":  51,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  4,
+                        "layer":  21,
+                        "max_dp_ref":  0.0453,
+                        "mean_row_max_dp_ref":  0.0141,
+                        "same_top_ref":  51,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  5,
+                        "layer":  20,
+                        "max_dp_ref":  0.0595,
+                        "mean_row_max_dp_ref":  0.0166,
+                        "same_top_ref":  50,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  6,
+                        "layer":  28,
+                        "max_dp_ref":  0.0761,
+                        "mean_row_max_dp_ref":  0.0161,
+                        "same_top_ref":  50,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  7,
+                        "layer":  22,
+                        "max_dp_ref":  0.1013,
+                        "mean_row_max_dp_ref":  0.02,
+                        "same_top_ref":  51,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  8,
+                        "layer":  30,
+                        "max_dp_ref":  0.1084,
+                        "mean_row_max_dp_ref":  0.0486,
+                        "same_top_ref":  50,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  9,
+                        "layer":  17,
+                        "max_dp_ref":  0.1127,
+                        "mean_row_max_dp_ref":  0.0367,
+                        "same_top_ref":  50,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  10,
+                        "layer":  23,
+                        "max_dp_ref":  0.1178,
+                        "mean_row_max_dp_ref":  0.0335,
+                        "same_top_ref":  51,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  11,
+                        "layer":  18,
+                        "max_dp_ref":  0.1283,
+                        "mean_row_max_dp_ref":  0.0334,
+                        "same_top_ref":  49,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  12,
+                        "layer":  24,
+                        "max_dp_ref":  0.1589,
+                        "mean_row_max_dp_ref":  0.0119,
+                        "same_top_ref":  51,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  13,
+                        "layer":  19,
+                        "max_dp_ref":  0.1745,
+                        "mean_row_max_dp_ref":  0.0469,
+                        "same_top_ref":  49,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  14,
+                        "layer":  27,
+                        "max_dp_ref":  0.1858,
+                        "mean_row_max_dp_ref":  0.0235,
+                        "same_top_ref":  49,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  15,
+                        "layer":  16,
+                        "max_dp_ref":  0.2079,
+                        "mean_row_max_dp_ref":  0.0582,
+                        "same_top_ref":  50,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  16,
+                        "layer":  3,
+                        "max_dp_ref":  0.3044,
+                        "mean_row_max_dp_ref":  0.08,
+                        "same_top_ref":  48,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  17,
+                        "layer":  5,
+                        "max_dp_ref":  0.3195,
+                        "mean_row_max_dp_ref":  0.0631,
+                        "same_top_ref":  45,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  18,
+                        "layer":  14,
+                        "max_dp_ref":  0.3274,
+                        "mean_row_max_dp_ref":  0.0882,
+                        "same_top_ref":  49,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  19,
+                        "layer":  15,
+                        "max_dp_ref":  0.3292,
+                        "mean_row_max_dp_ref":  0.0978,
+                        "same_top_ref":  48,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  20,
+                        "layer":  9,
+                        "max_dp_ref":  0.3362,
+                        "mean_row_max_dp_ref":  0.0709,
+                        "same_top_ref":  48,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  21,
+                        "layer":  13,
+                        "max_dp_ref":  0.3368,
+                        "mean_row_max_dp_ref":  0.0693,
+                        "same_top_ref":  46,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  22,
+                        "layer":  10,
+                        "max_dp_ref":  0.3402,
+                        "mean_row_max_dp_ref":  0.0868,
+                        "same_top_ref":  46,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  23,
+                        "layer":  4,
+                        "max_dp_ref":  0.3457,
+                        "mean_row_max_dp_ref":  0.0531,
+                        "same_top_ref":  47,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  24,
+                        "layer":  1,
+                        "max_dp_ref":  0.3609,
+                        "mean_row_max_dp_ref":  0.0661,
+                        "same_top_ref":  45,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  25,
+                        "layer":  8,
+                        "max_dp_ref":  0.3678,
+                        "mean_row_max_dp_ref":  0.0613,
+                        "same_top_ref":  49,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  26,
+                        "layer":  7,
+                        "max_dp_ref":  0.3708,
+                        "mean_row_max_dp_ref":  0.0731,
+                        "same_top_ref":  47,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  27,
+                        "layer":  6,
+                        "max_dp_ref":  0.3726,
+                        "mean_row_max_dp_ref":  0.0986,
+                        "same_top_ref":  46,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  28,
+                        "layer":  12,
+                        "max_dp_ref":  0.4579,
+                        "mean_row_max_dp_ref":  0.0592,
+                        "same_top_ref":  47,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  29,
+                        "layer":  31,
+                        "max_dp_ref":  0.5092,
+                        "mean_row_max_dp_ref":  0.2088,
+                        "same_top_ref":  52,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  30,
+                        "layer":  2,
+                        "max_dp_ref":  0.5712,
+                        "mean_row_max_dp_ref":  0.0841,
+                        "same_top_ref":  48,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  31,
+                        "layer":  11,
+                        "max_dp_ref":  0.6115,
+                        "mean_row_max_dp_ref":  0.1027,
+                        "same_top_ref":  43,
+                        "body_matmul_fraction":  0.030113190630953714,
+                        "pass":  false
+                    },
+                    {
+                        "rank":  32,
+                        "layer":  0,
+                        "max_dp_ref":  0.9902,
+                        "mean_row_max_dp_ref":  0.5085,
+                        "same_top_ref":  14,
+                        "body_matmul_fraction":  0.031628936456348761,
+                        "pass":  false
+                    }
+                ]
+}

@@ -1,0 +1,71 @@
+{
+  "verdict": "no-go",
+  "bar": {
+    "max_dp": 0.0146,
+    "min_top": 51
+  },
+  "required_body_matmul_fraction": 0.2,
+  "passing_greedy_layers": 0,
+  "passing_body_matmul_fraction": 0,
+  "question_only_followup": "not run: fewer than 3 layers pass",
+  "single_layer_ranking": "bench/results/layerskip/ranking_t004.json",
+  "fresh_greedy": "bench/results/layerskip/greedy_ranked_skip_all_20261023_114247.json",
+  "base": {
+    "rows": 52,
+    "max_dp_ref": 0.009432762868299638,
+    "mean_dp_ref": 0.0023363294085091465,
+    "same_top_ref": 51,
+    "worst_ref": "favours"
+  },
+  "first_failed_step": {
+    "variant": "+L25:skip",
+    "modes": {
+      "25": "skip"
+    },
+    "scope": "all",
+    "saved_frac": 0.03162893645634876,
+    "saved_frac_decision": 0.03162893645634876,
+    "pass": false,
+    "seconds": 24.432283639907837,
+    "max_dp_ref": 0.02137911685908289,
+    "mean_dp_ref": 0.007768993138881564,
+    "same_top_ref": 52,
+    "worst_ref": "stars",
+    "max_dp_base": 0.020581070587938344,
+    "mean_dp_base": 0.007296552484292614,
+    "same_top_base": 51,
+    "worst_rows": [
+      [
+        0.02137911685908289,
+        "stars"
+      ],
+      [
+        0.017785896177438976,
+        "camera"
+      ],
+      [
+        0.016035513183859706,
+        "risk"
+      ]
+    ]
+  },
+  "process_wall_seconds": 76.14,
+  "peak_host_rss_kib": 4783124,
+  "gpu_total_memory_observed_mib": 5204,
+  "gpu_model_loaded_gib": 2.59,
+  "log": "/home/optim/layerskip/t004-greedy.log",
+  "artifacts": {
+    "bench/results/layerskip/ranking_t004.json": {
+      "bytes": 12751,
+      "sha256": "081d710cd4e160ac6bf567f4bb22f4d8f8403047937e64fa3508d18f3c0f1aab"
+    },
+    "bench/results/layerskip/greedy_ranked_skip_all_20261023_114247.json": {
+      "bytes": 920,
+      "sha256": "ef598dd6e4e1ed705801b0ca998cfd3cf46239abfe43a8d74b7397292587ab0f"
+    },
+    "bench/results/layerskip/single_fromlog_20261022_220920.json": {
+      "bytes": 9289,
+      "sha256": "76f2e2c5ab146dcaa9eb00c6b7322f24bac0e9cc1ac0406195d2cfebad1e5f50"
+    }
+  }
+}
