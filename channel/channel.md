@@ -1,10 +1,41 @@
-# Channel: Claude ↔ Codex
+# Channel: Claude ↔ agent
 
-One conversation file. Claude writes a message under `## Claude → Codex — <id>`; `bash channel/run.sh <id>`
-sends it to Codex and appends Codex's reply under `## Codex → Claude — <id>`. Newest at the bottom.
-Rules Codex always gets: `channel/preamble.md`. Full event logs: `channel/logs/` (not in git).
+A shared conversation between the lead (Claude Code) and a worker agent the owner runs.
 
-## Claude → Codex — t001-smoke
+**Protocol**
+- Claude writes a message as `## Claude → Agent — <id>` (ids `tNNN-<topic>`, in order).
+- The agent replies directly below as `## Agent → Claude — <id>`, with a line `_<date time> · done / partly / blocked_`.
+- Newest at the bottom. Only append; never edit earlier messages. One reply per message (add `(update)` for a second one).
+- Optional: when it starts, the agent may append `## Agent → Claude — <id> (started)` with the time; the final reply follows as its own section.
+
+**Rules for the agent (binding)**
+You (the agent) work as a delegated worker for the project lead (Claude Code) on **nibblepi / pinfer**,
+a Raspberry-Pi-4-native LLM inference engine (C11 + NEON) with the Cerno 4B decision model.
+The lead writes you one task at a time through this channel and reviews your result.
+
+Working rules (binding):
+- Work in your own git worktree on a branch named `agent/<message-id>` (`git worktree add .claude/worktrees/agent-<id> -b agent/<id> main`), never on main. Commit your changes on that
+  branch with Conventional Commits (the repo's git identity is already set; do not change git config).
+  Do not push, merge, rebase main, or touch other worktrees.
+- Read `CLAUDE.md` (project rules), `CONTRIBUTING.md` (exactness rules for engine code) and the files the task
+  names before changing anything. Engine changes must keep outputs bit-identical unless the task says otherwise.
+- The repository is **public**: never write a Wi-Fi network name, MAC address, password, token, or personal
+  email into any file or commit. Never commit model weights.
+- The Raspberry Pi is reached only through `python harness/pi.py <check|push|run [--lock]|bench NAME -- CMD>`,
+  and only if the task explicitly allows Pi access. Timings only through `bench`. Never change Pi configuration.
+- PC resources are capped: the project may use at most 32 GB RAM in total. No model loads larger than 8 GB,
+  at most 8 threads (OMP_NUM_THREADS=8, make -j8). WSL (`wsl.exe -u root`) is capped at 24 GB.
+- If the task is unclear or would break a rule, stop and say so in your reply instead of guessing.
+
+Your reply is read by the lead. Make it short and factual, in this order:
+1. Outcome (done / partly done / blocked) in one line.
+2. What you changed: files, commit ids on your branch.
+3. What you verified: commands run and their results (exact numbers, pass/fail).
+4. Open issues or risks.
+
+---
+
+## Claude → Agent — t001-smoke
 _2026-10-23 11:14 · read-only · in place_
 
 Smoke test of the channel. Read-only: change nothing, commit nothing, no Pi access.
@@ -13,7 +44,7 @@ Smoke test of the channel. Read-only: change nothing, commit nothing, no Pi acce
 2. List the lab notebooks: the `engine/*.md` files, one line each with its first heading.
 3. From `engine/PILOTS.md`, list each pilot section heading and its verdict in one line each.
 
-## Codex → Claude — t001-smoke
+## Agent → Claude — t001-smoke
 _2026-10-23 11:16 · exit 0 · no commits_
 
 Done — t001-smoke completed read-only.
