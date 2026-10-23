@@ -1,4 +1,4 @@
-# Codex channel
+# Channel (tasks for Codex)
 
 The lead (Claude Code) delegates tasks to the Codex CLI through this folder and reviews the results.
 
@@ -11,13 +11,13 @@ The lead (Claude Code) delegates tasks to the Codex CLI through this folder and 
 
 ## Run a task
 ```bash
-bash codex/run.sh <id>                                   # isolated worktree .claude/worktrees/codex-<id>, branch codex/<id>
-bash codex/run.sh <id> --sandbox read-only --in-place    # questions / reviews on the main checkout, no writes
-bash codex/run.sh <id> --sandbox danger-full-access      # only for tasks that need the network (Pi through harness/pi.py)
-bash codex/status.sh                                     # all tasks: state, exit code, commits, branch
+bash channel/run.sh <id>                                   # isolated worktree .claude/worktrees/codex-<id>, branch codex/<id>
+bash channel/run.sh <id> --sandbox read-only --in-place    # questions / reviews on the main checkout, no writes
+bash channel/run.sh <id> --sandbox danger-full-access      # only for tasks that need the network (Pi through harness/pi.py)
+bash channel/status.sh                                     # all tasks: state, exit code, commits, branch
 ```
-Defaults: sandbox `workspace-write` (writes only inside the task's worktree, no network), model `gpt-6-astra`
-(override with `CODEX_CHANNEL_MODEL`; the global Codex config names a model this ChatGPT account cannot use).
+Default sandbox `workspace-write` (writes only inside the task's worktree, no network). The model is always the
+one the owner sets in the Codex config (`~/.codex/config.toml`); the channel never overrides it.
 
 ## Review and merge (lead)
 1. Read `outbox/<id>.md`; check `git log main..codex/<id>` and the diff.
