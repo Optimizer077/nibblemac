@@ -461,3 +461,17 @@ context and generation, `history.py` prompt tokens, `cache.py` snapshots / repli
 HTTP); tests: `tests/python/test_server.py`. Measurement: `bench/serve/serve_client.py` (works with any
 OpenAI-compatible server) and `bench/serve/serve_bench.sh` (starts the server once per configuration;
 on the Pi in one locked `bench` call).
+
+## GPU acceleration (opt-in, 0.3)
+
+> GPU acceleration is optional and **off by default**. Enable it with `pinfer_run --gpu 0.33`,
+> `Model.load(..., gpu_split=0.33)`, or `pinfer_params.gpu_split = 0.33` in C; 0.33 is the recommended share.
+> It accelerates batched prefill (prompt reading, n >= 7); decode and the speculative verify pass stay on the
+> CPU. Cerno 4B uploads about 499 MiB to the GPU once at load (512 MiB cap; 138 of 200 Q4_0 matrices,
+> largest MLP matrices first); loading takes ~6.8 s instead of ~2.7 s. Output is **not** bit-identical to the
+> CPU path: on the 52-question Cerno reference the largest probability difference is 0.0128 and two
+> near-50/50 yes/no answers flip (50/52 top answers). If the GPU is unavailable at load, pinfer warns and runs
+> on the CPU; a submit error or a 3 s wait timeout disables the GPU for that model and finishes the rows on
+> the CPU with identical results to the CPU path. ABI 0.3 (`libpinfer.so.0.3`): rebuild callers of 0.2.
+
+Details and measurements: `engine/GPU.md`.

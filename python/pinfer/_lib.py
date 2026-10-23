@@ -33,10 +33,10 @@ _cache: dict[str, Lib] = {}
 
 class Params(ctypes.Structure):
     """Mirror of ``pinfer_params`` in pinfer.h (``kv_dtype`` added in 0.2: 0 fp32, 1 fp16,
-    2 int8; older libraries ignore the extra field, which is zero-initialised)."""
+    2 int8; ``gpu_split`` added in 0.3, zero = CPU only)."""
 
     _fields_ = [("n_threads", ctypes.c_int), ("max_ctx", ctypes.c_int),
-                ("kv_dtype", ctypes.c_int)]
+                ("kv_dtype", ctypes.c_int), ("gpu_split", ctypes.c_float)]
 
 
 class SpecParams(ctypes.Structure):

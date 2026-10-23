@@ -14,11 +14,13 @@ from pathlib import Path
 import numpy as np
 
 MAGIC = 0x34465051
+SHAPES = {'gate': (9216, 2560), 'down': (2560, 9216), 'qkv': (8192, 2560)}
 
 
-def make(path: Path) -> None:
+def make(path: Path, shape: str = 'gate') -> None:
     rng = np.random.default_rng(1)
-    r, k, n = 9216, 2560, 64
+    r, k = SHAPES[shape]
+    n = 64
     u = rng.integers(0, 16, (r, k), dtype=np.uint8)
     d = (rng.standard_normal((r, k // 32)) * .02).astype('<f2')
     x = rng.standard_normal((n, k)).astype('<f4')
@@ -41,7 +43,7 @@ def reference(path: Path, prefix: Path, iters: int) -> None:
     with path.open('rb') as f:
         magic, version, r, k, nmax, *reserved = struct.unpack('<8I', f.read(32))
         assert magic == MAGIC and version == 1 and not any(reserved)
-        assert (r, k, nmax) == (9216, 2560, 64)
+        assert (r, k) in SHAPES.values() and nmax == 64
         u = np.fromfile(f, 'u1', r * k).reshape(r, k)
         d = np.fromfile(f, '<f2', r * k // 32).reshape(r, k // 32)
         x = np.fromfile(f, '<f4', nmax * k).reshape(nmax, k)
@@ -83,7 +85,8 @@ def reference(path: Path, prefix: Path, iters: int) -> None:
 
             call()
             y = np.array(yb)
-            checked = np.concatenate([np.arange(tile * 32, tile * 32 + 32) for tile in (0, 71, 143, 287)])
+            checked = np.concatenate([np.arange(tile * 32, tile * 32 + 32)
+                                      for tile in (0, t // 4, t // 2, t - 1)])
             model = q4gpu.reference_gpu(u[checked], d[checked], q[:n], dx[:n])
             exact = np.array_equal(y[:, checked].view('u4'), model.view('u4'))
             if not np.isfinite(y).all() or not exact:
@@ -106,11 +109,12 @@ if __name__ == '__main__':
     ap.add_argument('fixture', type=Path)
     ap.add_argument('prefix', nargs='?', type=Path)
     ap.add_argument('--iters', type=int, default=10)
+    ap.add_argument('--shape', choices=tuple(SHAPES), default='gate')
     args = ap.parse_args()
     if args.iters < 1 or args.iters > 100:
         ap.error('iters must be 1..100')
     if args.mode == 'make':
-        make(args.fixture)
+        make(args.fixture, args.shape)
     else:
         if args.prefix is None:
             ap.error('python mode needs an output prefix')

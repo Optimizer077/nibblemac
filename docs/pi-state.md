@@ -34,6 +34,7 @@ The Pi must always be reproducible from: the stock image + this list. Before a c
 ## Files we placed (not config)
 | Path | What |
 |---|---|
+| `~/pinfer/tmp/gpu-engine/` (2026-10-23, channel agent t007): GPU-engine test binaries and library, reference fixtures, test-only fault interposer, prompt ids, logit dumps; earlier `~/pinfer/tmp/gpu-c/` (t005); `~/venv-gpu` / py-videocore6 venv (GPU pilot) | `rm -rf ~/pinfer/tmp/gpu-engine ~/pinfer/tmp/gpu-c` (venv: see the GPU pilot row) |
 | `~/pinfer/engine/pinfer_run_fast` = 4B-prefill-tuning build `508f1d74` (2026-10-23 11:33, channel agent t003; was 0.2.0 `d48ffda1`, kept as `pinfer_run_fast.pre-csp`); `pinfer_ppl_fast` = `98f7c5e1` (was `9cdfe9c7`, `.pre-csp`). Gate: `install-csp-smoke` spec_exact 58/58. Removed scratch `pinfer_run_{cerno1,ck1,csp0}` | `cp engine/pinfer_run_fast.pre-csp engine/pinfer_run_fast && cp engine/pinfer_ppl_fast.pre-csp engine/pinfer_ppl_fast` (through `harness/pi.py run --lock`) |
 | `~/pinfer/memband` | bandwidth benchmark (sha256 in `logs/harness.jsonl` push events) |
 | `~/pinfer/llama/` | llama.cpp v0.7.0 @ `620d2225` static aarch64: llama-bench, llama-completion, llama-simple, llama-perplexity + `BUILD_INFO.txt` (sha256s) |

@@ -1,0 +1,12 @@
+9 prompt x mode cases, 4 in parallel
+     golden split  4    plain: state 20299848 B, save 11.7 ms load 0.0 ms size 20299848 bytes | load ok, rewind ok
+     golden split  4    spec3: state 20316232 B, save 10.4 ms load 0.0 ms size 20316232 bytes | load ok, rewind ok
+     golden split  4 adaptive: state 20316232 B, save 11.2 ms load 0.0 ms size 20316232 bytes | load ok, rewind ok
+    bench64 split 40    plain: state 21184584 B, save 12.0 ms load 0.0 ms size 21184584 bytes | load ok, rewind ok
+    bench64 split 40    spec3: state 21348424 B, save 10.9 ms load 0.0 ms size 21348424 bytes | load ok, rewind ok
+    bench64 split 40 adaptive: state 21348424 B, save 11.7 ms load 0.0 ms size 21348424 bytes | load ok, rewind ok
+     long74 split 64    plain: state 21774408 B, save 10.4 ms load 0.0 ms size 21774408 bytes | load ok, rewind ok
+     long74 split 64    spec3: state 22036552 B, save 11.3 ms load 0.0 ms size 22036552 bytes | load ok, rewind ok
+     long74 split 64 adaptive: state 22036552 B, save 12.3 ms load 0.0 ms size 22036552 bytes | load ok, rewind ok
+
+OVERALL: PASS

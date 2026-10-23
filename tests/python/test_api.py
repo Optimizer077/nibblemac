@@ -44,19 +44,33 @@ def test_bad_model_file(lib: Any, tmp_path: Path, content: bytes) -> None:
     assert ei.value.code == errors.E_FORMAT
 
 
-@pytest.mark.parametrize("kwargs", [{"n_threads": 0}, {"max_ctx": 0}])
-def test_bad_load_arguments(model_path: Path, kwargs: dict[str, int]) -> None:
+@pytest.mark.parametrize("kwargs", [{"n_threads": 0}, {"max_ctx": 0},
+    {"gpu_split": -0.1}, {"gpu_split": 1.1}, {"gpu_split": float("nan")},
+    {"gpu_split": float("inf")}])
+def test_bad_load_arguments(model_path: Path, kwargs: dict[str, int | float]) -> None:
     with pytest.raises(ValueError):
         pinfer.Model.load(model_path, tokenizer=False, **kwargs)
 
 
 def test_properties(fresh: Any) -> None:
+    assert fresh.gpu_split == 0.0
     assert fresh.n_vocab == 248320
     assert fresh.eos_id == 248044
     assert fresh.n_past == 0
     info = fresh.info()
     assert info["version"] == pinfer.__version__ and info["n_vocab"] == 248320
     assert info["build"].get("matvec") in ("ref", "fast")
+
+
+def test_gpu_unavailable_falls_back(fresh: Any, model_path: Path, capfd: Any) -> None:
+    if fresh.info()["build"].get("matvec") != "ref":
+        pytest.skip("reference backend intentionally has no GPU")
+    ids, labels = [760] * 8, [1, 2, 3]
+    expected = fresh.eval_select(ids, labels).tobytes()
+    with pinfer.Model.load(model_path, tokenizer=False, max_ctx=256, gpu_split=0.33) as m:
+        assert m.eval_select(ids, labels).tobytes() == expected
+        assert m.gpu_split == 0.33  # requested share, even when the device is unavailable
+    assert "falling back to CPU-only" in capfd.readouterr().err
 
 
 def test_eval_and_reset(fresh: Any, golden: dict[str, Any]) -> None:

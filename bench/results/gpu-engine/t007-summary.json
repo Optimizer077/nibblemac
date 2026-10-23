@@ -1,0 +1,838 @@
+{
+  "task": "t007-gpu-engine",
+  "base": "952a4b8",
+  "version": "0.3.0",
+  "gpu_budget_mib": 512,
+  "host_gates": {
+    "golden": 32,
+    "spec": 140,
+    "state": 9,
+    "pytest_initial": 139,
+    "pytest_final": 140,
+    "malformed_san": 43,
+    "check_lib": "host/aarch64 PASS",
+    "analyzer": "PASS",
+    "emulator": "all plans x n1..8 PASS"
+  },
+  "pi_cpu_off_gates": {
+    "spec": {
+      "matches": 58,
+      "source": "gpu-eng-off-spec_20261023_132758.json"
+    },
+    "ctx": {
+      "matches": 5,
+      "source": "gpu-eng-off-ctx_20261023_132909.json"
+    }
+  },
+  "prefill_runs": [
+    {
+      "source": "cerno-gpu-eng-prefill-000-p256-r1_20261023_133534.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "47.2'C",
+      "temp_after": "53.0'C",
+      "share": 0.0,
+      "n": 256,
+      "round": 1,
+      "tps": 6.8628,
+      "seconds": 37.30255872238737,
+      "peak_rss_mib": 2640.6
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-000-p256-r2_20261023_140115.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "57.9'C",
+      "temp_after": "59.4'C",
+      "share": 0.0,
+      "n": 256,
+      "round": 2,
+      "tps": 6.9436,
+      "seconds": 36.868483207558036,
+      "peak_rss_mib": 2640.8
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-000-p256-r3_20261023_142416.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "57.9'C",
+      "temp_after": "59.4'C",
+      "share": 0.0,
+      "n": 256,
+      "round": 3,
+      "tps": 6.9532,
+      "seconds": 36.81758039463844,
+      "peak_rss_mib": 2640.7
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-000-p64-r1_20261023_133418.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "39.4'C",
+      "temp_after": "47.7'C",
+      "share": 0.0,
+      "n": 64,
+      "round": 1,
+      "tps": 6.774,
+      "seconds": 9.447888987304399,
+      "peak_rss_mib": 2628.4
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-000-p64-r2_20261023_135959.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "54.0'C",
+      "temp_after": "58.4'C",
+      "share": 0.0,
+      "n": 64,
+      "round": 2,
+      "tps": 6.8604,
+      "seconds": 9.328902104833537,
+      "peak_rss_mib": 2628.6
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-000-p64-r3_20261023_142300.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "57.4'C",
+      "temp_after": "58.9'C",
+      "share": 0.0,
+      "n": 64,
+      "round": 3,
+      "tps": 6.6529,
+      "seconds": 9.61986502126892,
+      "peak_rss_mib": 2628.6
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-025-p256-r1_20261023_133712.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "52.1'C",
+      "temp_after": "54.0'C",
+      "share": 0.25,
+      "n": 256,
+      "round": 1,
+      "tps": 7.8552,
+      "seconds": 32.589876769528466,
+      "peak_rss_mib": 2640.5
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-025-p64-r1_20261023_133601.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "52.1'C",
+      "temp_after": "52.1'C",
+      "share": 0.25,
+      "n": 64,
+      "round": 1,
+      "tps": 7.88,
+      "seconds": 8.121827411167512,
+      "peak_rss_mib": 2628.5
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-033-p256-r1_20261023_133843.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "53.5'C",
+      "temp_after": "54.5'C",
+      "share": 0.33,
+      "n": 256,
+      "round": 1,
+      "tps": 8.2088,
+      "seconds": 31.18604424520027,
+      "peak_rss_mib": 2640.6
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-033-p256-r2_20261023_142100.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "57.9'C",
+      "temp_after": "58.9'C",
+      "share": 0.33,
+      "n": 256,
+      "round": 2,
+      "tps": 8.2491,
+      "seconds": 31.033688523596513,
+      "peak_rss_mib": 2640.7
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-033-p256-r3_20261023_142831.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "60.3'C",
+      "temp_after": "59.4'C",
+      "share": 0.33,
+      "n": 256,
+      "round": 3,
+      "tps": 8.1418,
+      "seconds": 31.442678523176692,
+      "peak_rss_mib": 2640.7
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-033-p64-r1_20261023_133734.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "54.0'C",
+      "temp_after": "54.0'C",
+      "share": 0.33,
+      "n": 64,
+      "round": 1,
+      "tps": 8.2238,
+      "seconds": 7.78229042535081,
+      "peak_rss_mib": 2628.7
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-033-p64-r2_20261023_141123.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "59.4'C",
+      "temp_after": "58.4'C",
+      "share": 0.33,
+      "n": 64,
+      "round": 2,
+      "tps": 8.1785,
+      "seconds": 7.825395854985634,
+      "peak_rss_mib": 2628.5
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-033-p64-r3_20261023_142654.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "60.3'C",
+      "temp_after": "59.4'C",
+      "share": 0.33,
+      "n": 64,
+      "round": 3,
+      "tps": 8.1173,
+      "seconds": 7.884395057469848,
+      "peak_rss_mib": 2628.8
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-040-p256-r1_20261023_134022.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "53.0'C",
+      "temp_after": "56.0'C",
+      "share": 0.4,
+      "n": 256,
+      "round": 1,
+      "tps": 7.4442,
+      "seconds": 34.38918889873996,
+      "peak_rss_mib": 2640.5
+    },
+    {
+      "source": "cerno-gpu-eng-prefill-040-p64-r1_20261023_133907.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "55.0'C",
+      "temp_after": "54.5'C",
+      "share": 0.4,
+      "n": 64,
+      "round": 1,
+      "tps": 7.3664,
+      "seconds": 8.688097306689835,
+      "peak_rss_mib": 2628.5
+    }
+  ],
+  "decision_runs": [
+    {
+      "source": "cerno-gpu-eng-decide-000-r1_20261023_134643.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "40.4'C",
+      "temp_after": "54.0'C",
+      "share": 0.0,
+      "round": 1,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 20.514596003599582,
+      "decision_median_s": 18.85809495799913,
+      "peak_rss_mib": 2197.1,
+      "load_s": 2.7,
+      "load_memory": {
+        "MemAvailable_kib": 3460324,
+        "Shmem_kib": 11996,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 0,
+        "peak_rss_mib": 236.60546875,
+        "drm_fdinfo": []
+      },
+      "gpu_matrices": 0,
+      "gpu_eligible": 0,
+      "bo_mib": 0
+    },
+    {
+      "source": "cerno-gpu-eng-decide-000-r2_20261023_140307.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "58.4'C",
+      "temp_after": "59.4'C",
+      "share": 0.0,
+      "round": 2,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 20.700592974398752,
+      "decision_median_s": 19.035746002999076,
+      "peak_rss_mib": 2200.2,
+      "load_s": 2.609,
+      "load_memory": {
+        "MemAvailable_kib": 3394736,
+        "Shmem_kib": 11548,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 0,
+        "peak_rss_mib": 236.51171875,
+        "drm_fdinfo": []
+      },
+      "gpu_matrices": 0,
+      "gpu_eligible": 0,
+      "bo_mib": 0
+    },
+    {
+      "source": "cerno-gpu-eng-decide-000-r3_20261023_142609.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "57.9'C",
+      "temp_after": "59.4'C",
+      "share": 0.0,
+      "round": 3,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 20.790478491400428,
+      "decision_median_s": 18.88540193499648,
+      "peak_rss_mib": 2200.1,
+      "load_s": 2.622,
+      "load_memory": {
+        "MemAvailable_kib": 3467868,
+        "Shmem_kib": 5904,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 20280,
+        "peak_rss_mib": 236.3671875,
+        "drm_fdinfo": []
+      },
+      "gpu_matrices": 0,
+      "gpu_eligible": 0,
+      "bo_mib": 0
+    },
+    {
+      "source": "cerno-gpu-eng-decide-025-r1_20261023_134825.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "52.5'C",
+      "temp_after": "55.5'C",
+      "share": 0.25,
+      "round": 1,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 17.983850928799075,
+      "decision_median_s": 16.389229134001653,
+      "peak_rss_mib": 2200.0,
+      "load_s": 6.373,
+      "load_memory": {
+        "MemAvailable_kib": 3014628,
+        "Shmem_kib": 475720,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 9776,
+        "peak_rss_mib": 672.08203125,
+        "drm_fdinfo": [
+          "pos:\t0\nflags:\t02400002\nmnt_id:\t22\nino:\t515\ndrm-driver:\tv3d\ndrm-client-id:\t42\ndrm-engine-bin: \t0 ns\nv3d-jobs-bin: \t0 jobs\ndrm-engine-render: \t0 ns\nv3d-jobs-render: \t0 jobs\ndrm-engine-tfu: \t0 ns\nv3d-jobs-tfu: \t0 jobs\ndrm-engine-csd: \t0 ns\nv3d-jobs-csd: \t0 jobs\ndrm-engine-cache_clean: \t0 ns\nv3d-jobs-cache_clean: \t0 jobs\ndrm-engine-cpu: \t0 ns\nv3d-jobs-cpu: \t0 jobs\ndrm-total-memory:\t464316 KiB\ndrm-shared-memory:\t0\ndrm-resident-memory:\t464316 KiB\n"
+        ]
+      },
+      "gpu_matrices": 200,
+      "gpu_eligible": 200,
+      "bo_mib": 453.43
+    },
+    {
+      "source": "cerno-gpu-eng-decide-033-r1_20261023_135004.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "54.5'C",
+      "temp_after": "56.4'C",
+      "share": 0.33,
+      "round": 1,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 17.2605183955995,
+      "decision_median_s": 15.798206485000264,
+      "peak_rss_mib": 2200.2,
+      "load_s": 6.832,
+      "load_memory": {
+        "MemAvailable_kib": 2964188,
+        "Shmem_kib": 522264,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 6900,
+        "peak_rss_mib": 713.734375,
+        "drm_fdinfo": [
+          "pos:\t0\nflags:\t02400002\nmnt_id:\t22\nino:\t515\ndrm-driver:\tv3d\ndrm-client-id:\t43\ndrm-engine-bin: \t0 ns\nv3d-jobs-bin: \t0 jobs\ndrm-engine-render: \t0 ns\nv3d-jobs-render: \t0 jobs\ndrm-engine-tfu: \t0 ns\nv3d-jobs-tfu: \t0 jobs\ndrm-engine-csd: \t0 ns\nv3d-jobs-csd: \t0 jobs\ndrm-engine-cache_clean: \t0 ns\nv3d-jobs-cache_clean: \t0 jobs\ndrm-engine-cpu: \t0 ns\nv3d-jobs-cpu: \t0 jobs\ndrm-total-memory:\t510748 KiB\ndrm-shared-memory:\t0\ndrm-resident-memory:\t510748 KiB\n"
+        ]
+      },
+      "gpu_matrices": 138,
+      "gpu_eligible": 200,
+      "bo_mib": 498.78
+    },
+    {
+      "source": "cerno-gpu-eng-decide-033-r2_20261023_142239.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "58.4'C",
+      "temp_after": "58.9'C",
+      "share": 0.33,
+      "round": 2,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 17.3511158851994,
+      "decision_median_s": 15.741933846999018,
+      "peak_rss_mib": 2200.0,
+      "load_s": 6.71,
+      "load_memory": {
+        "MemAvailable_kib": 2982720,
+        "Shmem_kib": 516708,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 16196,
+        "peak_rss_mib": 713.734375,
+        "drm_fdinfo": [
+          "pos:\t0\nflags:\t02400002\nmnt_id:\t22\nino:\t515\ndrm-driver:\tv3d\ndrm-client-id:\t50\ndrm-engine-bin: \t0 ns\nv3d-jobs-bin: \t0 jobs\ndrm-engine-render: \t0 ns\nv3d-jobs-render: \t0 jobs\ndrm-engine-tfu: \t0 ns\nv3d-jobs-tfu: \t0 jobs\ndrm-engine-csd: \t0 ns\nv3d-jobs-csd: \t0 jobs\ndrm-engine-cache_clean: \t0 ns\nv3d-jobs-cache_clean: \t0 jobs\ndrm-engine-cpu: \t0 ns\nv3d-jobs-cpu: \t0 jobs\ndrm-total-memory:\t510748 KiB\ndrm-shared-memory:\t0\ndrm-resident-memory:\t510748 KiB\n"
+        ]
+      },
+      "gpu_matrices": 138,
+      "gpu_eligible": 200,
+      "bo_mib": 498.78
+    },
+    {
+      "source": "cerno-gpu-eng-decide-033-r3_20261023_143037.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "60.3'C",
+      "temp_after": "59.4'C",
+      "share": 0.33,
+      "round": 3,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 17.181960948597407,
+      "decision_median_s": 15.854691437998554,
+      "peak_rss_mib": 2200.1,
+      "load_s": 6.718,
+      "load_memory": {
+        "MemAvailable_kib": 2929284,
+        "Shmem_kib": 516676,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 20292,
+        "peak_rss_mib": 713.8359375,
+        "drm_fdinfo": [
+          "pos:\t0\nflags:\t02400002\nmnt_id:\t22\nino:\t515\ndrm-driver:\tv3d\ndrm-client-id:\t56\ndrm-engine-bin: \t0 ns\nv3d-jobs-bin: \t0 jobs\ndrm-engine-render: \t0 ns\nv3d-jobs-render: \t0 jobs\ndrm-engine-tfu: \t0 ns\nv3d-jobs-tfu: \t0 jobs\ndrm-engine-csd: \t0 ns\nv3d-jobs-csd: \t0 jobs\ndrm-engine-cache_clean: \t0 ns\nv3d-jobs-cache_clean: \t0 jobs\ndrm-engine-cpu: \t0 ns\nv3d-jobs-cpu: \t0 jobs\ndrm-total-memory:\t510748 KiB\ndrm-shared-memory:\t0\ndrm-resident-memory:\t510748 KiB\n"
+        ]
+      },
+      "gpu_matrices": 138,
+      "gpu_eligible": 200,
+      "bo_mib": 498.78
+    },
+    {
+      "source": "cerno-gpu-eng-decide-040-r1_20261023_135153.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "54.0'C",
+      "temp_after": "56.0'C",
+      "share": 0.4,
+      "round": 1,
+      "checkpoint": true,
+      "questions": 13,
+      "requests": 5,
+      "decision_mean_s": 19.130121417199554,
+      "decision_median_s": 17.610408307999023,
+      "peak_rss_mib": 2200.2,
+      "load_s": 6.784,
+      "load_memory": {
+        "MemAvailable_kib": 2949476,
+        "Shmem_kib": 522520,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 119036,
+        "peak_rss_mib": 712.06640625,
+        "drm_fdinfo": [
+          "pos:\t0\nflags:\t02400002\nmnt_id:\t22\nino:\t515\ndrm-driver:\tv3d\ndrm-client-id:\t44\ndrm-engine-bin: \t0 ns\nv3d-jobs-bin: \t0 jobs\ndrm-engine-render: \t0 ns\nv3d-jobs-render: \t0 jobs\ndrm-engine-tfu: \t0 ns\nv3d-jobs-tfu: \t0 jobs\ndrm-engine-csd: \t0 ns\nv3d-jobs-csd: \t0 jobs\ndrm-engine-cache_clean: \t0 ns\nv3d-jobs-cache_clean: \t0 jobs\ndrm-engine-cpu: \t0 ns\nv3d-jobs-cpu: \t0 jobs\ndrm-total-memory:\t511020 KiB\ndrm-shared-memory:\t0\ndrm-resident-memory:\t511020 KiB\n"
+        ]
+      },
+      "gpu_matrices": 103,
+      "gpu_eligible": 200,
+      "bo_mib": 499.04
+    }
+  ],
+  "agreement": [
+    {
+      "source": "cerno-gpu-eng-agreement-025_20261023_141101.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "60.8'C",
+      "temp_after": "60.3'C",
+      "share": 0.25,
+      "questions": 52,
+      "agree": 50,
+      "option_probabilities": 213,
+      "max_dp": 0.011184498277830579,
+      "mean_option_dp": 0.0013576692992320614,
+      "token_ids_equal": true,
+      "original_pass": false,
+      "accepted_gate_pass": true
+    },
+    {
+      "source": "cerno-gpu-eng-agreement-033_20261023_135935.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "52.5'C",
+      "temp_after": "58.4'C",
+      "share": 0.33,
+      "questions": 52,
+      "agree": 50,
+      "option_probabilities": 213,
+      "max_dp": 0.012748099360329168,
+      "mean_option_dp": 0.0014686830957990884,
+      "token_ids_equal": true,
+      "original_pass": false,
+      "accepted_gate_pass": true
+    },
+    {
+      "source": "cerno-gpu-eng-agreement-040_20261023_141952.json",
+      "valid": true,
+      "throttle_before": "0x0",
+      "throttle_after": "0x0",
+      "temp_before": "59.9'C",
+      "temp_after": "58.9'C",
+      "share": 0.4,
+      "questions": 52,
+      "agree": 50,
+      "option_probabilities": 213,
+      "max_dp": 0.015793981927154088,
+      "mean_option_dp": 0.0014761271520394828,
+      "token_ids_equal": true,
+      "original_pass": false,
+      "accepted_gate_pass": false
+    }
+  ],
+  "direct_split_oracles": [
+    {
+      "source": "gpu-eng-oracle-down-n64_20261023_134214.json",
+      "valid": true,
+      "results": [
+        {
+          "bench": "gpu-engine-split-oracle",
+          "n": 64,
+          "gpu_rows": 768,
+          "gpu_bad_words": 0,
+          "cpu_bad_words": 0,
+          "gpu_max_abs": 0,
+          "cpu_max_abs": 0
+        }
+      ]
+    },
+    {
+      "source": "gpu-eng-oracle-down-n7_20261023_134212.json",
+      "valid": true,
+      "results": [
+        {
+          "bench": "gpu-engine-split-oracle",
+          "n": 7,
+          "gpu_rows": 768,
+          "gpu_bad_words": 0,
+          "cpu_bad_words": 0,
+          "gpu_max_abs": 0,
+          "cpu_max_abs": 0
+        }
+      ]
+    },
+    {
+      "source": "gpu-eng-oracle-gate-n64_20261023_134208.json",
+      "valid": true,
+      "results": [
+        {
+          "bench": "gpu-engine-split-oracle",
+          "n": 64,
+          "gpu_rows": 2816,
+          "gpu_bad_words": 0,
+          "cpu_bad_words": 0,
+          "gpu_max_abs": 0,
+          "cpu_max_abs": 0
+        }
+      ]
+    },
+    {
+      "source": "gpu-eng-oracle-gate-n7_20261023_134207.json",
+      "valid": true,
+      "results": [
+        {
+          "bench": "gpu-engine-split-oracle",
+          "n": 7,
+          "gpu_rows": 2816,
+          "gpu_bad_words": 0,
+          "cpu_bad_words": 0,
+          "gpu_max_abs": 0,
+          "cpu_max_abs": 0
+        }
+      ]
+    },
+    {
+      "source": "gpu-eng-oracle-qkv-n64_20261023_134219.json",
+      "valid": true,
+      "results": [
+        {
+          "bench": "gpu-engine-split-oracle",
+          "n": 64,
+          "gpu_rows": 2560,
+          "gpu_bad_words": 0,
+          "cpu_bad_words": 0,
+          "gpu_max_abs": 0,
+          "cpu_max_abs": 0
+        }
+      ]
+    },
+    {
+      "source": "gpu-eng-oracle-qkv-n7_20261023_134217.json",
+      "valid": true,
+      "results": [
+        {
+          "bench": "gpu-engine-split-oracle",
+          "n": 7,
+          "gpu_rows": 2560,
+          "gpu_bad_words": 0,
+          "cpu_bad_words": 0,
+          "gpu_max_abs": 0,
+          "cpu_max_abs": 0
+        }
+      ]
+    }
+  ],
+  "fallback_tests": [
+    {
+      "source": "gpu-eng-fallback-submit_20261023_142723.json",
+      "valid": true,
+      "results": [
+        {
+          "gpu_fallback": "submit",
+          "simulated": true,
+          "checks": 3,
+          "all_bits_identical": true,
+          "compared_fp32_words": 744960,
+          "setup_faults": 0,
+          "submit_calls": 2,
+          "wait_faults": 0,
+          "drm_fds_after_close": 0,
+          "sha256": "ccb8f56e8d7ae09b20f438f0a6b85461dd0fdd3d4ec3427c7cb47ef9dda37332"
+        }
+      ]
+    },
+    {
+      "source": "gpu-eng-fallback-unavailable_20261023_142633.json",
+      "valid": true,
+      "results": [
+        {
+          "gpu_fallback": "unavailable",
+          "simulated": true,
+          "checks": 3,
+          "all_bits_identical": true,
+          "compared_fp32_words": 744960,
+          "setup_faults": 1,
+          "submit_calls": 0,
+          "wait_faults": 0,
+          "drm_fds_after_close": 0,
+          "sha256": "ccb8f56e8d7ae09b20f438f0a6b85461dd0fdd3d4ec3427c7cb47ef9dda37332"
+        }
+      ]
+    },
+    {
+      "source": "gpu-eng-fallback-wait_20261023_142859.json",
+      "valid": true,
+      "results": [
+        {
+          "gpu_fallback": "wait",
+          "simulated": true,
+          "checks": 3,
+          "all_bits_identical": true,
+          "compared_fp32_words": 744960,
+          "setup_faults": 0,
+          "submit_calls": 10,
+          "wait_faults": 2,
+          "drm_fds_after_close": 0,
+          "sha256": "ccb8f56e8d7ae09b20f438f0a6b85461dd0fdd3d4ec3427c7cb47ef9dda37332"
+        }
+      ]
+    }
+  ],
+  "original_gate": {
+    "top_min": 51,
+    "questions": 52,
+    "max_dp": 0.0146
+  },
+  "accepted_gate": {
+    "owner_decision": "t007-decision",
+    "questions": 52,
+    "max_dp": 0.0146,
+    "near_tie_flips_accepted": true
+  },
+  "recommended_share": 0.33,
+  "health": {
+    "source": "gpu-eng-health_20261023_143059.json",
+    "valid": true,
+    "result": {
+      "gpu_health": true,
+      "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+      "uptime_s": 60840.02,
+      "throttled": "throttled=0x0",
+      "cpu_clock": "frequency(48)=1500398464",
+      "v3d_clock": "frequency(46)=500000992",
+      "memory": {
+        "MemTotal_kib": 3885812,
+        "MemAvailable_kib": 3681584,
+        "Shmem_kib": 6024,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 20296
+      },
+      "gpu_kernel_messages": [
+        "[ 1570.380012] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1570.380080] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1571.404029] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1571.404098] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1573.100025] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1573.100069] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1574.124029] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1574.124068] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1575.148045] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1575.148083] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1576.172056] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1576.172088] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1577.868121] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1577.868166] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1578.892100] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1578.892141] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1579.916112] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1579.916152] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1580.940122] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1580.940159] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000"
+      ],
+      "md5": {
+        "engine/pinfer_run_fast": "508f1d742e0168282fb94b3c3cd0afc7",
+        "tmp/gpu-engine/pinfer_run_gpu8": "c6dcc1953fd7fb5e20a672a94e651f61",
+        "tmp/gpu-engine/lib-fallback/libpinfer.so": "9d3bbc18cdb8aaf41c9492f406e0573a"
+      },
+      "sha256": {
+        "engine/pinfer_run_fast": "3dc94501460d2980b4d431a51bbcb48cde64211c9a84786dc6110095eaf8af24",
+        "tmp/gpu-engine/pinfer_run_gpu8": "fd1009d78c38b69ba81a11fd9cc9fbed129055fcda57e41f7241fb18858ea216",
+        "tmp/gpu-engine/lib-fallback/libpinfer.so": "f9f301f2bc939efa6487e2029da99fb0bd5b31c12743a7ed44dd363028c79419"
+      }
+    }
+  },
+  "final_positive_matches_earlier_gpu_bits": true,
+  "final_positive_comparison": {
+    "earlier": "gpu-eng-smoke-033_20261023_132026.json",
+    "final": "gpu-eng-final-positive_20261023_143058.json",
+    "method": "cmp smoke-033.bin smoke-final-033.bin, exit 0"
+  },
+  "averages": {
+    "0": {
+      "p64": {
+        "rounds": 3,
+        "mean_seconds": 9.465552037802285,
+        "mean_tps": 6.762433333333334
+      },
+      "p256": {
+        "rounds": 3,
+        "mean_seconds": 36.99620744152795,
+        "mean_tps": 6.919866666666667
+      },
+      "decision": {
+        "rounds": 3,
+        "mean_seconds": 20.66855582313292
+      }
+    },
+    "0.25": {
+      "p64": {
+        "rounds": 1,
+        "mean_seconds": 8.121827411167512,
+        "mean_tps": 7.880000000000001,
+        "time_saved_pct": 14.195945690947354
+      },
+      "p256": {
+        "rounds": 1,
+        "mean_seconds": 32.589876769528466,
+        "mean_tps": 7.8552,
+        "time_saved_pct": 11.910222632856716
+      },
+      "decision": {
+        "rounds": 1,
+        "mean_seconds": 17.983850928799075,
+        "time_saved_pct": 12.989320189120502
+      }
+    },
+    "0.33": {
+      "p64": {
+        "rounds": 3,
+        "mean_seconds": 7.830693779268764,
+        "mean_tps": 8.1732,
+        "time_saved_pct": 17.2716631000964
+      },
+      "p256": {
+        "rounds": 3,
+        "mean_seconds": 31.22080376399116,
+        "mean_tps": 8.1999,
+        "time_saved_pct": 15.610799260072117
+      },
+      "decision": {
+        "rounds": 3,
+        "mean_seconds": 17.264531743132103,
+        "time_saved_pct": 16.469578760751734
+      }
+    },
+    "0.4": {
+      "p64": {
+        "rounds": 1,
+        "mean_seconds": 8.688097306689835,
+        "mean_tps": 7.3664,
+        "time_saved_pct": 8.213517056454311
+      },
+      "p256": {
+        "rounds": 1,
+        "mean_seconds": 34.38918889873996,
+        "mean_tps": 7.4441999999999995,
+        "time_saved_pct": 7.046718361357318
+      },
+      "decision": {
+        "rounds": 1,
+        "mean_seconds": 19.130121417199554,
+        "time_saved_pct": 7.443357044866672
+      }
+    }
+  },
+  "binary_sha256": {
+    "build/aarch64/engine/pinfer_run": "fd1009d78c38b69ba81a11fd9cc9fbed129055fcda57e41f7241fb18858ea216",
+    "build/aarch64/engine/lib/libpinfer.so": "f9f301f2bc939efa6487e2029da99fb0bd5b31c12743a7ed44dd363028c79419"
+  }
+}

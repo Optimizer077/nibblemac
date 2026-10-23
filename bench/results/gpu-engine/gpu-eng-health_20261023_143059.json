@@ -1,0 +1,97 @@
+{
+  "name": "gpu-eng-health",
+  "command": "python3 tmp/gpu-engine/health.py",
+  "timestamp": "2026-10-23T14:30:59",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "gpu_health": true,
+      "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+      "uptime_s": 60840.02,
+      "throttled": "throttled=0x0",
+      "cpu_clock": "frequency(48)=1500398464",
+      "v3d_clock": "frequency(46)=500000992",
+      "memory": {
+        "MemTotal_kib": 3885812,
+        "MemAvailable_kib": 3681584,
+        "Shmem_kib": 6024,
+        "CmaTotal_kib": 524288,
+        "CmaFree_kib": 20296
+      },
+      "gpu_kernel_messages": [
+        "[ 1570.380012] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1570.380080] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1571.404029] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1571.404098] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1573.100025] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1573.100069] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1574.124029] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1574.124068] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1575.148045] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1575.148083] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1576.172056] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1576.172088] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1577.868121] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1577.868166] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1578.892100] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1578.892141] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1579.916112] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1579.916152] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+        "[ 1580.940122] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.",
+        "[ 1580.940159] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000"
+      ],
+      "md5": {
+        "engine/pinfer_run_fast": "508f1d742e0168282fb94b3c3cd0afc7",
+        "tmp/gpu-engine/pinfer_run_gpu8": "c6dcc1953fd7fb5e20a672a94e651f61",
+        "tmp/gpu-engine/lib-fallback/libpinfer.so": "9d3bbc18cdb8aaf41c9492f406e0573a"
+      },
+      "sha256": {
+        "engine/pinfer_run_fast": "3dc94501460d2980b4d431a51bbcb48cde64211c9a84786dc6110095eaf8af24",
+        "tmp/gpu-engine/pinfer_run_gpu8": "fd1009d78c38b69ba81a11fd9cc9fbed129055fcda57e41f7241fb18858ea216",
+        "tmp/gpu-engine/lib-fallback/libpinfer.so": "f9f301f2bc939efa6487e2029da99fb0bd5b31c12743a7ed44dd363028c79419"
+      }
+    }
+  ],
+  "unparsed": [],
+  "stdout": "RESULT {\"gpu_health\": true, \"boot_id\": \"196bccb0-9d30-4574-afa1-5c54ba63cfc2\", \"uptime_s\": 60840.02, \"throttled\": \"throttled=0x0\", \"cpu_clock\": \"frequency(48)=1500398464\", \"v3d_clock\": \"frequency(46)=500000992\", \"memory\": {\"MemTotal_kib\": 3885812, \"MemAvailable_kib\": 3681584, \"Shmem_kib\": 6024, \"CmaTotal_kib\": 524288, \"CmaFree_kib\": 20296}, \"gpu_kernel_messages\": [\"[ 1570.380012] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1570.380080] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1571.404029] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1571.404098] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1573.100025] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1573.100069] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1574.124029] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1574.124068] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1575.148045] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1575.148083] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1576.172056] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1576.172088] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1577.868121] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1577.868166] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1578.892100] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1578.892141] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1579.916112] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1579.916152] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\", \"[ 1580.940122] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.\", \"[ 1580.940159] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000\"], \"md5\": {\"engine/pinfer_run_fast\": \"508f1d742e0168282fb94b3c3cd0afc7\", \"tmp/gpu-engine/pinfer_run_gpu8\": \"c6dcc1953fd7fb5e20a672a94e651f61\", \"tmp/gpu-engine/lib-fallback/libpinfer.so\": \"9d3bbc18cdb8aaf41c9492f406e0573a\"}, \"sha256\": {\"engine/pinfer_run_fast\": \"3dc94501460d2980b4d431a51bbcb48cde64211c9a84786dc6110095eaf8af24\", \"tmp/gpu-engine/pinfer_run_gpu8\": \"fd1009d78c38b69ba81a11fd9cc9fbed129055fcda57e41f7241fb18858ea216\", \"tmp/gpu-engine/lib-fallback/libpinfer.so\": \"f9f301f2bc939efa6487e2029da99fb0bd5b31c12743a7ed44dd363028c79419\"}}\n",
+  "stderr": "",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 21:36:59",
+    "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "56.9'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3603",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 21:36:59",
+    "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "56.4'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3593",
+    "python": "Python 3.13.5"
+  }
+}

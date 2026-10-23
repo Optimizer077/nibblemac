@@ -27,6 +27,12 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - `engine/pinfer_run_fast` `d48ffda1` → `508f1d74` (prefill tail + groups of 7s + 5s; Cerno decisions −4.4%, bit-identical);
   spec_exact 58/58 on the installed binary; old builds kept as `*.pre-csp`. `docs/pi-state.md` "Files we placed".
 
+### Added (GPU in the engine, 0.3)
+- **Opt-in CPU + GPU prefill** (`gpu_split`, `pinfer_run --gpu`, `Model.load(gpu_split=)`; recommended 0.33): Cerno 4B
+  decisions 20.67 → 17.26 s (**−16.5%**, 3 rounds); off by default (bit-identical, all gates pass); with it on,
+  probabilities within 0.0128 of the reference and two near-50/50 flips (owner-accepted). Clean CPU fallback.
+  ABI / package 0.3. `engine/GPU.md`, `docs/library.md`.
+
 ### Added (checkpoint)
 - `pinfer_checkpoint` / `pinfer_rewind` (and `Model.checkpoint()` / `rewind()`): rewind to a saved prefix without copying
   the state blob; Cerno decisions −1.6%, bit-identical; 106 MiB less peak memory. Not yet in the Pi's `pinfer_run_fast`.

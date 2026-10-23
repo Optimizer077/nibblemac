@@ -31,6 +31,7 @@
 #include "ops.h"
 #include "pq_format.h"
 #include "pq_quant.h"
+#include "gpu.h"
 
 #define MAX_THREADS 8
 #define SPIN_SEC 0.05 /* idle spin before a worker sleeps (see worker_main) */
@@ -64,6 +65,8 @@ struct pf_pool {
     _Atomic int quit;
     alignas(64) _Atomic int done; /* written by workers: separate line */
     char pad[60];
+    pf_gpu *gpu;
+    int gpu_paused;
 };
 
 static inline void cpu_pause(void) { __asm__ volatile("yield" ::: "memory"); }
@@ -164,10 +167,17 @@ void pf_pool_destroy(pf_pool *pool) {
     atomic_fetch_add(&pool->gen, 1);
     syscall(SYS_futex, &pool->gen, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
     for (int t = 1; t < pool->n; t++) pthread_join(pool->th[t], NULL);
+    pf_gpu_destroy(pool->gpu);
     free(pool);
 }
 
 int pf_pool_threads(const pf_pool *pool) { return pool ? pool->n : 1; }
+int pf_pool_gpu_enable(pf_pool *pool, const pf_mat *const *weights, int count, float share) {
+    if (!pool || pool->gpu) return -1;
+    pool->gpu = pf_gpu_create(weights, count, share);
+    return pool->gpu ? 0 : -1;
+}
+void pf_pool_gpu_pause(pf_pool *pool, int pause) { if (pool) pool->gpu_paused = pause; }
 
 static void dispatch(pf_pool *pool, const job_t *job) {
     if (!pool || pool->n == 1 || job->nthr <= 1) {
@@ -308,7 +318,7 @@ typedef struct {
     const pf_mat *W;
     const float *X;
     float *Y;
-    int ng, units;
+    int ng, units, row0;
     int8_t *q;
     float *d, *fs;
     int st[MAX_GROUPS + 1];
@@ -328,15 +338,15 @@ static void groups_task(void *arg, int tid, int nthr) {
     const group_job *j = arg;
     const int u0 = (int)((long)j->units * tid / nthr);
     const int u1 = (int)((long)j->units * (tid + 1) / nthr);
-    int r1 = u1 * 4;
+    int r1 = j->row0 + u1 * 4;
     if (r1 > j->W->rows) r1 = j->W->rows;
-    if (u0 * 4 >= r1) return;
+    if (j->row0 + u0 * 4 >= r1) return;
     const int cols = j->W->cols, nb = cols / KERN_ACT_BLOCK;
     for (int g = 0; g < j->ng; g++) {
         const int g0 = j->st[g], gn = j->st[g + 1] - g0;
         const pf_act a = {cols, gn, j->q + (size_t)g0 * cols, j->d + (size_t)g0 * nb,
                           j->fs + (size_t)g0 * nb};
-        j->fn(j->W, NULL, &a, j->Y + (size_t)g0 * j->W->rows, gn, u0 * 4, r1);
+        j->fn(j->W, NULL, &a, j->Y + (size_t)g0 * j->W->rows, gn, j->row0 + u0 * 4, r1);
     }
 }
 
@@ -352,17 +362,36 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
     group_job gj; /* only st[0..ng] are set (no zeroing of the whole array per call) */
     gj.fn = fn, gj.W = W, gj.X = X, gj.Y = Y, gj.ng = 1, gj.units = (W->rows + 3) / 4;
     gj.st[0] = 0, gj.st[1] = n;
+    gj.row0 = 0;
+    const int gpu_rows = pool && !pool->gpu_paused && n >= 7 && n <= 64 ? pf_gpu_rows(pool->gpu, W) : 0;
     if (kern_act_group > 0 && quant && kern_group_vecs > 0 && n > kern_qgroup_min)
         gj.ng = plan_groups(n, kern_group_vecs, kern_group_mode, gj.st);
     else if (kern_act_group > 0 && !quant && n > kern_act_group)
         gj.ng = plan_groups(n, kern_act_group, 0, gj.st);
-    if (quant && kern_group_fused && gj.ng > 1) {
+    if (quant && ((kern_group_fused && gj.ng > 1) || gpu_rows)) {
         const size_t qb = ((size_t)n * cols + 63) & ~(size_t)63;
         const size_t fb = ((size_t)n * nb * 4 + 63) & ~(size_t)63;
         uint8_t *s = scratch_get(qb + 2 * fb);
         gj.q = (int8_t *)s, gj.d = (float *)(s + qb), gj.fs = (float *)(s + qb + fb);
         kern_pool_run(pool, quant_task, &gj, gj.ng);
+        int submitted = 0;
+        if (gpu_rows) {
+            pf_act groups[MAX_GROUPS];
+            for (int g = 0; g < gj.ng; g++) {
+                int g0 = gj.st[g];
+                groups[g] = (pf_act){cols, gj.st[g + 1] - g0, gj.q + (size_t)g0 * cols,
+                                      gj.d + (size_t)g0 * nb, gj.fs + (size_t)g0 * nb};
+            }
+            if (pf_gpu_begin(pool->gpu, W, groups, gj.ng) == 0) {
+                submitted = 1; gj.row0 = gpu_rows; gj.units = (W->rows - gpu_rows + 3) / 4;
+            }
+        }
         kern_pool_run(pool, groups_task, &gj, threads_for(W, gj.st[1], pool));
+        if (submitted && pf_gpu_finish(pool->gpu, Y)) {
+            /* Device failure: complete the missing prefix with the unchanged CPU kernel. */
+            gj.row0 = 0; gj.units = gpu_rows / 4;
+            kern_pool_run(pool, groups_task, &gj, threads_for(W, gj.st[1], pool));
+        }
     } else {
         for (int g = 0; g < gj.ng; g++) {
             const int g0 = gj.st[g], gn = gj.st[g + 1] - g0;

@@ -110,6 +110,12 @@ SONAME    := libpinfer.so.$(VER_MAJOR).$(VER_MINOR)
 HOST_PIC  := $(HOST_OUT)/pic-$(MATVEC)
 HOST_LIB  := $(HOST_OUT)/lib
 PI_PIC    := $(PI_OUT)/pic-$(MATVEC)
+
+# These units include the standalone DRM client and generated QPU programs.
+$(HOST_OBJ)/gpu.o $(PI_OBJ)/gpu.o $(HOST_PIC)/gpu.o $(PI_PIC)/gpu.o: \
+    $(ROOT)/engine/gpu/v3d.h $(ROOT)/engine/gpu/q4gpu_kernels.h
+$(HOST_OBJ)/gpu_v3d.o $(PI_OBJ)/gpu_v3d.o $(HOST_PIC)/gpu_v3d.o $(PI_PIC)/gpu_v3d.o: \
+    $(ROOT)/engine/gpu/v3d.h $(ROOT)/engine/gpu/v3d.c
 PI_LIB    := $(PI_OUT)/lib
 PI_TOOL   := aarch64-linux-gnu-
 # -fno-math-errno: without it GCC keeps a libm call next to the inlined sqrt instruction only

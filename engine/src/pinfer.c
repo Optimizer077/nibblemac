@@ -1,5 +1,6 @@
 /* Public API (pinfer.h): context allocation, state reset, eval. The math is in forward.c. */
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,7 +11,7 @@
 #define STR(x) STR2(x)
 
 pinfer_params pinfer_default_params(void) {
-    pinfer_params p = {4, 4096, PINFER_KV_F32};
+    pinfer_params p = {4, 4096, PINFER_KV_F32, 0.0f};
     return p;
 }
 
@@ -90,6 +91,35 @@ static int alloc_buffers(pinfer_ctx *c) {
     return PINFER_OK;
 }
 
+static int enable_gpu(pinfer_ctx *c, float share) {
+    /* MLP candidates first; backend sorts by size, preserving this priority on ties.
+     * Embedding and output head are excluded (lookup/decode, not prefill body matmuls). */
+    const pf_mat **mats = calloc((size_t)c->n_layers * 13, sizeof(*mats));
+    if (!mats) {
+        fprintf(stderr, "pinfer: GPU setup allocation failed; falling back to CPU-only\n");
+        return PINFER_OK;
+    }
+    int n = 0;
+    for (int l = 0; l < c->n_layers; l++) {
+        const pf_layer *layer = &c->model.layers[l];
+        mats[n++] = &layer->gate; mats[n++] = &layer->up; mats[n++] = &layer->down;
+    }
+    for (int l = 0; l < c->n_layers; l++) {
+        const pf_layer *layer = &c->model.layers[l];
+        if (layer->is_full) {
+            mats[n++] = &layer->q; mats[n++] = &layer->k;
+            mats[n++] = &layer->v; mats[n++] = &layer->o;
+        } else {
+            mats[n++] = &layer->qkv; mats[n++] = &layer->z;
+            mats[n++] = &layer->b; mats[n++] = &layer->a; mats[n++] = &layer->out;
+        }
+    }
+    int rc = pf_pool_gpu_enable(c->pool, mats, n, share);
+    free(mats);
+    if (rc) fprintf(stderr, "pinfer: requested GPU split unavailable; falling back to CPU-only\n");
+    return PINFER_OK;
+}
+
 pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err) {
     pinfer_params p = params ? *params : pinfer_default_params();
     if (p.n_threads <= 0) p.n_threads = 4;
@@ -97,7 +127,10 @@ pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err)
     int rc = PINFER_E_NOMEM;
     pinfer_ctx *c = path ? calloc(1, sizeof *c) : NULL;
     if (!path) rc = PINFER_E_ARG;
-    if (c && (p.kv_dtype < PINFER_KV_F32 || p.kv_dtype > PINFER_KV_I8)) {
+    if (c && (!isfinite(p.gpu_split) || p.gpu_split < 0.0f || p.gpu_split > 1.0f)) {
+        fprintf(stderr, "pinfer: gpu_split must be finite and in [0,1]\n");
+        rc = PINFER_E_ARG;
+    } else if (c && (p.kv_dtype < PINFER_KV_F32 || p.kv_dtype > PINFER_KV_I8)) {
         fprintf(stderr, "pinfer: unknown kv_dtype %d\n", p.kv_dtype);
         rc = PINFER_E_ARG;
     } else if (c) {
@@ -122,6 +155,7 @@ pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err)
             c->pool = pf_pool_create(p.n_threads);
             if (!c->pool) rc = PINFER_E_NOMEM;
         }
+        if (rc == PINFER_OK && p.gpu_split > 0.0f) rc = enable_gpu(c, p.gpu_split);
     }
     if (rc != PINFER_OK) {
         pinfer_free(c);

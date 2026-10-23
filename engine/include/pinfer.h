@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 #define PINFER_VERSION_MAJOR 0
-#define PINFER_VERSION_MINOR 2
+#define PINFER_VERSION_MINOR 3
 #define PINFER_VERSION_PATCH 0
 
 enum {
@@ -41,6 +41,10 @@ typedef struct {
     int n_threads; /* worker threads for matrix ops; <= 0 means 4 */
     int max_ctx;   /* max tokens kept in the KV cache; <= 0 means 4096 */
     int kv_dtype;  /* PINFER_KV_*; 0 = fp32 (added in 0.2: zero-initialised means fp32) */
+    float gpu_split; /* 0 = CPU only; (0,1] = requested V3D Q4 row share for batches >=7.
+                     * Recommended opt-in share: 0.33. Changes output rounding; near-tie
+                     * answers may flip. Unavailable GPU falls back to CPU with a warning.
+                     * Added in 0.3 (struct/SONAME ABI change). */
 } pinfer_params;
 
 pinfer_params pinfer_default_params(void);

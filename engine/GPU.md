@@ -204,3 +204,38 @@ Pi files: `~/pinfer/tmp/gpu-c/` (undo `rm -rf ~/pinfer/tmp/gpu-c`).
 
 Next (step 2): split each matmul's rows ~1/3 GPU / 2/3 CPU (GPU tiles in multiples of 8 × 32 rows), upload the GPU
 rows once at model load within a bounded BO budget, submit the GPU part before the CPU part, join per matmul.
+
+
+## Scale-up step 2: CPU + GPU inside the engine (channel agent t007, 2026-10-23, merged 14:35 KST)
+
+Implementation: `engine/src/gpu.{c,h}`, `gpu_v3d.c` (persistent per-model buffer objects, uploaded once),
+the split in `matvec_fast.c` (GPU rows rounded down to 256-row units, CPU gets the rest; GPU submitted first,
+CPU rows meanwhile, wait / read back at the join). Default off: no GPU device is opened.
+
+| Cerno 4B on the Pi (1.5 GHz, checkpoint path in both arms) | off | gpu_split 0.33 | change |
+|---|---|---|---|
+| prefill 64 tokens (3 rounds) | 6.76 tok/s | 8.17 tok/s | −17.3% time |
+| prefill 256 tokens (3 rounds) | 6.92 tok/s | 8.20 tok/s | −15.6% time |
+| one decision, 5 requests / 13 questions (3 rounds) | 20.67 s | **17.26 s** | **−16.5%** |
+| agreement vs reference (52 questions) | 0.0108 / 51 | 0.0128 / 50 | two near-0.5 flips |
+
+Share sweep (one round): 0.25 → 17.98 s (0.0112 / 50), 0.40 → 19.13 s (0.0158 / 50, fails the probability bound).
+Gates with the flag off: host golden 32/32, spec 140, state 9/9, pytest 140, SAN malformed 43/43, check-lib; Pi
+spec_exact 58/58 (`gpu-eng-off-spec_20261023_132758`), ctx_check 5/5 (`gpu-eng-off-ctx_20261023_132909`). Split oracles:
+zero differing words vs an independent GPU prefix + the NEON remainder (gate / down / qkv, n = 7 / 64). Fallback
+(fault injection, never reaching the hardware): setup unavailable, submit error, wait timeout → 744,960 / 744,960
+fp32 words identical to CPU-only. Evidence: `bench/results/gpu-engine/` (`t007-summary.json`); Cerno decision and
+agreement files stay private (`bench/results/cerno-gpu-eng-*`, gitignored). Owner decision (2026-10-23): accepted as an
+opt-in under "probabilities within 0.0146; near-50/50 answers may flip".
+
+**User-facing behaviour**
+
+> GPU acceleration is optional and **off by default**. Enable it with `pinfer_run --gpu 0.33`,
+> `Model.load(..., gpu_split=0.33)`, or `pinfer_params.gpu_split = 0.33` in C; 0.33 is the recommended share.
+> It accelerates batched prefill (prompt reading, n >= 7); decode and the speculative verify pass stay on the
+> CPU. Cerno 4B uploads about 499 MiB to the GPU once at load (512 MiB cap; 138 of 200 Q4_0 matrices,
+> largest MLP matrices first); loading takes ~6.8 s instead of ~2.7 s. Output is **not** bit-identical to the
+> CPU path: on the 52-question Cerno reference the largest probability difference is 0.0128 and two
+> near-50/50 yes/no answers flip (50/52 top answers). If the GPU is unavailable at load, pinfer warns and runs
+> on the CPU; a submit error or a 3 s wait timeout disables the GPU for that model and finishes the rows on
+> the CPU with identical results to the CPU path. ABI 0.3 (`libpinfer.so.0.3`): rebuild callers of 0.2.
