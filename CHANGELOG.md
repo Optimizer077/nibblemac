@@ -10,6 +10,17 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Stricter `.pq` validation (every tensor's size, header bounds); the caller's CPU affinity is
   no longer changed. Details: `engine/HARDENING.md`. `docs/release-0.1.0.md` stays the 0.1.0 note.
 
+## 2026-10-23
+
+### Decided: distilled decider pilot no-go (t002)
+- Recovered the interrupted agent's scripts and verified its completed three-epoch 0.8B student:
+  39/52 held-out top answers (75.0%, below the 85% / 45-of-52 bar); mean option probability
+  error 0.0888, maximum 0.6274. Choice 16/19, yes/no 17/21, score 6/12.
+- Fixed pilot evaluation to use original request types and record CUDA memory peaks. Aggregate
+  evidence and hashes: `tools/pilot/distill/results/t002-summary.json`; report: `engine/PILOTS.md`.
+- No extra training: the completed run's dev agreement plateaued at 42/49. No Pi changes;
+  weights and full labels remain local because Cerno's weight repository has no licence file.
+
 ## 2026-10-22
 
 ### Pilots closed (22:28): no-go for prompt economy, compilers, table-lookup / asm kernels, numeric approximations
