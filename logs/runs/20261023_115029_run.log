@@ -1,0 +1,9 @@
+# 2026-10-23T11:50:29 pi@10.42.0.2
+$ pwd; ls -d venvs/gpu tmp; find tmp -maxdepth 4 -name assembler.py -o -name gpurun.sh -o -name bench_q4.py; ls -l venvs/gpu/bin/python
+
+/home/pi/pinfer
+tmp
+venvs/gpu
+lrwxrwxrwx 1 pi pi 7 Oct 22 17:37 venvs/gpu/bin/python -> python3
+
+[exit 0]

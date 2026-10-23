@@ -1,0 +1,2 @@
+2026-10-22_21:44 wslconfig: wrote C:\Users\Optim\.wslconfig (memory=40GB, processors=16, swap=8GB); takes effect at the next WSL restart; undo: delete the file (or restore logs/pc/wslconfig.before-*.txt). Reason: WSL crashed at 21:20 (OOM) and at 21:4x the host had 0.6 GB free with 7 agent jobs.
+2026-10-22_21:46 wslconfig: tightened to memory=24GB processors=12 swap=2GB (owner: cap the project total RAM at 32 GB = WSL 24 + Windows-side model jobs 8); WSL restarted. Undo: delete C:\Users\Optim\.wslconfig and run wsl --shutdown.

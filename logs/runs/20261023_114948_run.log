@@ -1,0 +1,9 @@
+# 2026-10-23T11:49:48 pi@10.42.0.2
+$ ls -l /dev/dri/renderD128; ls -l tmp/gpu/pyvc6/src/videocore6/assembler.py tmp/gpu/pyvc6/src/_videocore6/assembler.py; ls tmp/gpu
+
+crw-rw---- 1 root render 226, 128 Oct 22 21:04 /dev/dri/renderD128
+ls: cannot access 'tmp/gpu/pyvc6/src/videocore6/assembler.py': No such file or directory
+ls: cannot access 'tmp/gpu/pyvc6/src/_videocore6/assembler.py': No such file or directory
+ls: cannot access 'tmp/gpu': No such file or directory
+
+[exit 2]

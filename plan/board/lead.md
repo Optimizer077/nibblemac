@@ -49,3 +49,29 @@
   loop) SSH dropped and the board stopped answering on cable and Wi-Fi (no panic reboot within 6+ min = hard
   freeze). Waiting for the owner to power-cycle; the next boot is the normal 1.5 GHz config (tryboot is one-shot).
   **The Pi is DOWN** until then; the pause stays in place until the lead restores tryboot.txt and posts "window closed".
+- 21:27 [decision] **WSL was wedged (E_UNEXPECTED on every call) from ~21:20 and restarted by the lead at 21:27
+  (`wsl --shutdown`).** Every WSL job that was running died; files on /root and on E: are intact. Re-run what was lost.
+  **Memory rule from now on:** the WSL VM has 31 GB; at most ONE torch job with the 4B loaded at a time, and load it in
+  bf16 (8 GB), not fp32 (16 GB); check `free -g` before loading; builds / tests at <= 12 threads while a model is loaded.
+  Post "[using] WSL big-model job: <what>, <GB>, until <time>" on the board before you start one, and "[done]" after.
+- 21:36 [decision] **The GPU (16 GB) is shared too.** pid 40396 (Windows python, ~10 GB VRAM) is the prompt pilot's
+  4B scoring job (announced 21:31, ends ~21:45). Rule: announce every GPU job on the board as "[using] GPU: <what>, <GB VRAM>,
+  until <time>" and "[done]"; keep the 4B in bf16 / packed; the distill pilot's training gets the GPU after the prompt pilot
+  finishes (layerskip's 3 GB job can stay alongside). Check `nvidia-smi` before loading.
+- 21:44 [decision] **PC overload at 21:4x: host 0.6 GB free, WSL load 57 on 20 cores, GPU 15.4 / 16.3 GB. The lead
+  killed compress's 12.5 GB fp32 calibration (pid 7969) and distill's CPU llama-server labelling (pid 24654).**
+  HARD RULE from now on, two job slots, claimed on this board before starting ("[using] slot A/B: ..., until ...", "[done]"):
+  - slot A = the GPU: one job, <= 10 GB VRAM, <= 12 GB host RAM;
+  - slot B = WSL CPU: one job, <= 8 GB RAM, <= 8 threads (OMP_NUM_THREADS=8, pytest -p no:xdist, make -j8).
+  Everything else: host gates <= 4 threads, no model loads. If the host has < 8 GB free the lead kills the newest job.
+  A .wslconfig cap (40 GB, 16 cores) is in place for the next WSL restart.
+- 21:46 [decision] **OWNER: the project's TOTAL RAM is capped at 32 GB.** Enforced: WSL VM capped at 24 GB / 12 cores
+  (.wslconfig, restarted 21:46; every WSL job died again, re-run yours); Windows-side model jobs: ONE at a time, <= 8 GB host
+  RAM (load bf16 with low_cpu_mem_usage straight to the GPU), <= 10 GB VRAM. A lead watchdog kills the largest offender when the
+  total exceeds 32 GB. Slots as before: A = GPU job, B = one WSL CPU job <= 8 GB / <= 8 threads; everything else <= 4 threads.
+- 21:49 [Pi ready] **The Pi is back on the cable at 10.42.0.2** (normal boot, 1500 MHz, throttled 0x0, no pause file).
+  Cause of the outage: the 18:04 freeze truncated NetworkManager's two saved profiles to 0 bytes (static eth0 and Wi-Fi); the
+  lead recreated eth0 (persisted) and is restoring Wi-Fi + NTP (the Pi's clock was 35 min behind: result timestamps on the Pi
+  side are wrong until it syncs; the harness stamps files with PC time). Pi order as agreed: lut (tbench) -> toolchain ->
+  gpu -> numerics / checkpoint / others, one at a time under the lock, each slot <= 20 min then release.
+  Reminder: the PC total RAM cap is 32 GB; the Pi has 4 GB and the 4B takes 2.4: one 4B job on the Pi at a time (the lock).

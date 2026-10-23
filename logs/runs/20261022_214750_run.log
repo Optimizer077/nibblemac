@@ -1,0 +1,34 @@
+# 2026-10-22T21:47:50 pi@10.42.0.2
+$ chmod +x tmp/num/pinfer_run_aq1 tmp/num/nbench* tmp/num/pinfer_*; cp tmp/csp/p64.ids tmp/csp/p256.ids tmp/csp/p512.ids tmp/num/ 2>&1; md5sum tmp/num/nbench tmp/num/nbench_ns tmp/num/pinfer_run_num1 tmp/num/pinfer_ppl_num1 tmp/num/lib/libpinfer.so; ls tmp/num tmp/num/py tmp/num/cerno
+
+ea8476df18ed02b724ae6f01a62faf3a  tmp/num/nbench
+c280913f51b67704c575a28bdd504768  tmp/num/nbench_ns
+7e41e9dca5010bdfd7f4a85c6604d6f6  tmp/num/pinfer_run_num1
+37cf773883dd95c711a93b65762bd4c1  tmp/num/pinfer_ppl_num1
+3864feea9cea44efd4e9cf53b343b8ea  tmp/num/lib/libpinfer.so
+tmp/num:
+cerno
+lib
+nbench
+nbench_ns
+num_decide.sh
+num_e2e4b.sh
+num_kbench.sh
+num_opt_check.sh
+p256.ids
+p512.ids
+p64.ids
+pinfer_ppl_num1
+pinfer_run_aq1
+pinfer_run_num1
+py
+
+tmp/num/cerno:
+bench
+cerno_pi
+requests
+
+tmp/num/py:
+pinfer
+
+[exit 0]

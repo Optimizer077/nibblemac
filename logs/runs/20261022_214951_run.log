@@ -1,0 +1,14 @@
+# 2026-10-22T21:49:51 pi@10.42.0.2
+$ bash tmp/netfix_wifi.sh; rm -f tmp/netfix_wifi.sh
+
+wifi profile created
+wifi up
+wlan0            UP             192.168.1.166/24 fe80::f0a:79b3:6548:fdfe/64 
+NTPSynchronized=yes
+TimeUSec=Thu 2026-10-22 21:50:09 KST
+internet ok
+netplan-wlan0-<wifi-ssid>:wlan0:activated
+netplan-eth0:eth0:activated
+lo:lo:activated
+
+[exit 0]

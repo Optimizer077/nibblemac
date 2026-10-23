@@ -1,0 +1,16 @@
+# 2026-10-22T21:50:58 pi@10.42.0.2
+$ md5sum engine/pinfer_run_tc0 engine/pinfer_run_tc15 engine/pinfer_run_tc13 engine/pinfer_run_tc2 engine/pinfer_run_tc3 engine/pinfer_run_fast | cut -c1-8,33-; ls tmp/csp/p64.ids tmp/csp/p256.ids data/prompt64.ids data/chat27.ids data/ctx512.ids; which fincore bc
+
+7db0de08  engine/pinfer_run_tc0
+e6e9f19d  engine/pinfer_run_tc15
+484ae808  engine/pinfer_run_tc13
+772a20d0  engine/pinfer_run_tc2
+b0e4c47d  engine/pinfer_run_tc3
+d48ffda1  engine/pinfer_run_fast
+data/chat27.ids
+data/ctx512.ids
+data/prompt64.ids
+tmp/csp/p256.ids
+tmp/csp/p64.ids
+
+[exit 1]

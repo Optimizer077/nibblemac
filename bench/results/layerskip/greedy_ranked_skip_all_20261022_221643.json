@@ -1,0 +1,117 @@
+{
+ "bar": {
+  "max_dp": 0.0146,
+  "min_top": 51
+ },
+ "base": {
+  "rows": 52,
+  "max_dp_ref": 0.009432762868299638,
+  "mean_dp_ref": 0.0023363294085091465,
+  "same_top_ref": 51,
+  "worst_ref": "favours"
+ },
+ "strategy": "ranked",
+ "units": "skip",
+ "scope": "all",
+ "steps": [
+  {
+   "variant": "+L25:skip",
+   "modes": {
+    "25": "skip"
+   },
+   "scope": "all",
+   "saved_frac": 0.03162893645634876,
+   "saved_frac_decision": 0.03162893645634876,
+   "pass": false,
+   "seconds": 113.86468434333801,
+   "max_dp_ref": 0.02137911685908289,
+   "mean_dp_ref": 0.007768993138881564,
+   "same_top_ref": 52,
+   "worst_ref": "stars",
+   "max_dp_base": 0.020581070587938344,
+   "mean_dp_base": 0.007296552484292614,
+   "same_top_base": 51,
+   "worst_rows": [
+    [
+     0.02137911685908289,
+     "stars"
+    ],
+    [
+     0.017785896177438976,
+     "camera"
+    ],
+    [
+     0.016035513183859706,
+     "risk"
+    ]
+   ]
+  },
+  {
+   "variant": "+L26:skip",
+   "modes": {
+    "25": "skip",
+    "26": "skip"
+   },
+   "scope": "all",
+   "saved_frac": 0.06325787291269752,
+   "saved_frac_decision": 0.06325787291269752,
+   "pass": false,
+   "seconds": 110.21944284439087,
+   "max_dp_ref": 0.05699823662184575,
+   "mean_dp_ref": 0.011899351961690193,
+   "same_top_ref": 51,
+   "worst_ref": "answer",
+   "max_dp_base": 0.0583037451918795,
+   "mean_dp_base": 0.011621827268921182,
+   "same_top_base": 50,
+   "worst_rows": [
+    [
+     0.05699823662184575,
+     "answer"
+    ],
+    [
+     0.03328585835023512,
+     "quality"
+    ],
+    [
+     0.028733398282506983,
+     "kind"
+    ]
+   ]
+  },
+  {
+   "variant": "+L29:skip",
+   "modes": {
+    "25": "skip",
+    "26": "skip",
+    "29": "skip"
+   },
+   "scope": "all",
+   "saved_frac": 0.09488680936904628,
+   "saved_frac_decision": 0.09488680936904628,
+   "pass": false,
+   "seconds": 57.163015365600586,
+   "max_dp_ref": 0.08479677894802562,
+   "mean_dp_ref": 0.021466471933490588,
+   "same_top_ref": 51,
+   "worst_ref": "country",
+   "max_dp_base": 0.09128722205167639,
+   "mean_dp_base": 0.021459580148160098,
+   "same_top_base": 50,
+   "worst_rows": [
+    [
+     0.08479677894802562,
+     "country"
+    ],
+    [
+     0.06024554159821405,
+     "stars"
+    ],
+    [
+     0.05248252351827065,
+     "answer"
+    ]
+   ]
+  }
+ ]
+}

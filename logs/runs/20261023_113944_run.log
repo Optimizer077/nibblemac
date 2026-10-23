@@ -1,0 +1,11 @@
+# 2026-10-23T11:39:44 pi@10.42.0.2
+$ set -eu; test $(md5sum engine/pinfer_run_fast | cut -c1-32) = 508f1d742e0168282fb94b3c3cd0afc7; test $(md5sum engine/pinfer_ppl_fast | cut -c1-32) = 98f7c5e1376abc9e2acbdc34db39f05c; test -f engine/pinfer_run_fast.pre-csp; test -f engine/pinfer_ppl_fast.pre-csp; test -f engine/pinfer_run_cerno2; test -f engine/pinfer_run_csp1; rm -f engine/pinfer_run_cerno1 engine/pinfer_run_ck1 engine/pinfer_run_csp0; rm -f tmp/install-csp-t003/pinfer_run tmp/install-csp-t003/pinfer_ppl; rmdir tmp/install-csp-t003; test ! -e engine/pinfer_run_cerno1; test ! -e engine/pinfer_run_ck1; test ! -e engine/pinfer_run_csp0; md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast engine/pinfer_run_fast.pre-csp engine/pinfer_ppl_fast.pre-csp engine/pinfer_run_cerno2 engine/pinfer_run_csp1
+
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_fast
+98f7c5e1376abc9e2acbdc34db39f05c  engine/pinfer_ppl_fast
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast.pre-csp
+9cdfe9c75d371cc1497278cbbfa04c86  engine/pinfer_ppl_fast.pre-csp
+537fb9a3baa8e949cbe6fe6618bc82c9  engine/pinfer_run_cerno2
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+
+[exit 0]

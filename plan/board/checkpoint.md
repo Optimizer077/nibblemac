@@ -25,3 +25,29 @@ the lead syncs it to the main board. Not committed.
   the PC. Other gates running (WSL load 88: slow). Pi: ssh refused since 21:09 (still booting?) — Pi
   gates and the before -> after decision timing wait for it; scripts ready in `tools/ckpt/` (`ckpt_pi.sh`:
   4B row A / rewind / save / load; `decide_ab.sh`: decisions ckpt vs state, same lib, the lead's 5-request set).
+- 21:27 [question:lead] my WSL host gates were killed twice: all my `pinfer_run` / `test_spec.py` / `gates.sh`
+  processes got SIGTERM at ~21:23 (WSL stayed up, load ~90), then `wsl.exe` itself failed at 21:26
+  ("Wsl/Service/E_UNEXPECTED", i.e. the WSL service restarted / `wsl --shutdown`). Is someone restarting WSL
+  or killing `pinfer_run` processes? Every agent's host gates die with it. I relaunch when WSL answers again.
+  Pi: ssh refused 21:09-21:25, then timed out at 21:26 (power cycle in progress?).
+- 21:46 [using] no slot: host gates only (golden / spec / state / pytest / malformed / check-lib / Pi build), one
+  `pinfer_run` at a time, 4 threads (`--jobs 1`), bf16 0.8B mmap'd (page cache). Relaunched 21:45 after the
+  WSL restart; previous chains killed (SIGTERM at 21:23, WSL crash 21:26, then the thread-cap changes).
+  I will claim **slot B** here before the PC decision A/B (cerno-pi `decide_bench.py` on the host build with
+  the bf16 0.8B as the 4B stand-in, 4 threads, ~2 GB, ~20 min) once the gates are through.
+- 21:50 [integrating] merged main `f1089ab` (speed4b's prefill tuning `dcc2219` included) into my branch as
+  `004c732`; the only code conflict was `pinfer_run.c` (speed4b's `--dump-last` next to my `--rewind-at`, both
+  kept). Host gate chain relaunched 21:49 on the 24 GB / 12-core WSL (one `pinfer_run` at a time, 4 threads; the
+  chain's own Pi build comes last); the Pi artifacts (`engine/pinfer_run_ck1`, `tmp/ck/lib/libpinfer.so`,
+  NEON, from the merged tree) are being cross-compiled now, serial make. Waiting for "[Pi ready]" before any push.
+- 22:04 [dead-end] first Pi gate run (`ckpt-spec-exact_20261022_220047`, 9 min of Pi time) produced no RESULT rows:
+  the scripts I pushed from the Windows worktree had CRLF endings (the worktree checkout converts; the Pi's bash
+  then runs nothing useful). Fixed with `sed -i 's/\r$//'` on `tmp/ck/*.sh` and the id files, re-pushed as LF.
+  Lesson for the board: push scripts from WSL or check `grep -c $'\r'` before `pi.py push`.
+- 22:04 [plan] per the owner (reduce consumption): only `spec_exact`, `ctx_check`, `cerno_check` and ONE
+  decision round (state r1, ckpt r1, 5 requests) on the Pi; the PC decision A/B, the 3x2 rounds, the 18-request
+  and long-state runs are dropped. Then commit, delete `tmp/ck` on the Pi, final report.
+- 22:12 [dead-end] the empty gate runs were NOT (only) the CRLF: `pi.py bench NAME -- bash -c "bash x.sh args"` joins
+  the words with spaces, so the Pi ran `bash -c bash x.sh args` = an empty bash (exit 0, no output, `valid=true`).
+  Give the command words directly after `--` (`-- bash tmp/ck/x.sh args`). Result files `ckpt-spec-exact{,2}`,
+  `ckpt-ctx-check{,2}`, `ckpt-cerno-check` (22:00-22:11) are empty for that reason; the `*3` runs are the real ones.

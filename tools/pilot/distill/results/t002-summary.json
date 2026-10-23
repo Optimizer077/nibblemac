@@ -1,0 +1,100 @@
+{
+  "verdict": "no-go",
+  "go_threshold_pct": 85,
+  "required_agreements": 45,
+  "evaluation": {
+    "model": "/root/distill/student-0.8b",
+    "tag": "t002-finished-student",
+    "ref": "/mnt/e/Personal_tries/cerno-pi/results/ref_llama_pc.jsonl",
+    "rows": 52,
+    "options": 213,
+    "agree": 39,
+    "agree_pct": 75.0,
+    "mean_abs_dp_options": 0.0888,
+    "mean_max_dp_rows": 0.1748,
+    "max_dp": 0.6274,
+    "median_max_dp": 0.1094,
+    "tokenization_mismatches": 0,
+    "seconds": 2.7,
+    "by_type": {
+      "choice": {
+        "rows": 19,
+        "agree": 16,
+        "mean_abs_dp_options": 0.0542,
+        "mean_max_dp": 0.1647,
+        "max_dp": 0.5694
+      },
+      "noul": {
+        "rows": 21,
+        "agree": 17,
+        "mean_abs_dp_options": 0.1478,
+        "mean_max_dp": 0.1478,
+        "max_dp": 0.6274
+      },
+      "score": {
+        "rows": 12,
+        "agree": 6,
+        "mean_abs_dp_options": 0.1205,
+        "mean_max_dp": 0.2381,
+        "max_dp": 0.5452
+      }
+    },
+    "temperature": 1.534,
+    "device": "cuda",
+    "cuda_peak_allocated_bytes": 1570329088,
+    "cuda_peak_reserved_bytes": 1595932672
+  },
+  "training": {
+    "teacher": "cerno-4b-v1.1-q4_0.gguf via llama-server",
+    "student_base": "/root/distill/models/Qwen3.5-0.8B",
+    "temperature": 1.534,
+    "lora": {
+      "rank": 16,
+      "alpha": 32
+    },
+    "epochs": 3,
+    "lr": 0.0002,
+    "train_rows": 941,
+    "dev_rows": 49,
+    "seconds": 1653.1,
+    "labels": [
+      "/root/distill/labels.jsonl"
+    ]
+  },
+  "label_requests": 363,
+  "label_rows": 990,
+  "exact_prompt_overlap_with_reference": 0,
+  "training_log": "/root/distill/student-0.8b.log",
+  "evaluation_log": "/root/distill/eval-typed-t002.log",
+  "peak_host_rss_kib": 2509608,
+  "artifacts": {
+    "/root/distill/labels.jsonl": {
+      "bytes": 1031835,
+      "sha256": "2070e460fe8ea18cd5bec78c888e0afe31e161a3f42ef48703487efc1ac3aa50"
+    },
+    "/root/distill/labels_ref_gpu.jsonl": {
+      "bytes": 60955,
+      "sha256": "90e0e9b04a3a550d29f6974d9477d138248213c25f7c07d92b7ab029fee12fd2"
+    },
+    "/root/distill/student-0.8b/model.safetensors": {
+      "bytes": 1504827608,
+      "sha256": "d59e99124a378f32fc7f3c73ac407108125066b84feb817953f5df9f2eea2bc3"
+    },
+    "/root/distill/student-0.8b/adapter/adapter_model.safetensors": {
+      "bytes": 43340856,
+      "sha256": "12c0163738f7c0bb8194332afeffd8b090744f587c2ebbc475337aa456423a74"
+    },
+    "/root/distill/results/student-0.8b-typed-t002.json": {
+      "bytes": 122490,
+      "sha256": "35a2a566e9ba4ffefd8af3f3d40d13bc544dad6088a996e3346fad6b8b02157d"
+    },
+    "/mnt/e/Personal_tries/cerno-pi/results/ref_llama_pc.jsonl": {
+      "bytes": 105658,
+      "sha256": "25db355e9639b3be4b0877ff4dc93028c6948257f983c085ae0da2b349480759"
+    },
+    "/mnt/e/Personal_tries/cerno-pi/requests/correctness.json": {
+      "bytes": 15335,
+      "sha256": "8e9674290913d1f82f5d224ea328d1ac8452990b9d196096b62472ed0764ec5f"
+    }
+  }
+}

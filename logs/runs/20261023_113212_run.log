@@ -1,0 +1,12 @@
+# 2026-10-23T11:32:12 pi@10.42.0.2
+$ set -eu; md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast engine/pinfer_run_csp1; for f in engine/pinfer_run_fast.pre-csp engine/pinfer_ppl_fast.pre-csp engine/spec_exact.sh engine/bench/spec_exact.sh engine/pinfer_run_cerno1 engine/pinfer_run_ck1 engine/pinfer_run_csp0; do if [ -e $f ]; then ls -l $f; fi; done
+
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+9cdfe9c75d371cc1497278cbbfa04c86  engine/pinfer_ppl_fast
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+-rwxr-xr-x 1 pi pi 2312 Oct 22 14:20 engine/spec_exact.sh
+-rwxr-xr-x 1 pi pi 934304 Oct 22 14:27 engine/pinfer_run_cerno1
+-rwxr-xr-x 1 pi pi 1000912 Oct 22 21:50 engine/pinfer_run_ck1
+-rwxr-xr-x 1 pi pi 934784 Oct 22 15:48 engine/pinfer_run_csp0
+
+[exit 0]

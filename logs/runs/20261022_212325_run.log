@@ -1,0 +1,6 @@
+# 2026-10-22T21:23:25 pi@10.42.0.2
+$ bash os/overclock/oc_tryboot.sh status; uptime; dmesg --level=err,warn | tail -5
+
+ssh: connect to host 10.42.0.2 port 22: Connection refused
+
+[exit 255]

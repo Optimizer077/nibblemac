@@ -1,0 +1,5 @@
+# 2026-10-22T22:00:46 pi@10.42.0.2
+$ pkill -f 'tmp/num/' ; sleep 2; pgrep -af 'tmp/num' | grep -v pgrep || echo 'pi: no numerics jobs left'; rm -rf tmp/num; ls tmp
+
+
+[exit 255]

@@ -25,6 +25,7 @@ import sys
 import tarfile
 import time
 import tomllib
+import dataclasses
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -84,7 +85,12 @@ def load_config() -> PiConfig:
     if not CONFIG_PATH.exists():
         sys.exit(f"Missing {CONFIG_PATH}. Copy harness/pi.example.toml to pi.toml and edit it.")
     with CONFIG_PATH.open("rb") as f:
-        return PiConfig(**tomllib.load(f)["pi"])
+        cfg = PiConfig(**tomllib.load(f)["pi"])
+    # PINFER_PI_HOST overrides the address for one call (e.g. the IPv6 link-local address over the
+    # cable while the Pi's IPv4 is broken); every call is still logged with the host actually used.
+    if (host := os.environ.get("PINFER_PI_HOST")):
+        cfg = dataclasses.replace(cfg, host=host)
+    return cfg
 
 
 def ssh_base(cfg: PiConfig) -> list[str]:

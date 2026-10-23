@@ -1,0 +1,11 @@
+# 2026-10-23T11:36:51 pi@10.42.0.2
+$ ps -C pinfer_run_fast -o pid,args; pgrep -a -f spec_exact.sh
+
+    PID COMMAND
+   8856 ./engine/pinfer_run_fast -m models/qwen35-0.8b-mix-headq4k.pq -t 4 -n 40 --ids-file data/chat_edit.ids --spec 8 --ngram 8
+8464 flock /tmp/pinfer-bench.lock timeout --kill-after=30 1200 bash -c bash engine/spec_exact.sh ./engine/pinfer_run_fast
+8466 timeout --kill-after=30 1200 bash -c bash engine/spec_exact.sh ./engine/pinfer_run_fast
+8467 bash engine/spec_exact.sh ./engine/pinfer_run_fast
+8855 bash engine/spec_exact.sh ./engine/pinfer_run_fast
+
+[exit 0]

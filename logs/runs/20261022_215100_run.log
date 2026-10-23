@@ -1,0 +1,46 @@
+# 2026-10-22T21:51:00 pi@10.42.0.2
+$ md5sum engine/pinfer_run_ck1 tmp/ck/lib/libpinfer.so; ls tmp/ck tmp/ck/py tmp/ck/cerno tmp/ck/ids; ls -la engine/pinfer_run_fast engine/pinfer_run_csp1 2>&1; md5sum engine/pinfer_run_fast engine/pinfer_run_csp1 2>&1; ls models/ | head; cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq; vcgencmd measure_temp
+
+b7ff26727165c395a76b135572852803  engine/pinfer_run_ck1
+3473e184eeeb2b2254803c0b86d587eb  tmp/ck/lib/libpinfer.so
+tmp/ck:
+cerno
+ckpt_pi.sh
+ctx_check.sh
+decide_ab.sh
+ids
+ids_long
+lib
+py
+spec_exact.sh
+
+tmp/ck/cerno:
+bench
+cerno_pi
+requests
+
+tmp/ck/ids:
+c_prefix.ids
+c_q.ids
+c_row.ids
+
+tmp/ck/py:
+pinfer
+-rwxr-xr-x 1 pi pi 935136 Oct 22 16:44 engine/pinfer_run_csp1
+-rwxr-xr-x 1 pi pi 934696 Oct 22 14:55 engine/pinfer_run_fast
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_csp1
+cerno-4b-q4_0.pq
+cerno-4b-q4_0.tokenizer
+cerno-4b-v1.1-q4_0.gguf
+qwen35-0.8b-bf16.pq
+qwen35-0.8b-mix-headq4k.pq
+qwen35-0.8b-mix-headq8.pq
+Qwen3.5-0.8B-Q4_0.gguf
+qwen35-0.8b-q4-headq4k.pq
+qwen35-0.8b-q4-headq4.pq
+qwen35-0.8b-q4k-headq4k.pq
+1500000
+temp=48.7'C
+
+[exit 0]

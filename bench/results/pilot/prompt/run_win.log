@@ -1,0 +1,175 @@
+﻿.venv\Scripts\python.exe : 21:32:52 base rows == reference ids: 52
+At line:1 char:417
++ ... HREADS="8"; .venv\Scripts\python.exe tools\pilot\prompt\run.py --vari ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (21:32:52 base rows == reference ids: 52:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+W1022 21:32:54.871000 40396 Lib\site-packages\torch\distributed\elastic\multiprocessing\redirects.py:29] NOTE: 
+Redirects are currently not supported in Windows or MacOs.
+21:33:34 GPU: layers 0..23 (10.0 GB), TF32 off
+21:33:34 Cerno loaded from E:\Personal_tries\Raspberry_Pi\models\cerno-4b\cerno-4b-q4_0.pq in 40 s
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is 
+not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because 
+`flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the 
+optimized kernel.
+21:33:43 base support_triage: 4 questions, 208 tokens, 8.7 s
+21:33:46 base agent_guardrail: 4 questions, 190 tokens, 2.4 s
+21:33:48 base billing_angry: 3 questions, 183 tokens, 2.1 s
+21:33:50 base agent_guardrail_email: 3 questions, 199 tokens, 2.2 s
+21:33:52 base sentiment_review: 4 questions, 187 tokens, 2.3 s
+21:33:54 base intent_smart_home: 2 questions, 96 tokens, 1.4 s
+21:33:55 base router_wide: 2 questions, 177 tokens, 1.8 s
+21:33:57 base country_wide: 2 questions, 186 tokens, 2.0 s
+21:33:59 base unicode_mix: 2 questions, 135 tokens, 1.9 s
+21:34:03 base json_tickets: 3 questions, 466 tokens, 4.1 s
+21:34:07 base contract_clause: 4 questions, 249 tokens, 3.4 s
+21:34:08 base nli: 1 questions, 90 tokens, 1.1 s
+21:34:09 base math_word: 2 questions, 114 tokens, 1.5 s
+21:34:12 base phishing: 3 questions, 176 tokens, 2.5 s
+21:34:18 base long_incident: 5 questions, 589 tokens, 5.8 s
+21:34:19 base medical_triage: 2 questions, 132 tokens, 1.7 s
+21:34:22 base code_review: 3 questions, 152 tokens, 2.3 s
+21:34:24 base translation_quality: 3 questions, 174 tokens, 2.2 s
+21:34:24 base: tokens 3703 (cached 3703) vs_ref {'max_dp': 0.009433243879823139, 'mean_dp': 0.00233632991093594, 
+'same_top': 51, 'rows': 52} vs_base {'max_dp': 0.0, 'mean_dp': 0.0, 'same_top': 52, 'rows': 52} -> E:\Personal_tries\Ra
+spberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\base_20261022_213424.json
+21:34:26 schema support_triage: 4 questions, 233 tokens, 2.1 s
+21:34:29 schema agent_guardrail: 4 questions, 215 tokens, 3.0 s
+21:34:31 schema billing_angry: 3 questions, 201 tokens, 2.0 s
+21:34:34 schema agent_guardrail_email: 3 questions, 217 tokens, 3.0 s
+21:34:36 schema sentiment_review: 4 questions, 212 tokens, 2.1 s
+21:34:37 schema intent_smart_home: 2 questions, 107 tokens, 1.2 s
+21:34:39 schema router_wide: 2 questions, 188 tokens, 1.8 s
+21:34:41 schema country_wide: 2 questions, 199 tokens, 1.6 s
+21:34:42 schema unicode_mix: 2 questions, 146 tokens, 1.6 s
+21:34:46 schema json_tickets: 3 questions, 484 tokens, 3.5 s
+21:34:48 schema contract_clause: 4 questions, 274 tokens, 2.4 s
+21:34:49 schema nli: 1 questions, 90 tokens, 1.1 s
+21:34:51 schema math_word: 2 questions, 125 tokens, 1.3 s
+21:34:53 schema phishing: 3 questions, 194 tokens, 2.2 s
+21:34:57 schema long_incident: 5 questions, 621 tokens, 4.6 s
+21:34:59 schema medical_triage: 2 questions, 143 tokens, 1.5 s
+21:35:01 schema code_review: 3 questions, 170 tokens, 1.9 s
+21:35:03 schema translation_quality: 3 questions, 192 tokens, 1.8 s
+21:35:03 schema: tokens 4011 (cached 1766) vs_ref {'max_dp': 0.5933604690563744, 'mean_dp': 0.09440273612038462, 
+'same_top': 47, 'rows': 52} vs_base {'max_dp': 0.593671071437868, 'mean_dp': 0.0945517764886795, 'same_top': 46, 
+'rows': 52} -> E:\Personal_tries\Raspberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\sche
+ma_20261022_213503.json
+21:35:04 multi support_triage: 4 questions, 233 tokens, 1.9 s
+21:35:06 multi agent_guardrail: 4 questions, 215 tokens, 1.6 s
+21:35:08 multi billing_angry: 3 questions, 201 tokens, 1.8 s
+21:35:10 multi agent_guardrail_email: 3 questions, 217 tokens, 2.0 s
+21:35:12 multi sentiment_review: 4 questions, 212 tokens, 2.0 s
+21:35:13 multi intent_smart_home: 2 questions, 107 tokens, 1.2 s
+21:35:15 multi router_wide: 2 questions, 188 tokens, 1.4 s
+21:35:16 multi country_wide: 2 questions, 199 tokens, 1.7 s
+21:35:17 multi unicode_mix: 2 questions, 146 tokens, 1.1 s
+21:35:20 multi json_tickets: 3 questions, 484 tokens, 3.1 s
+21:35:23 multi contract_clause: 4 questions, 274 tokens, 2.1 s
+21:35:23 multi nli: 1 questions, 90 tokens, 0.9 s
+21:35:25 multi math_word: 2 questions, 125 tokens, 1.2 s
+21:35:26 multi phishing: 3 questions, 194 tokens, 1.5 s
+21:35:30 multi long_incident: 5 questions, 621 tokens, 3.9 s
+21:35:31 multi medical_triage: 2 questions, 143 tokens, 1.2 s
+21:35:33 multi code_review: 3 questions, 170 tokens, 1.7 s
+21:35:34 multi translation_quality: 3 questions, 192 tokens, 1.4 s
+21:35:34 multi: tokens 4011 (cached 4011) vs_ref {'max_dp': 0.14935486661416875, 'mean_dp': 0.02804822262829708, 
+'same_top': 51, 'rows': 52} vs_base {'max_dp': 0.1399216227343456, 'mean_dp': 0.028200910899353906, 'same_top': 50, 
+'rows': 52} -> E:\Personal_tries\Raspberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\mult
+i_20261022_213534.json
+21:35:37 multi_ans support_triage: 4 questions, 239 tokens, 3.1 s
+21:35:40 multi_ans agent_guardrail: 4 questions, 221 tokens, 2.7 s
+21:35:42 multi_ans billing_angry: 3 questions, 205 tokens, 2.1 s
+21:35:45 multi_ans agent_guardrail_email: 3 questions, 221 tokens, 2.4 s
+21:35:47 multi_ans sentiment_review: 4 questions, 218 tokens, 2.4 s
+21:35:48 multi_ans intent_smart_home: 2 questions, 109 tokens, 1.3 s
+21:35:50 multi_ans router_wide: 2 questions, 190 tokens, 1.8 s
+21:35:52 multi_ans country_wide: 2 questions, 201 tokens, 1.9 s
+21:35:54 multi_ans unicode_mix: 2 questions, 148 tokens, 1.7 s
+21:35:57 multi_ans json_tickets: 3 questions, 488 tokens, 3.6 s
+21:36:00 multi_ans contract_clause: 4 questions, 280 tokens, 2.9 s
+21:36:01 multi_ans nli: 1 questions, 90 tokens, 0.8 s
+21:36:03 multi_ans math_word: 2 questions, 127 tokens, 1.5 s
+21:36:05 multi_ans phishing: 3 questions, 198 tokens, 2.1 s
+21:36:10 multi_ans long_incident: 5 questions, 629 tokens, 4.8 s
+21:36:11 multi_ans medical_triage: 2 questions, 145 tokens, 1.5 s
+21:36:13 multi_ans code_review: 3 questions, 174 tokens, 2.0 s
+21:36:15 multi_ans translation_quality: 3 questions, 196 tokens, 2.3 s
+21:36:15 multi_ans: tokens 4079 (cached 4079) vs_ref {'max_dp': 0.153377144095715, 'mean_dp': 0.029436053640642976, 
+'same_top': 50, 'rows': 52} vs_base {'max_dp': 0.14394390021589187, 'mean_dp': 0.02951241613541931, 'same_top': 49, 
+'rows': 52} -> E:\Personal_tries\Raspberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\mult
+i_ans_20261022_213615.json
+21:36:18 compact_a support_triage: 4 questions, 196 tokens, 2.7 s
+21:36:21 compact_a agent_guardrail: 4 questions, 178 tokens, 2.6 s
+21:36:23 compact_a billing_angry: 3 questions, 174 tokens, 2.0 s
+21:36:25 compact_a agent_guardrail_email: 3 questions, 190 tokens, 2.2 s
+21:36:27 compact_a sentiment_review: 4 questions, 175 tokens, 2.5 s
+21:36:29 compact_a intent_smart_home: 2 questions, 90 tokens, 1.2 s
+21:36:31 compact_a router_wide: 2 questions, 171 tokens, 1.9 s
+21:36:32 compact_a country_wide: 2 questions, 180 tokens, 1.9 s
+21:36:34 compact_a unicode_mix: 2 questions, 129 tokens, 1.5 s
+21:36:40 compact_a json_tickets: 3 questions, 457 tokens, 5.8 s
+21:36:43 compact_a contract_clause: 4 questions, 237 tokens, 3.1 s
+21:36:44 compact_a nli: 1 questions, 87 tokens, 0.9 s
+21:36:45 compact_a math_word: 2 questions, 108 tokens, 1.5 s
+21:36:48 compact_a phishing: 3 questions, 167 tokens, 2.7 s
+21:36:54 compact_a long_incident: 5 questions, 574 tokens, 5.9 s
+21:36:56 compact_a medical_triage: 2 questions, 126 tokens, 1.7 s
+21:36:58 compact_a code_review: 3 questions, 143 tokens, 2.7 s
+21:37:01 compact_a translation_quality: 3 questions, 165 tokens, 2.8 s
+21:37:01 compact_a: tokens 3547 (cached 3547) vs_ref {'max_dp': 0.14529897374150025, 'mean_dp': 0.015893074657811066, 
+'same_top': 51, 'rows': 52} vs_base {'max_dp': 0.14982893810929132, 'mean_dp': 0.015498756777049568, 'same_top': 52, 
+'rows': 52} -> E:\Personal_tries\Raspberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\comp
+act_a_20261022_213701.json
+21:37:05 compact_b support_triage: 4 questions, 180 tokens, 3.9 s
+21:37:09 compact_b agent_guardrail: 4 questions, 168 tokens, 4.1 s
+21:37:14 compact_b billing_angry: 3 questions, 162 tokens, 5.2 s
+21:37:21 compact_b agent_guardrail_email: 3 questions, 182 tokens, 6.2 s
+21:37:26 compact_b sentiment_review: 4 questions, 161 tokens, 5.7 s
+21:37:31 compact_b intent_smart_home: 2 questions, 82 tokens, 5.0 s
+21:37:35 compact_b router_wide: 2 questions, 150 tokens, 3.8 s
+21:37:41 compact_b country_wide: 2 questions, 150 tokens, 6.4 s
+21:37:48 compact_b unicode_mix: 2 questions, 123 tokens, 6.3 s
+21:37:58 compact_b json_tickets: 3 questions, 446 tokens, 10.4 s
+21:38:09 compact_b contract_clause: 4 questions, 225 tokens, 10.7 s
+21:38:12 compact_b nli: 1 questions, 84 tokens, 3.3 s
+21:38:17 compact_b math_word: 2 questions, 102 tokens, 5.2 s
+21:38:23 compact_b phishing: 3 questions, 157 tokens, 5.5 s
+21:38:35 compact_b long_incident: 5 questions, 556 tokens, 12.5 s
+21:38:40 compact_b medical_triage: 2 questions, 119 tokens, 5.1 s
+21:38:47 compact_b code_review: 3 questions, 133 tokens, 6.4 s
+21:38:55 compact_b translation_quality: 3 questions, 154 tokens, 8.2 s
+21:38:55 compact_b: tokens 3334 (cached 3334) vs_ref {'max_dp': 0.17346677115420006, 'mean_dp': 0.033812414892297415, 
+'same_top': 50, 'rows': 52} vs_base {'max_dp': 0.176223107005179, 'mean_dp': 0.033290672206666254, 'same_top': 51, 
+'rows': 52} -> E:\Personal_tries\Raspberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\comp
+act_b_20261022_213855.json
+21:39:01 compact_c support_triage: 4 questions, 176 tokens, 6.2 s
+21:39:07 compact_c agent_guardrail: 4 questions, 164 tokens, 6.2 s
+21:39:13 compact_c billing_angry: 3 questions, 159 tokens, 5.8 s
+21:39:21 compact_c agent_guardrail_email: 3 questions, 179 tokens, 8.2 s
+21:39:28 compact_c sentiment_review: 4 questions, 157 tokens, 6.4 s
+21:39:33 compact_c intent_smart_home: 2 questions, 80 tokens, 5.0 s
+21:39:39 compact_c router_wide: 2 questions, 148 tokens, 5.9 s
+21:39:43 compact_c country_wide: 2 questions, 148 tokens, 3.9 s
+21:39:48 compact_c unicode_mix: 2 questions, 121 tokens, 5.6 s
+21:40:00 compact_c json_tickets: 3 questions, 443 tokens, 12.0 s
+21:40:16 compact_c contract_clause: 4 questions, 221 tokens, 16.2 s
+21:40:30 compact_c nli: 1 questions, 83 tokens, 13.4 s
+21:40:52 compact_c math_word: 2 questions, 100 tokens, 22.3 s
+21:41:24 compact_c phishing: 3 questions, 154 tokens, 31.9 s
+21:42:48 compact_c long_incident: 5 questions, 551 tokens, 83.5 s
+21:43:16 compact_c medical_triage: 2 questions, 117 tokens, 28.6 s
+21:44:20 compact_c code_review: 3 questions, 130 tokens, 64.1 s
+21:44:52 compact_c translation_quality: 3 questions, 151 tokens, 32.2 s
+21:44:52 compact_c: tokens 3282 (cached 3282) vs_ref {'max_dp': 0.26172485437256, 'mean_dp': 0.06056024115943375, 
+'same_top': 48, 'rows': 52} vs_base {'max_dp': 0.26287512308886524, 'mean_dp': 0.06023982250880077, 'same_top': 49, 
+'rows': 52} -> E:\Personal_tries\Raspberry_Pi\.claude\worktrees\agent-ae99d2e23cc77288a\bench\results\pilot\prompt\comp
+act_c_20261022_214452.json
+21:44:58 compact_d support_triage: 4 questions, 208 tokens, 5.2 s
+21:45:00 compact_d agent_guardrail: 4 questions, 190 tokens, 2.5 s
+21:45:02 compact_d billing_angry: 3 questions, 183 tokens, 2.2 s
+21:45:05 compact_d agent_guardrail_email: 3 questions, 199 tokens, 2.3 s
+21:45:07 compact_d sentiment_review: 4 questions, 187 tokens, 2.4 s
+21:45:08 compact_d intent_smart_home: 2 questions, 96 tokens, 1.3 s

@@ -1,0 +1,304 @@
+[
+ {
+  "name": "contract_018",
+  "source": "synth_b.contract",
+  "state": "10. Termination. Customer Data may be retained by the Provider for backup purposes without time limit. Sections 7 (Confidentiality) and 9 (Limitation of Liability) survive termination for five years. Either party may terminate immediately on a material breach that is not cured within 15 days. either party may terminate this Agreement for convenience at any time by written notice.",
+  "questions": {
+   "notice_days": {
+    "type": "choice",
+    "instructions": "How much notice is needed to terminate for convenience?",
+    "criteria": [
+     "30 days",
+     "60 days",
+     "90 days",
+     "no notice",
+     "not stated"
+    ]
+   },
+   "confidentiality_survives": {
+    "type": "noul",
+    "instructions": "Does the confidentiality obligation continue after termination?"
+   },
+   "data_returned": {
+    "type": "noul",
+    "instructions": "Must the Provider return or destroy the Customer Data after termination?"
+   }
+  }
+ },
+ {
+  "name": "tickets_003",
+  "source": "synth_b.tickets",
+  "state": {
+   "tickets": [
+    {
+     "id": 1,
+     "title": "SSO logins fail for one tenant",
+     "severity": "high",
+     "status": "resolved",
+     "age_hours": 53
+    },
+    {
+     "id": 2,
+     "title": "wrong VAT number on invoice",
+     "severity": "low",
+     "status": "open",
+     "age_hours": 17
+    },
+    {
+     "id": 3,
+     "title": "feature request: dark mode",
+     "severity": "low",
+     "status": "resolved",
+     "age_hours": 71
+    },
+    {
+     "id": 4,
+     "title": "cannot delete old projects",
+     "severity": "medium",
+     "status": "resolved",
+     "age_hours": 31
+    },
+    {
+     "id": 5,
+     "title": "data missing after migration",
+     "severity": "critical",
+     "status": "open",
+     "age_hours": 13
+    }
+   ],
+   "team": "platform"
+  },
+  "questions": {
+   "most_urgent": {
+    "type": "choice",
+    "instructions": "Which open ticket is the most urgent?",
+    "criteria": {
+     "1": "SSO logins fail for one tenant",
+     "2": "wrong VAT number on invoice",
+     "3": "feature request: dark mode",
+     "4": "cannot delete old projects",
+     "5": "data missing after migration"
+    }
+   },
+   "ticket_4_resolved": {
+    "type": "noul",
+    "instructions": "Is tickets[3] (the one with id 4) resolved?"
+   },
+   "all_open": {
+    "type": "noul",
+    "instructions": "Are all tickets still open?"
+   }
+  }
+ },
+ {
+  "name": "math_024",
+  "source": "synth_b.math",
+  "state": "Tickets cost $35 each. A class buys 8 tickets with a 10% discount. What do they pay?",
+  "questions": {
+   "answer": {
+    "type": "choice",
+    "instructions": "What is the answer?",
+    "criteria": [
+     "$234.50",
+     "$252.00",
+     "$287.00",
+     "$280.00"
+    ]
+   },
+   "needs_arithmetic": {
+    "type": "noul",
+    "instructions": "Does answering require arithmetic?"
+   },
+   "steps": {
+    "type": "score",
+    "instructions": "How many calculation steps does the problem need?",
+    "criteria": [
+     "one",
+     "two",
+     "three or more"
+    ]
+   }
+  }
+ },
+ {
+  "name": "math_003",
+  "source": "synth_b.math",
+  "state": "Tickets cost $35 each. A class buys 4 tickets with a 25% discount. What do they pay?",
+  "questions": {
+   "answer": {
+    "type": "choice",
+    "instructions": "What is the answer?",
+    "criteria": [
+     "$105.00",
+     "$87.50",
+     "$140.00"
+    ]
+   },
+   "needs_arithmetic": {
+    "type": "noul",
+    "instructions": "Does answering require arithmetic?"
+   }
+  }
+ },
+ {
+  "name": "support_003",
+  "source": "synth_a.support",
+  "state": "Please cancel my subscription at the end of this month. Thanks.",
+  "questions": {
+   "kind": {
+    "type": "choice",
+    "instructions": "What kind of message is this?",
+    "criteria": {
+     "incident": "an outage or something broken in production",
+     "billing": "invoices, charges, refunds",
+     "account": "cancellations, plan changes, access",
+     "feedback": "praise or suggestions",
+     "spam": "unsolicited or scam",
+     "other": null
+    }
+   },
+   "is_question": {
+    "type": "noul",
+    "instructions": "Is the sender asking a question?"
+   },
+   "urgency": {
+    "type": "score",
+    "instructions": "How quickly does this need a reply?",
+    "criteria": [
+     "no action needed",
+     "can wait a few days",
+     "should be handled today",
+     "needs attention within the hour"
+    ]
+   },
+   "tone": {
+    "type": "score",
+    "instructions": "What is the sender's tone?",
+    "criteria": [
+     "hostile",
+     "negative",
+     "neutral",
+     "positive"
+    ]
+   }
+  }
+ },
+ {
+  "name": "delivery_016",
+  "source": "synth_b.delivery",
+  "state": "Leave the parcel in the garage, the code is 4 2 1 1. Don't ring, baby sleeping 😴",
+  "questions": {
+   "action": {
+    "type": "choice",
+    "instructions": "What should the delivery driver do?",
+    "criteria": {
+     "deliver_normally": "deliver to the customer's door",
+     "neighbour": "leave the parcel with a neighbour or nearby shop",
+     "safe_place": "leave it in the stated safe place",
+     "call_first": "phone the customer before delivering",
+     "reception": "hand it to a reception or concierge",
+     "hold": "hold the parcel at the depot",
+     "return": "return the parcel to the sender"
+    }
+   },
+   "signature": {
+    "type": "noul",
+    "instructions": "Does the delivery require a signature?"
+   }
+  }
+ },
+ {
+  "name": "translation_000",
+  "source": "synth_b.translation",
+  "state": "Source (English): Please do not water the plants more than once a week.\nTranslation: Veuillez ne pas arroser les plantes plus d'une fois par semaine.",
+  "questions": {
+   "error_type": {
+    "type": "choice",
+    "instructions": "What is the main problem of the translation, if any?",
+    "criteria": {
+     "mistranslation": "a word or phrase changes the meaning",
+     "omission": "something from the source is missing",
+     "addition": "the translation adds information",
+     "grammar": "the meaning is kept but the grammar is wrong",
+     "none": "no problem"
+    }
+   },
+   "quality": {
+    "type": "score",
+    "instructions": "Rate the translation.",
+    "criteria": [
+     "unusable",
+     "poor",
+     "acceptable",
+     "good",
+     "perfect"
+    ]
+   }
+  }
+ },
+ {
+  "name": "medical_016",
+  "source": "synth_b.medical",
+  "state": "Caller reports: 28-year-old with vomiting since last night, unable to keep fluids down, dizzy when standing.",
+  "questions": {
+   "time_critical": {
+    "type": "noul",
+    "instructions": "Would a delay of a few hours make the outcome worse?"
+   },
+   "self_care": {
+    "type": "noul",
+    "instructions": "Can this be managed at home without seeing a clinician?"
+   }
+  }
+ },
+ {
+  "name": "contract_000",
+  "source": "synth_b.contract",
+  "state": "9. Termination. either party may terminate this Agreement for convenience on 90 days' written notice. The Provider may suspend the Service for non-payment after 10 days' notice. Within 30 days after termination the Provider shall return or securely destroy all Customer Data. All obligations of the parties end on the effective date of termination.",
+  "questions": {
+   "confidentiality_survives": {
+    "type": "noul",
+    "instructions": "Does the confidentiality obligation continue after termination?"
+   },
+   "data_returned": {
+    "type": "noul",
+    "instructions": "Must the Provider return or destroy the Customer Data after termination?"
+   },
+   "favours": {
+    "type": "choice",
+    "instructions": "Which party does the termination clause favour?",
+    "criteria": {
+     "customer": null,
+     "provider": null,
+     "balanced": "neither party is clearly favoured"
+    }
+   },
+   "notice_days": {
+    "type": "choice",
+    "instructions": "How much notice is needed to terminate for convenience?",
+    "criteria": [
+     "30 days",
+     "60 days",
+     "90 days",
+     "no notice",
+     "not stated"
+    ]
+   }
+  }
+ },
+ {
+  "name": "code_009",
+  "source": "synth_b.code",
+  "state": "def last(d):\n    return d['last']\n\nprint(last({'first': 1}))",
+  "questions": {
+   "bug": {
+    "type": "noul",
+    "instructions": "Does the code fail for the way it is called?"
+   },
+   "has_tests": {
+    "type": "noul",
+    "instructions": "Does the snippet include a test?"
+   }
+  }
+ }
+]

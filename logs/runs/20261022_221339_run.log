@@ -1,0 +1,9 @@
+# 2026-10-22T22:13:39 pi@10.42.0.2
+$ SP=~/pinfer/venvs/gpu/lib/python3.13/site-packages; cp -r tmp/gpu/pyvc6/src/videocore6 tmp/gpu/pyvc6/src/_videocore6 $SP/ && mkdir -p ~/pinfer/venvs/gpu/py-videocore6-licence && cp tmp/gpu/pyvc6/LICENSE.GPL2 tmp/gpu/pyvc6/COMMIT ~/pinfer/venvs/gpu/py-videocore6-licence/ && echo 'py-videocore6 @ 175741a (github.com/Idein/py-videocore6): packages videocore6 + _videocore6 copied into site-packages (driver GPL-2.0-or-later, assembler MIT); run-time dependency of engine/gpu/*.py, not part of the pinfer tree' > ~/pinfer/venvs/gpu/py-videocore6-licence/NOTE.txt && ~/pinfer/venvs/gpu/bin/python -c 'import videocore6.driver, videocore6.assembler; print(" venv import ok\)' && ~/pinfer/venvs/gpu/bin/pip freeze > ~/pinfer/venvs/gpu.freeze.txt && rm -rf ~/pinfer/tmp/gpu && ls ~/pinfer/tmp/ && ls ~/pinfer/venvs/gpu/py-videocore6-licence/ && du -sh ~/pinfer/venvs/gpu
+
+  File "<string>", line 1
+    import videocore6.driver, videocore6.assembler; print(" venv import ok\)
+                                                          ^
+SyntaxError: unterminated string literal (detected at line 1)
+
+[exit 1]

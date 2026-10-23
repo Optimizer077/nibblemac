@@ -10,7 +10,42 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Stricter `.pq` validation (every tensor's size, header bounds); the caller's CPU affinity is
   no longer changed. Details: `engine/HARDENING.md`. `docs/release-0.1.0.md` stays the 0.1.0 note.
 
+## 2026-10-23
+
+### Decided: distilled decider pilot no-go (t002)
+- Recovered the interrupted agent's scripts and verified its completed three-epoch 0.8B student:
+  39/52 held-out top answers (75.0%, below the 85% / 45-of-52 bar); mean option probability
+  error 0.0888, maximum 0.6274. Choice 16/19, yes/no 17/21, score 6/12.
+- Fixed pilot evaluation to use original request types and record CUDA memory peaks. Aggregate
+  evidence and hashes: `tools/pilot/distill/results/t002-summary.json`; report: `engine/PILOTS.md`.
+- No extra training: the completed run's dev agreement plateaued at 42/49. No Pi changes;
+  weights and full labels remain local because Cerno's weight repository has no licence file.
+
+## 2026-10-23
+
+### Pi: shared binary = gated 4B-prefill build (channel agent t003, 11:41)
+- `engine/pinfer_run_fast` `d48ffda1` → `508f1d74` (prefill tail + groups of 7s + 5s; Cerno decisions −4.4%, bit-identical);
+  spec_exact 58/58 on the installed binary; old builds kept as `*.pre-csp`. `docs/pi-state.md` "Files we placed".
+
+### Added (GPU)
+- GPU co-processing pilot: **go** (CPU + GPU = 1.41–1.47× CPU alone on the Cerno 4B shapes).
+- `engine/gpu/v3d.c`: the QPU Q4_0 kernel from C through our own DRM calls (no GPL code), byte-identical to the
+  Python path, 28 GOP/s; GPU vs CPU differ by ~6e-7 relative, so the coming engine path is opt-in.
+
+### Pilots
+- Distilled decider: **no-go** (0.8B student 39/52 = 75% top-answer agreement with Cerno 4B, bar 85%).
+- Layer skipping: **no-go** (no single layer or early exit stays within the probability bar; best L25 0.0214 vs 0.0146).
+
+### Added
+- `channel/channel.md`: conversation with a worker agent the owner runs; the lead writes tasks, reviews, commits.
+
 ## 2026-10-22
+
+### Pilots closed (22:28): no-go for prompt economy, compilers, table-lookup / asm kernels, numeric approximations
+- Cerno 4B is calibrated to its exact prompt and its Q4_0 numerics: every output-changing shortcut measured today exceeds the
+  agreement bar; the exact kernel routes give <= 3.5% end to end. Verified full host gate on main (speed4b merge) all PASS.
+- Interrupted by the API session limit (work saved on branches): layer skipping, low-rank, GPU co-processing, in-engine
+  checkpoint, distilled 0.8B decider (epoch 0: 41% -> 67% dev agreement).
 
 ### Merged (21:25): 4B prefill tuning (speed4b agent) — note: landed as commit `dcc2219`, whose message says "docs(pi)"
 - Prefill tail (the last layer computes only the last token's rows when only its logits are read) and prefill groups of
@@ -38,6 +73,68 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   `decide_bench.py --no-checkpoint`); probabilities bit-identical between the paths.
 - Measured: see `engine/CONTEXT.md` §10c (host gates) and §10d (Pi), filled in by this agent's
   journal section.
+
+
+### Prompt economy pilot (prompt agent, 21:08–; branch `worktree-agent-ae99d2e23cc77288a`)
+- Added `engine/PILOTS.md` ("Prompt economy") and `tools/pilot/prompt/` (`variants.py`: the prompt
+  layouts and their token counts, the base rows checked equal to the reference's ids 52/52; `run.py`:
+  fp32 torch emulation of the 4B from its `.pq`, GPU/CPU split; `report.py`: the table), results in
+  `bench/results/pilot/prompt/` (PC emulation, no Pi numbers).
+- Found: the upstream decider defines a multi-question state-first row and a schema-first layout
+  (question blocks first, then the state, then the answer slots); Cerno's engine uses one row per question.
+- Measured (tokens, 18 requests / 52 questions): compact templates save 4–11%, option sharing 1%,
+  multi-question rows cost 8–10% more, schema-first 8% more per isolated decision and 52% less with the
+  question block cached across decisions.
+- Measured (PC fp32 emulation vs the llama.cpp reference, max |dp| / same top of 52): base 0.0094 / 51
+  (anchor); compact templates 0.145–0.262 / 48–51; multi-question rows 0.149–0.153 / 50–51; schema-first
+  0.593 / 47. **No-go for every variant**: no layout change stays inside the identical bar (0.0146), and
+  the only large saving (schema-first, −52% with the question block cached) changes answers. The 4B's
+  calibration is specific to the one-question state-first row.
+- Process: a first WSL CPU run was OOM-killed (three pilots loading the 4B in the 31 GB VM); rerun on the
+  Windows side with the GPU holding 24 fp32 layers; the run was stopped at 21:45 before two zero-value
+  variants when the lead asked for the PC's model slot.
+
+
+### Compilers pilot (toolchain agent, 17:37–; branch `worktree-agent-a75a53a7559d5b274`)
+- Added `engine/TOOLCHAIN.md` (every compiler / flag set tried, with numbers and result files) and
+  `engine/PILOTS.md` (index of pilot verdicts; first entry "Compilers").
+- PC (WSL, apt): cross GCC 13.4 / 14.3 / 16.0.1 and clang 20.1.8 / 22.1.2 installed next to the shipping
+  GCC 15.2; the engine builds static for the Pi with all of them at the project flags.
+- Exactness under qemu (kbench `--check`, 880 configurations per build): GCC 13 / 14 / 15 / 16 and clang 22
+  produce the shipping build's output bytes on every row; **clang 20 rejected**: at `-O3` it miscompiles a
+  max-by-magnitude loop (kbench's Q4 fill, 1.7 % of blocks get a different maximum), i.e. it changes plain
+  C floating-point results. No compiler contracts multiply-adds (`-ffp-contract=off` honoured by all).
+- Dead end: `-fno-schedule-insns` on `kern_quant.c` removes every stack spill of the Q4 loops but is 6–15 %
+  slower on the Pi (speed4b's `cerno-speed-kb8-nosched_*`): instruction count is the wrong proxy on the
+  in-order A72.
+- Pi (1.5 GHz, `toolchain-kb-r1_*`, `toolchain-e2e4b-r1_*`): GCC 14 and 16 equal GCC 15 within noise on the
+  Q4_0 kernel (n = 5 / 7, 4B shapes) and on 4B prefill p256 (6.79 / 6.92 vs 6.92 tok/s); clang 22 is 5–15 %
+  slower on the kernel, clang 22 without its machine scheduler 12–22 % slower. **Verdict: no-go**, the
+  Makefile stays at GCC 15 `-O3 -mcpu=cortex-a72`; the `load` line of the 3.4 GB model is 6 ms (mmap), the
+  page-in happens in the warm-up. Pi scratch files removed (`engine/pinfer_run_tc*`, `tmp/tc`).
+- Scratchpad incident: three pre-existing files in the shared session scratchpad root overwritten (17:39–17:54)
+  and removed (18:18); nothing in the repo or on the Pi affected; details in the journal.
+
+
+### GPU co-processing pilot (GPU agent, 17:30–22:12; branch `worktree-agent-a459e8864e2e5ea3b`)
+- Added: `engine/gpu/` — an integer Q4_0 x int8 matmul kernel for the Pi 4's V3D 4.2 QPUs
+  (two rows packed per `smul24` operand, exact int16 block sums, activations as a uniform stream;
+  generator `q4gpu.py`, dual-issue list scheduler `qsched.py`, numpy emulator check
+  `qemu_check.py` bit-exact for n = 1–12, Pi benchmarks `bench_q4.py` / `corun.sh`, hardware
+  diagnostics `diag.py`); notebook `engine/GPU.md`; pilot record `engine/PILOTS.md`
+  ("GPU co-processing"); `engine/bench/kbench.c` gets the Qwen3.5-4B shapes `c4*` (same hunk
+  as speed4b, selected by name only).
+- Measured (Pi, stock 1.5 GHz, V3D 500 MHz): GPU alone 27–28 GOP/s on 9216x2560 / 2560x9216 /
+  8192x2560 at batch 7 and 64, bit-exact vs the kernel's fp32 model; CPU + GPU together
+  77.8 / 78.0 / 74.1 GOP/s vs CPU alone 55.2 / 55.4 / 50.3 = **1.41x / 1.41x / 1.47x**, CPU keeps
+  94 %, throttled 0x0 (`bench/results/gpu-q4-alone_20261022_221029.json`,
+  `gpu-corun_20261022_221209.json`). Verdict: go; scale-up design (DRM ioctls, class (b) opt-in)
+  in `engine/GPU.md`.
+- Found: py-videocore6 is GPL-2.0 (driver) / MIT (assembler), not BSD-3: used only as a venv
+  dependency on the Pi, never vendored; numpy 2.5 breaks it (pinned 2.3.1). TMU loads without
+  the `thrsw` signal hang the V3D 4.2 (two slots lost to it).
+- Pi: `~/pinfer/venvs/gpu` (numpy 2.3.1, ioctl-opt, py-videocore6 @ `175741a` packages copied
+  in, licence note) kept for the scale-up; `~/pinfer/tmp/gpu` removed. Rows in `docs/pi-state.md`.
 
 ### Pi: overclock test reverted (21:01)
 - Boot partition edited on the PC (F:): `tryboot.txt` back to the custom-kernel test file, overclock files removed; `config.txt` / `cmdline.txt` unchanged; standard 1.5 GHz profile. `docs/pi-state.md` #5.
@@ -118,6 +215,24 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   fused recurrence sweeps, `-fno-schedule-insns`. Details: `engine/bench/KERNELS.md` Part 4.
 - Pi: `~/pinfer/engine/pinfer_run_csp1` added (`docs/pi-state.md`); scratch (`tmp/csp`,
   `engine/pinfer_run_csp0`) removed after the lead's overclock pause.
+
+
+### Table-lookup kernels and the multiply loop's dispatch order (lut agent, 17:12–22:20; branch `worktree-agent-aa5998fa1cda1365d`) — measured, nothing integrated
+- Engine unchanged (rebuild byte-identical to 69b31a3, md5 `508f1d74`). Added bench tools:
+  `engine/bench/ubench2.c` (A72 pairing rules with the dispatch order controlled),
+  `engine/bench/tbench.c` + `qvar_*.c` (A/B bench of Q4 / Q4K kernel variants, byte-compared with the
+  C loops; `--core` times one L1-resident tile), `tools/gen_kern_q4s.py` (asm generator →
+  `engine/bench/q4{s,e,m}_gen.h`). Details: `engine/bench/KERNELS.md` Part 5.
+- Measured: SMLAL pairs perfectly with D-form ops (8.34 cycles per 8 + 8) but Q-form ops cost
+  +0.5–0.7 cycle each next to it; TBL .8b issues 2 per cycle, TBL .16b 1.5 cycles
+  (`bench/results/lut-ubench2_20261022_175209.json`, `lut-ubench2b_20261022_175214.json`).
+- Dead end: exact T-MAC-style LUT kernel 4.5–8× slower than SMLAL (0.49 vs 0.26 instructions per
+  MAC; c4gate n = 7 10.6 vs 53.7 GOP/s) (`lut-tbench-r1_20261022_215231.json`).
+- Dispatch-ordered asm passes: −9 to −13 % cycles per block-vector on Q4 (one L1 tile, n = 7:
+  26.0 → 22.6), exact (416 kbench configs, yhash = 69b31a3), but 4B prefill only +2.1 % (64 tokens)
+  / +3.5 % (256) in one A/B round vs `pinfer_run_csp1` (`cerno-lut-e2e4b-r1_20261022_221018.json`,
+  gitignored with the Cerno results): below the 5 % bar, not integrated.
+- Pi: scratch `tmp/lut/`, `engine/pinfer_run_lut0/1` removed; `pinfer_run_fast` untouched (`d48ffda1`).
 
 ### Renamed (lead, 15:35): piquant → **nibblepi**
 - Owner asked for a better name; a naming review checked meaning, collisions (GitHub, PyPI, npm, web)
