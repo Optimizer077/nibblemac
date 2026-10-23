@@ -158,3 +158,98 @@ def test_load_state_rejects_other_kv_dtype(lib: Any, model_path: Path, saved: by
                             kv_dtype="fp16") as m,
           pytest.raises(pinfer.ModelFormatError, match="kv_dtype fp32")):
         m.load_state(saved)
+
+
+# ---------------------------------------------------------------- in-context checkpoint
+def _need_checkpoint(model: Any) -> None:
+    if not model.supports_checkpoint:
+        pytest.skip("libpinfer without pinfer_checkpoint")
+
+
+def test_checkpoint_rewind_is_exact(fresh: Any, golden: dict[str, Any]) -> None:
+    """checkpoint -> other tokens -> rewind -> the rest equals feeding the rest directly."""
+    _need_checkpoint(fresh)
+    ids = golden["input_ids"]
+    ref = fresh.eval(ids)
+    fresh.reset()
+    fresh.eval_select(ids[:4], [])
+    assert fresh.checkpoint_n_past is None
+    fresh.checkpoint()
+    assert fresh.checkpoint_n_past == 4
+    for detour in (ids[4:][::-1], ids[::-1] + ids[:3]):
+        fresh.eval(detour)
+        fresh.rewind()
+        assert fresh.n_past == 4 and fresh.context_tokens == tuple(ids[:4])
+        assert fresh.checkpoint_n_past == 4   # kept for the next rewind
+    assert np.array_equal(fresh.eval(ids[4:]), ref)
+    gen = list(fresh.iter_tokens(ids, max_new_tokens=6))   # continues from the context
+    assert gen == golden["greedy_ids"][:6]
+    fresh.rewind()                                          # once more, after a generation
+    assert np.array_equal(fresh.eval(ids[4:]), ref)
+
+
+def test_rewind_restores_last_logits(fresh: Any, golden: dict[str, Any]) -> None:
+    _need_checkpoint(fresh)
+    ids = golden["input_ids"]
+    fresh.eval(ids)
+    fresh.checkpoint()
+    fresh.eval(ids[:5])
+    fresh.rewind()
+    state: dict[str, Any] = {}
+    gen = list(fresh.iter_tokens(ids, max_new_tokens=3, _state=state))
+    assert state["cached_tokens"] == len(ids) and gen == golden["greedy_ids"][:3]
+
+
+def test_checkpoint_dropped_by_reset_and_load_state(fresh: Any, golden: dict[str, Any]) -> None:
+    _need_checkpoint(fresh)
+    import pinfer
+
+    ids = golden["input_ids"]
+    fresh.eval(ids[:4])
+    blob = fresh.save_state()
+    fresh.checkpoint()
+    fresh.eval_select(ids[4:6], [])          # feeding keeps it
+    assert fresh.checkpoint_n_past == 4
+    fresh.load_state(blob)                    # replacing the state drops it
+    assert fresh.checkpoint_n_past is None
+    with pytest.raises(pinfer.PinferError, match="no checkpoint"):
+        fresh.rewind()
+    assert fresh.n_past == 4                  # unchanged by the failed rewind
+    fresh.checkpoint()
+    fresh.reset()                             # so does a reset
+    assert fresh.checkpoint_n_past is None
+    with pytest.raises(pinfer.PinferError, match="no checkpoint"):
+        fresh.rewind()
+    assert fresh.n_past == 0
+
+
+def test_clear_checkpoint(fresh: Any, golden: dict[str, Any]) -> None:
+    _need_checkpoint(fresh)
+    import pinfer
+
+    fresh.eval(golden["input_ids"][:4])
+    fresh.checkpoint()
+    fresh.clear_checkpoint()
+    assert fresh.checkpoint_n_past is None
+    with pytest.raises(pinfer.PinferError, match="no checkpoint"):
+        fresh.rewind()
+    fresh.clear_checkpoint()                  # idempotent
+    fresh.checkpoint()                        # and usable again
+    assert fresh.checkpoint_n_past == 4
+
+
+def test_speculative_continues_after_rewind(fresh: Any, golden: dict[str, Any]) -> None:
+    """A speculative generation that extends the context keeps the checkpoint; after the
+    rewind the real prompt continues speculatively to the golden tokens."""
+    _need_checkpoint(fresh)
+    if not fresh.supports_speculative or not fresh._lib.has("pinfer_generate_greedy_cont"):
+        pytest.skip("no speculative continuation in this library / model")
+    ids = golden["input_ids"]
+    fresh.eval(ids[:4])
+    fresh.checkpoint()
+    detour = fresh.generate(ids[:4] + ids[4:][::-1], 5, speculative=True, spec_k=3)
+    assert detour.cached_tokens == 4 and fresh.checkpoint_n_past == 4
+    fresh.rewind()
+    res = fresh.generate(ids, 10, speculative=True, spec_k=3)
+    assert res.cached_tokens == 4
+    assert list(res.token_ids) == golden["greedy_ids"][:10]

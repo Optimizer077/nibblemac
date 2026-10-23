@@ -27,6 +27,10 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - `engine/pinfer_run_fast` `d48ffda1` → `508f1d74` (prefill tail + groups of 7s + 5s; Cerno decisions −4.4%, bit-identical);
   spec_exact 58/58 on the installed binary; old builds kept as `*.pre-csp`. `docs/pi-state.md` "Files we placed".
 
+### Added (checkpoint)
+- `pinfer_checkpoint` / `pinfer_rewind` (and `Model.checkpoint()` / `rewind()`): rewind to a saved prefix without copying
+  the state blob; Cerno decisions −1.6%, bit-identical; 106 MiB less peak memory. Not yet in the Pi's `pinfer_run_fast`.
+
 ### Added (GPU)
 - GPU co-processing pilot: **go** (CPU + GPU = 1.41–1.47× CPU alone on the Cerno 4B shapes).
 - `engine/gpu/v3d.c`: the QPU Q4_0 kernel from C through our own DRM calls (no GPL code), byte-identical to the
@@ -51,6 +55,28 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Prefill tail (the last layer computes only the last token's rows when only its logits are read) and prefill groups of
   7s + 5s with one fused job per call; bit-identical. Cerno decisions -4.4%, 4B prefill +4-5%, 0.8B prefill 43.8 -> 45.1,
   decode unchanged. `engine/bench/KERNELS.md` Part 4; `tests/test_prefill_tail.py`.
+
+### In-context checkpoint (checkpoint agent, 18:00–; branch `worktree-agent-a4d7c6bb45401045d`)
+- API (additive, version unchanged): `pinfer_checkpoint` / `pinfer_rewind` /
+  `pinfer_checkpoint_clear` / `pinfer_checkpoint_n_past` — one rewind point held inside the
+  context: the checkpoint copies only the conv + DeltaNet states of the linear layers (0.8B
+  20.2 MB, 4B 52.7 MB, whatever the context length) and remembers the position; the rewind
+  copies them back and returns to it, bit-identically, any number of times; the KV rows below it
+  stay in place (never rewritten while the checkpoint is valid), rows above are overwritten
+  later. Dropped by `pinfer_reset` / `pinfer_state_load` / the resetting generate calls.
+  Python: `Model.checkpoint()` / `rewind()` / `clear_checkpoint()`, `supports_checkpoint`,
+  `checkpoint_n_past`; `save_state` / `load_state` unchanged. Audit recommendation C3
+  (`docs/network-audit.md` §4): removes the 4 Python copies of the ~51 MB snapshot blob and the
+  K/V copy per restore in a Cerno decision; long states fit (3.5k → ~17k tokens).
+  `engine/CONTEXT.md` §10, `docs/library.md` §3 / §4 / §9.
+- Tests: `pinfer_run --rewind-at S`; `tests/test_state.py` run D (checkpoint → two rewound
+  detours → the rest of the prompt must equal the full run, plain / spec 3 / adaptive); 5 pytest
+  cases in `tests/python/test_state.py`.
+- cerno-pi (`feat/checkpoint`): `Decider` restores the shared prefix with the checkpoint when
+  the library has it, else `save_state` / `load_state` (`checkpoint=` argument,
+  `decide_bench.py --no-checkpoint`); probabilities bit-identical between the paths.
+- Measured: see `engine/CONTEXT.md` §10c (host gates) and §10d (Pi), filled in by this agent's
+  journal section.
 
 
 ### Prompt economy pilot (prompt agent, 21:08–; branch `worktree-agent-ae99d2e23cc77288a`)

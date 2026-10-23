@@ -486,3 +486,55 @@ decode vs −12% attention time in abench), see §9c.
   remaining lever for prefill and fp16 decode; not done (style of the code base).
 - With fp16 above 85% at 4096, making fp16 the default would need the quality decision of §5c
   (greedy output differs from fp32 at near-ties); unchanged here.
+
+## 10. In-context checkpoint (`pinfer_checkpoint` / `pinfer_rewind`; checkpoint agent, 2026-10-22 18:00–)
+Branch `worktree-agent-a4d7c6bb45401045d` from `624e00a`. Audit recommendation C3
+(`docs/network-audit.md` §4.1 #8): a Cerno decision prefills the rows' shared prefix once, saves
+it with `save_state` (Python: 4 copies of a ~51 MB blob, 0.24 s median) and restores it with
+`load_state` before every later question (a memcpy of the recurrent state **and** the prefix's
+K/V rows). The copies also bound the longest state that fits next to the 2.4 GB model at ~3,500
+tokens (audit §5).
+
+### 10a. Design
+- One slot inside the context (`forward.h`: `ck_buf`, `ck_valid`, `ck_n_past`, `ck_mtp_rows`).
+  `pinfer_checkpoint` copies the conv and recurrent states of the linear layers into it with
+  `copy_lin` (the same routine as `state.c`'s blob) and records `n_past` and the MTP row count.
+  Slot size = `count_layers(0) × lin_bytes`: 20.2 MB for Qwen3.5-0.8B, 52.7 MB for the 4B,
+  independent of the context length. Allocated on first use, kept across resets until
+  `pinfer_checkpoint_clear` / `pinfer_free`.
+- `pinfer_rewind` copies them back and sets `n_past` / `mtp_rows` back. **The K/V rows are not
+  copied**: the engine writes K/V rows only at positions ≥ `n_past` (prefill, decode, the
+  speculative verify pass and the MTP pass; a speculative round lowers `n_past` at most to where
+  the round started, never below), and a row above `n_past` is always written before it is read
+  (`docs/ARCHITECTURE.md` §6, the speculative rollback argument). So while `n_past ≥ ck_n_past` the
+  rows below the checkpoint are still the checkpoint's. The only calls that bring `n_past` below it
+  are `pinfer_reset` and `pinfer_state_load`, and both clear `ck_valid` (`pinfer_generate_greedy` /
+  `_ex` reset, so they drop it too; `_cont` keeps it). MTP rows in `[ck_mtp_rows, ck_n_past)` are
+  zeroed by the next speculative prefill like after a `state_load`. A rewind also forgets the
+  pending draft (`spec->m = NULL`) and resets the n-gram history (it described the abandoned
+  tokens; drafts never change the output).
+- Both directions cost one memcpy of the slot. For the 4B that is ~53 MB each way, i.e. ~15–30 ms
+  on the Pi (DRAM copy), against ~0.1 s for the Python `save_state` / `load_state` pair per
+  question and 0.24 s for the snapshot; memory: no transient copies, no K/V in the slot, so a
+  long state costs 64 KiB per token (the live K/V only): ~17,000 tokens fit (audit §5).
+- Python: `Model.checkpoint()` / `rewind()` / `clear_checkpoint()`, `supports_checkpoint`,
+  `checkpoint_n_past`; the Python-side token list and last logits are restored with the engine
+  state. `reset()` and `load_state()` drop the checkpoint on both sides. `save_state` /
+  `load_state` unchanged (persistence).
+- ABI: four additive `pinfer_*` symbols, no struct change, version stays 0.2.0 (same rule as
+  `pinfer_eval_select`, `docs/library.md` §4 ABI note). Feature-detected by the Python package
+  (`Lib.optional`), so an older `.so` still works (no checkpoint; cerno-pi falls back to the blob).
+- `pinfer_run --rewind-at S`: feeds the first S prompt tokens, checkpoints, then twice feeds a
+  detour (the prompt reversed, rotated by the round) in the run's mode, generates `-n` tokens
+  from it and rewinds; then the rest of the prompt and the normal generation. The output must
+  equal the plain run; it prints the checkpoint / rewind times and the slot size.
+
+### 10b. Host checks (WSL, scalar `ref` build, bf16 0.8B)
+- Smoke (prompt64, `--rewind-at 20`, 8 tokens): identical tokens to the full run, plain and
+  `--spec 3`; checkpoint 49–55 ms (first touch of the 20 MB slot), rewind 2.3 ms on the PC.
+- `tests/test_state.py` run D (`--rewind-at split`, 3 prompts × plain / spec 3 / adaptive, one
+  split inside a prefill chunk): see the gate table below.
+- pytest `tests/python/test_state.py`: 5 new cases — rewind exactness (two detours, then a
+  generation that extends the context, then a rewind again), last logits restored, dropped by
+  `reset` / `load_state` (failed rewind leaves the context unchanged), `clear_checkpoint`,
+  speculative continuation after a rewind (`pinfer_generate_greedy_cont` keeps the slot).

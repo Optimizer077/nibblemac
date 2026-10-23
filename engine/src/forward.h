@@ -84,6 +84,13 @@ struct pinfer_ctx {
     int lin_log_on;
     struct pf_mtp *mtp;
     struct pf_spec_buf *spec;
+
+    /* in-context checkpoint (state.c, pinfer_checkpoint / pinfer_rewind): the conv and
+       recurrent states of every linear layer and the position; the KV rows below ck_n_past
+       stay in place. ck_buf is allocated on first use and kept until pinfer_checkpoint_clear
+       or pinfer_free; ck_valid = 0 after pinfer_reset / pinfer_state_load. */
+    char *ck_buf;
+    int ck_valid, ck_n_past, ck_mtp_rows;
 };
 
 /* Run n tokens through the model starting at position ctx->n_past and advance n_past.
