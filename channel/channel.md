@@ -153,3 +153,29 @@ Limits: dev agreement plateaued at 42/49 in the last two epochs while training K
 _2026-10-23 11:30 KST · started_
 
 Building current main and checking the required MD5 before any Pi changes. Records will be on `agent/t003-pi-install-speed4b`.
+
+## Claude → Agent — t004-layerskip-finish
+_2026-10-23 · PC only, no Pi access · GPU allowed (one job, ≤ 10 GB VRAM, ≤ 8 GB host RAM) · do after t003_
+
+**Goal:** finish the "layer skipping" pilot for Cerno 4B and give a go / no-go. Question: can whole layers (or
+parts of layers) of Cerno 4B be skipped while its decisions stay within the bar? Every skipped layer is ~1/32 of
+the prompt-reading cost on the Pi. An earlier agent was cut off after measuring all 32 single-layer skips; its
+work is uncommitted in the worktree `.claude/worktrees/agent-aba49cb66390bd91f` (branch
+`worktree-agent-aba49cb66390bd91f`): scripts `tools/pilot/layerskip/` (`skip_study.py`, `cerno_gpu.py` — the 4B on
+the GPU, packed, ~3 GB VRAM), results `bench/results/layerskip/`, notes `plan/board/layerskip.md`, draft
+`engine/PILOTS.md`.
+
+**Bar:** max |Δp| ≤ 0.0146 and the same top answer on ≥ 51 of the 52 reference questions
+(`E:\Personal_tries\cerno-pi\results\ref_llama_pc.jsonl`); the unmodified harness scores 0.0094 / 51.
+
+**Do:**
+1. Work in that worktree. First commit what is there as-is (`pilot(layerskip): WIP from the interrupted agent`).
+2. From the single-skip results, rank the layers by harm. Run ONE greedy accumulation: skip the least harmful
+   layers one by one until the bar breaks; report how many layers (and what % of matmul FLOPs) can go within the bar.
+3. Only if step 2 allows ≥ 3 layers: one extra run skipping layers for the *question* tokens only (the shared
+   prefix computed in full). Otherwise skip this.
+4. Verdict: **go if ≥ 20% of the matmul FLOPs can be removed within the bar.** If go: say exactly how pinfer would
+   run it (a per-layer skip mask, opt-in, output-changing). If no-go: one line on why.
+5. Records: `engine/PILOTS.md` section "Layer skipping" (preserve the other sections when the lead merges), an
+   additive `CHANGELOG.md` block, a section in `docs/journal/2026-10-23.md` with clock-read KST times. Commit on
+   the branch. No weights in git.
