@@ -19,16 +19,20 @@ reference questions.
 | `sample_requests.json` | The first 10 generated requests (the full set stays outside git) |
 | `label_llama.py` | Teacher labels through `llama-server`, the same protocol as the reference (`n_probs=260`, `p^(1/T)` renormalised, T = 1.534) |
 | `train_student.py` | LoRA (or full) distillation, KL(teacher ‖ student) over the option labels at the answer slot |
-| `eval_ref.py` | Scores an HF model on labelled rows; top-answer agreement, mean / max \|Δp\|, per question type; checks the token ids against `server_ids` |
+| `eval_ref.py` | Scores an HF model on labelled rows; top-answer agreement, mean / max \|Δp\|; `--requests` supplies exact question types; checks the token ids against `server_ids` |
+| `results/t002-summary.json` | Aggregate verified result, training config, artifact sizes and SHA-256 hashes; no prompts or weights |
 
 ## Data and checkpoints (outside git, WSL `/root/distill/`)
 
 | Path | What | Size |
 |---|---|---|
-| `requests.json` | synthetic requests (seed 1, 25 per domain) | filled below |
-| `labels.jsonl` | the 4B's label logprobs and distributions per row | filled below |
-| `student-0.8b/` | merged distilled 0.8B (bf16 safetensors) + `adapter/` (LoRA) | filled below |
-| `results/*.json` | per-row evaluations (contain the reference prompts: Cerno material, not for this public repo) | filled below |
+| `requests.json` | synthetic requests (seed 1, 25 per domain) | 303,508 bytes |
+| `labels.jsonl` | the 4B's labels: 363 requests, 990 questions | 1,031,835 bytes |
+| `labels_ref_gpu.jsonl` | GPU teacher reference check | 60,955 bytes |
+| `student-0.8b/` | merged distilled 0.8B + LoRA, tokenizer/configs | 1,568,175,781 bytes (`du -sb`) |
+| `student-0.8b/model.safetensors` | merged bf16 model | 1,504,827,608 bytes |
+| `student-0.8b/adapter/adapter_model.safetensors` | LoRA weights | 43,340,856 bytes |
+| `results/student-0.8b-typed-t002.json` | full verified evaluation, including prompts; local only | exact bytes/hash in committed aggregate summary |
 | `models/` | local ext4 copies of the GGUF and the HF checkpoints (loads from `/mnt/e` were slow under load) | ~10 GB |
 
 ## Licences
@@ -69,7 +73,7 @@ mean |Δp| ≤ 0.05.
 | Qwen3.5-0.8B zero-shot (reference torch kernels) | 15/52 (28.8%) | 0.2089 | 0.4078 | 0.7417 | 9/31 | 6/21 | 11.8 |
 | Qwen3.5-0.8B zero-shot (`fla` kernels) | 16/52 (30.8%) | 0.2087 | 0.4075 | 0.7563 | 10/31 | 6/21 | 46.0 (Triton compile) |
 | Qwen3.5-2B zero-shot | 35/52 (67.3%) | 0.1598 | 0.3114 | 0.6506 | 18/31 | 17/21 | 8.9 |
-STUDENT_ROWS
+| Qwen3.5-0.8B distilled, 3 epochs (verified 2026-10-23) | 39/52 (75.0%) | 0.0888 | 0.1748 | 0.6274 | 22/31 | 17/21 | 2.7 |
 
 Notes.
 - The teacher row bounds what any student can reach against this reference: the GPU teacher itself
@@ -90,8 +94,44 @@ The templates saturate (1440 → 1009 unique): more variety needs more templates
 Labelling speed on the GPU teacher: ~2.8 requests/s (set 1 in 2 min; the CPU x86 build did 1
 request in 3 min under the shared load, a dead end).
 
-STUDENT_NOTES
+### Completed student: no-go (verified 2026-10-23)
+
+The interrupted *agent* left a completed student, not interrupted training: `distill_config.json`
+records 3 epochs, 941 train / 49 dev rows, 1,653.1 seconds; the pipeline ends `PIPELINE_DONE`.
+Dev agreement went 33/49 -> 42/49 -> 42/49 (epochs 0, 1, 2); final dev KL 0.152 versus late
+training KL about 0.04. The run is not clearly undertrained, so no additional training was run.
+Held-out agreement is only 39/52: **no-go** against the 85% bar (45/52 required).
+
+| actual question type | agreement | mean option \|Δp\| | mean row max \|Δp\| | max \|Δp\| |
+|---|---|---|---|---|
+| choice | 16/19 | 0.0542 | 0.1647 | 0.5694 |
+| yes/no (`noul`) | 17/21 | 0.1478 | 0.1478 | 0.6274 |
+| score | 6/12 | 0.1205 | 0.2381 | 0.5452 |
+
+Types are taken from the original requests. Without `--requests`, missing types are reported as
+`unknown`; two options alone do not establish a yes/no question. The evaluator now also records
+peak CUDA allocated/reserved memory. Reproduce (WSL, at this worktree's root):
+
+```bash
+OMP_NUM_THREADS=8 MKL_NUM_THREADS=8 OPENBLAS_NUM_THREADS=8 /usr/bin/time -v \
+  /root/venv-distill/bin/python tools/pilot/distill/eval_ref.py \
+  --model /root/distill/student-0.8b \
+  --ref /mnt/e/Personal_tries/cerno-pi/results/ref_llama_pc.jsonl \
+  --requests /mnt/e/Personal_tries/cerno-pi/requests/correctness.json \
+  --out /root/distill/results/student-0.8b-typed-t002.json --temperature 1.534
+```
+
+Measured process: 8.27 s wall, 2,509,608 KiB peak RSS, 1,570,329,088 bytes CUDA allocated /
+1,595,932,672 reserved. One GPU job, no Pi access. The initial fresh evaluation also reproduced
+39/52 (`/root/distill/eval-t002.log`); the typed run log is `/root/distill/eval-typed-t002.log`.
+An independent aggregate check verified counts, normalized finite probabilities, agreement and
+mean/max error, completed config, and zero exact prompt overlaps with the 990 synthetic rows.
+Close the pilot: template coverage/generalization and score questions limit it. Similar domains
+are not an independent quality benchmark; Cerno remains the deployed decision model.
 
 ## Timeline
 
 - 21:08 start; 21:20 WSL crash (restarted by the lead 21:27), first zero-shot and server runs lost.
+- 2026-10-22 22:18: saved student and completed evaluation, from `/root/distill/pipeline.log`.
+- 2026-10-23 11:22 KST: resumed task t002, preserved WIP in commit `1b679da`; completion checked.
+- 2026-10-23 11:25 KST: fresh typed result verified; no-go, no retraining. Times read from the clock.

@@ -3,7 +3,7 @@
 One section per pilot: question, method, numbers, verdict, scale-up plan. Scripts under
 `tools/pilot/<name>/`; data and checkpoints outside git.
 
-## Distilled decider (2026-10-22, branch `worktree-agent-acefa744010d32b52`)
+## Distilled decider (2026-10-23, branch `worktree-agent-acefa744010d32b52`)
 
 **Question.** Can a small Qwen3.5 model reproduce Cerno 4B's typed decisions closely enough to be a
 fast first pass on the Pi 4 (0.8B prefill 43 tok/s vs 6.8 for the 4B: 5-6x per decision)?
@@ -28,11 +28,34 @@ fast first pass on the Pi 4 (0.8B prefill 43 tok/s vs 6.8 for the 4B: 5-6x per d
 **Results** (52 held-out reference questions, 213 options; the engine-exactness bar is
 max |Δp| ≤ 0.0146 and ≥ 51/52 top answers; the pilot's go bar is ≥ 85% top-answer agreement):
 
-RESULTS_TABLE
+| model | top answer | mean \|Δp\|, options | mean row max \|Δp\| | max \|Δp\| | choice | yes/no | score |
+|---|---|---|---|---|---|---|---|
+| 0.8B zero-shot | 15/52 (28.8%) | 0.2089 | 0.4078 | 0.7417 | 7/19 | 6/21 | 2/12 |
+| 2B zero-shot | 35/52 (67.3%) | 0.1598 | 0.3114 | 0.6506 | 12/19 | 17/21 | 6/12 |
+| 0.8B distilled, completed 3 epochs | 39/52 (75.0%) | 0.0888 | 0.1748 | 0.6274 | 16/19 | 17/21 | 6/12 |
 
-**Verdict.** VERDICT
+Per-type mean option / maximum probability error: choice 0.0542 / 0.5694; yes/no
+0.1478 / 0.6274; score 0.1205 / 0.5452. Exact types come from
+`cerno-pi/requests/correctness.json`, rather than guessing from the number of options.
+Fresh evaluation: 52/52 tokenizations match, 213 options, T = 1.534, 2.7 s scoring on the PC GPU
+(8.27 s process wall time), peak host RSS 2,509,608 KiB, CUDA allocator peak 1,595,932,672 bytes
+reserved. These are PC evaluation costs, not Pi timings. Evidence and artifact hashes:
+`tools/pilot/distill/results/t002-summary.json`; full local rows:
+`/root/distill/results/student-0.8b-typed-t002.json`.
 
-**Scale-up plan.** SCALEUP
+**Verdict.** **No-go:** 39/52 is below the required 85% (at least 45/52).
+Distillation improves agreement substantially but does not reproduce Cerno closely enough.
+The original run completed all 3 epochs (941 train / 49 dev rows, 1,653.1 s); dev agreement
+plateaued at 42/49 (85.7%) in epochs 1 and 2, while late training KL fell to about 0.04 and
+dev KL remained 0.152. This suggests a generalization / synthetic-data coverage gap rather
+than an unfinished or clearly undertrained run, so no extra training or model variant was run.
+Score questions remain at 6/12; confident probability differences remain large.
+
+**Next step.** Close this pilot; keep Cerno as the decision model. A future separately authorized
+pilot would need broader teacher-labelled states and a fresh evaluation set, rather than more
+epochs on these templates. This 52-question correctness set measures agreement with Cerno,
+not real-world decision quality. There are no exact prompt overlaps with the 990 synthetic
+training/dev rows, but both sets cover similar domains. No Pi speedup is claimed for this student.
 
 **Licences.** Qwen3.5 base models Apache-2.0. Cerno's weights: the model card says Apache-2.0 but the
 weight repositories carry no LICENSE file (`cerno-pi/NOTICE`); the teacher is used locally only and

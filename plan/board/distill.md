@@ -55,3 +55,13 @@ outside git (`/root/distill/` in WSL, listed in `tools/pilot/distill/README.md`)
   rows. 52 rows in 11.8 s on the GPU (evidence: `/root/distill/results/zs-0.8b.json`).
 - 21:20 [measured] reference readout checked: p = softmax(logprob / 1.534) over the label
   logprobs of `ref_llama_pc.jsonl` reproduces `probs` to 4 digits (row support_triage/kind).
+
+## Completed 2026-10-23 (t002)
+- 11:22 KST [verified] Training had finished: 3 epochs, 941 train / 49 dev rows, 1,653.1 s;
+  saved merged model and adapter in `/root/distill/student-0.8b`. Existing WIP committed as `1b679da`.
+- 11:25 KST [measured] Fresh reference evaluation: 39/52 (75.0%); mean option |dp| 0.0888,
+  max 0.6274; choice 16/19, yes/no 17/21, score 6/12. T=1.534, 52/52 tokenizations match.
+- 11:28 KST [done] **No-go** (bar 85%, at least 45/52). Dev agreement plateaued at 42/49 over
+  the final two epochs; not an unfinished/clearly undertrained model, so no additional training.
+  No Pi access. GPU slot released. Full evidence: `tools/pilot/distill/results/t002-summary.json`;
+  report and local artifact sizes: `tools/pilot/distill/README.md`, `engine/PILOTS.md`.

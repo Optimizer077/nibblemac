@@ -53,11 +53,7 @@ def load_rows(path: Path) -> list[dict]:
 
 
 def q_type(row: dict) -> str:
-    if row["type"]:
-        return row["type"]
-    if len(row["labels"]) == 2:
-        return "noul"
-    return "choice/score"
+    return row["type"] or "unknown"
 
 
 @torch.no_grad()
@@ -72,6 +68,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--model", required=True)
     ap.add_argument("--ref", type=Path, required=True)
+    ap.add_argument("--requests", type=Path, help="original requests, for exact question types")
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--temperature", type=float, default=CERNO_TEMPERATURE)
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
@@ -80,6 +77,14 @@ def main() -> None:
     tok, model = load_model(a.model, a.device)
     labels = label_table(tok)
     rows = load_rows(a.ref)
+    if a.requests:
+        types = {}
+        for request in json.loads(a.requests.read_text(encoding="utf-8")):
+            for key, question in request["questions"].items():
+                kind = question.get("type", "choice")
+                types[(request["name"], key)] = "noul" if kind == "bool" else kind
+        for row in rows:
+            row["type"] = types[(row["name"], row["question"])]
     t0 = time.perf_counter()
     mismatched = 0
     for row in rows:
@@ -101,6 +106,8 @@ def main() -> None:
     for t in sorted({q_type(r) for r in rows}):
         sub = [r for r in rows if q_type(r) == t]
         by_type[t] = {"rows": len(sub), "agree": sum(r["agree"] for r in sub),
+                      "mean_abs_dp_options": round(st.mean(abs(x - y) for r in sub
+                          for x, y in zip(r["p_teacher"], r["p_student"])), 4),
                       "mean_max_dp": round(st.mean(r["max_dp"] for r in sub), 4),
                       "max_dp": round(max(r["max_dp"] for r in sub), 4)}
     summary = {"model": a.model, "tag": a.tag, "ref": str(a.ref), "rows": len(rows), "options": len(all_dp),
@@ -111,6 +118,9 @@ def main() -> None:
                "median_max_dp": round(st.median(r["max_dp"] for r in rows), 4),
                "tokenization_mismatches": mismatched, "seconds": round(secs, 1), "by_type": by_type,
                "temperature": a.temperature, "device": a.device}
+    if str(a.device).startswith("cuda"):
+        summary["cuda_peak_allocated_bytes"] = torch.cuda.max_memory_allocated(a.device)
+        summary["cuda_peak_reserved_bytes"] = torch.cuda.max_memory_reserved(a.device)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps({"summary": summary, "rows": rows}, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(summary, indent=1))
