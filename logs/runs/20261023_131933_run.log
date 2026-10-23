@@ -1,0 +1,5 @@
+# 2026-10-23T13:19:33 pi@10.42.0.2
+$ flock -n /tmp/pinfer-bench.lock true
+
+
+[exit 0]
