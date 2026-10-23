@@ -159,11 +159,6 @@ twice; clang 20 is excluded for correctness. `engine/Makefile` unchanged. The re
 this loop is instruction order inside the kernel (lut's asm passes), not the compiler.
 
 
-# Pilots (PC-side experiments before scaling)
-
-One section per pilot: question, method, numbers, verdict, scale-up plan. Scripts under
-`tools/pilot/<name>/`; data and checkpoints outside git.
-
 ## Distilled decider (2026-10-23, branch `worktree-agent-acefa744010d32b52`)
 
 **Question.** Can a small Qwen3.5 model reproduce Cerno 4B's typed decisions closely enough to be a
