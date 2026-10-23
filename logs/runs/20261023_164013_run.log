@@ -1,0 +1,32 @@
+# 2026-10-23T16:40:13 pi@10.42.0.2
+$ set -eu
+venvs/pinfer/bin/python -c 'import pinfer; print({x:hasattr(pinfer.Model,x) for x in ("eval_select","save_state","load_state","checkpoint")}); import pinfer._lib as l; print(l.__file__)'
+printf 'Cerno source files\n'
+find tmp/cerno -maxdepth 2 -type f -name '*.py' -print
+printf 'Installed pinfer wheel caches\n'
+find . -maxdepth 4 -type f -name 'pinfer-0.1*whl' -print
+printf 'Remote gate revision\n'
+md5sum engine/spec_exact.sh engine/ctx_check.sh
+
+
+{'eval_select': False, 'save_state': False, 'load_state': False, 'checkpoint': False}
+/home/pi/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/_lib.py
+Cerno source files
+tmp/cerno/cerno_pi/__main__.py
+tmp/cerno/cerno_pi/__init__.py
+tmp/cerno/cerno_pi/cli.py
+tmp/cerno/cerno_pi/decide.py
+tmp/cerno/bench/decide_bench.py
+tmp/cerno/bench/compare_refs.py
+tmp/cerno/bench/llama_pi.py
+tmp/cerno/bench/compare.py
+tmp/cerno/bench/latency_table.py
+tmp/cerno/bench/ref_llama.py
+Installed pinfer wheel caches
+./wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl
+./wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_33_aarch64.whl
+Remote gate revision
+2d0668b18325a7696188d38370216579  engine/spec_exact.sh
+07561f150c64cd4079fdecf3e7dab1bd  engine/ctx_check.sh
+
+[exit 0]

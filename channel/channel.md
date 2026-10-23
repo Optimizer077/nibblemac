@@ -733,3 +733,57 @@ decode (7.8 tok/s plain, 20.2 speculative) is DRAM-bound (424.9 MB per token at 
    output must still equal plain greedy *within* the GPU mode (spec_exact rows with `--gpu`).
 4. **Gates (GPU off):** bit-identical as before (host suite, Pi spec_exact, ctx_check). Fallback paths still clean.
 5. Report as usual (files uncommitted in `agent/t011-gpu-q4k`, result files, tables, Pi files + undo). No records.
+
+## Agent → Claude — t010-pi-install-0.3 (started)
+_2026-10-23 16:39 KST · running_
+
+Worktree `.claude/worktrees/agent-t010-pi-install-0.3`, branch `agent/t010-pi-install-0.3`, current main `7499dab` (t011 channel commit landed before checkout). Cross-building CLI tools, 0.3 shared library and wheel with MATVEC=fast, four build workers. Will stage and gate before replacing shared binaries; preserve binary and Python-package rollback. No records or commits.
+
+## Agent → Claude — t011-gpu-q4k-0.8b (started)
+_2026-10-23 16:39 KST · queued after t010_
+
+Read the full Q4K pilot request. Will start in a separate `agent/t011-gpu-q4k` worktree after the shared 0.3 install is complete. No Q4K changes yet.
+
+## Agent → Claude — t010-pi-install-0.3
+_2026-10-23 16:54 KST · done_
+
+Done: shared CLI tools and `venvs/pinfer` now use main's pinfer 0.3.0. GPU remains off by default. No commits or record edits.
+
+Worktree `.claude/worktrees/agent-t010-pi-install-0.3`, branch `agent/t010-pi-install-0.3`, base `7499dab`. Built `make -C engine -j4 pi pi-lib wheel-pi MATVEC=fast` in WSL. Evidence, uncommitted: `bench/results/v03-install-summary.json`, `v03-install-spec_20261023_164906.json`, `v03-install-ctx_20261023_165034.json`. Build logs, hashes and controller/helpers under ignored `build/t010/`.
+
+| installed artifact | md5 |
+|---|---|
+| `~/pinfer/engine/pinfer_run_fast` (also staged as `pinfer_run_v03`) | `c6dcc1953fd7fb5e20a672a94e651f61` |
+| `~/pinfer/engine/pinfer_ppl_fast` (also `pinfer_ppl_v03`) | `069d034d5ad18ccc3cf7a316c79dab1d` |
+| `~/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so` | `9d3bbc18cdb8aaf41c9492f406e0573a` |
+| `pinfer-0.3.0-py3-none-manylinux_2_34_aarch64.whl` | `78c80e6b845b98b473c5bb275ce51b5c` |
+
+Wheel (163718 bytes) staged in `~/pinfer/tmp/install-v03/`, installed offline with `--no-index --no-deps --force-reinstall`; other dependencies unchanged. Bundled .so matches the standalone build. `check_lib.sh` PASS: SONAME 0.3, required glibc 2.34 <= Pi 2.41. CLI and .so SHA256 match the final t007 GPU8 artifacts exactly (full hashes in summary).
+
+Gates **before installation**, both valid=true:
+- `bash engine/spec_exact.sh ./engine/pinfer_run_v03`: **58/58 match**, n=40. All 58 generation hashes also equal the previous csp1 build's `cerno-speed-gate-spec-exact_20261022_165439.json`.
+- `bash engine/ctx_check.sh ./engine/pinfer_run_v03 ./engine/pinfer_run_fast`: **5/5 identical** hidden/logit dumps against shared `508f1d74`. Pi scripts match the corresponding current `engine/bench/` source hashes.
+
+Installed-package Cerno smoke, `intent_smart_home`, two questions / eight options, ctx=512, both valid=true:
+- `cerno-v03-install-off_20261023_165107.json`: default GPU 0, real in-engine checkpoint, **8/8 unrounded probabilities + all row IDs and answers exactly equal** pre-install t007 CPU record `cerno-gpu-eng-decide-000-r1_20261023_134643.json`.
+- `cerno-v03-install-gpu_20261023_165130.json`: `gpu_split=0.33`, actual V3D cache 138/200, checkpoint; all eight probabilities/IDs/answers exactly equal its earlier t007 GPU record `cerno-gpu-eng-decide-033-r1_20261023_135004.json`.
+- Both import the installed package and bundled library from `~/pinfer/venvs/pinfer`, version 0.3.0. Prior package was 0.1.0 with no checkpoint/eval_select/state API. Full raw Cerno records retain the ignored `cerno-` prefix.
+
+Backups: `engine/pinfer_run_fast.pre-v03` md5 `508f1d742e0168282fb94b3c3cd0afc7`; `engine/pinfer_ppl_fast.pre-v03` `98f7c5e1376abc9e2acbdc34db39f05c`. Exact previous Python package/metadata/console script archived at `tmp/install-v03/pinfer-pre-v03.tar.gz`; inventory `pinfer-pre-v03.json`. Its old library md5 `50fff71a50b8711c70a57903b754bc60` also matches the preserved `wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl`.
+
+Cleanup: checked process cwd/exe/maps/open fds; none used the three completed scratch trees. Archived them for undo, then removed **tmp/gpu-c, tmp/gpu-engine, tmp/csp**. Archive `tmp/install-v03/scratch-pre-v03.tar.gz`, 86209174 bytes, SHA256 `62744128f960e4112269f9c4f2c297a0d14abc0a9b52a031d82e0629a90497b7`. Final inventory confirms all three absent, installed hashes correct, checkpoint exported, throttle 0x0.
+
+Undo from the PC repository root (every mutation uses the harness lock):
+
+```powershell
+python harness/pi.py run --lock 'cp engine/pinfer_run_fast.pre-v03 engine/pinfer_run_fast && cp engine/pinfer_ppl_fast.pre-v03 engine/pinfer_ppl_fast'
+python harness/pi.py run --lock 'venvs/pinfer/bin/python -m pip install --no-index --no-deps --force-reinstall wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl'
+python harness/pi.py run --lock 'tar -xzf tmp/install-v03/scratch-pre-v03.tar.gz -C .'
+```
+
+Exact archive alternative for Python rollback: `python harness/pi.py run --lock 'venvs/pinfer/bin/python -m pip uninstall -y pinfer && tar -xzf tmp/install-v03/pinfer-pre-v03.tar.gz -C venvs/pinfer'`.
+After rollback, remove the new aliases/backups/staging if wanted: `python harness/pi.py run --lock 'rm -f engine/pinfer_run_v03 engine/pinfer_ppl_v03 engine/pinfer_run_fast.pre-v03 engine/pinfer_ppl_fast.pre-v03 && rm -rf tmp/install-v03'` (do this only after restoring from its archives).
+
+Snapshot `logs/snapshots/20261023_165034_before-pinfer-v03-install`. Install / cleanup / final inventory logs: `logs/runs/20261023_165038_run.log`, `20261023_165131_run.log`, `20261023_165250_run.log`. All underlying harness calls exited 0. The PC PowerShell `*>` wrapper returned 1 because it classified the GPU's informational stderr banner as NativeCommandError; the controller completed, both harness smoke records are valid=true, and independent final inventory passed. A subsequent local log-read initially assumed UTF8; corrected for PowerShell's UTF16 output. No engine, installation or gate failure.
+
+Open issues: none blocking. Starting the queued t011 Q4K pilot next.

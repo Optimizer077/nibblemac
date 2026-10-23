@@ -1,0 +1,14 @@
+# 2026-10-23T16:50:38 pi@10.42.0.2
+$ venvs/pinfer/bin/python tmp/install-v03/install_v03.py
+
+Processing ./tmp/install-v03/pinfer-0.3.0-py3-none-manylinux_2_34_aarch64.whl
+Installing collected packages: pinfer
+  Attempting uninstall: pinfer
+    Found existing installation: pinfer 0.1.0
+    Uninstalling pinfer-0.1.0:
+      Successfully uninstalled pinfer-0.1.0
+Successfully installed pinfer-0.3.0
+installed package and bundled library 0.3.0
+RESULT {"bench": "v03_install", "installed": true, "binary_md5": {"pinfer_run_fast": "c6dcc1953fd7fb5e20a672a94e651f61", "pinfer_ppl_fast": "069d034d5ad18ccc3cf7a316c79dab1d"}, "library_md5": "9d3bbc18cdb8aaf41c9492f406e0573a", "rollback": {"before_package": "0.1.0", "before_library_md5": "50fff71a50b8711c70a57903b754bc60", "matching_rollback_wheels": ["wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl"], "archive": "tmp/install-v03/pinfer-pre-v03.tar.gz", "archive_sha256": "8f8c222cb0b7c4f516dfea5ca0498933bd9fe424eb418d6b4874c3b3cb96abb2", "packages": [{"name": "anyio", "version": "4.15.1"}, {"name": "click", "version": "8.5.0"}, {"name": "filelock", "version": "4.2.4"}, {"name": "fsspec", "version": "2026.9.0"}, {"name": "h11", "version": "0.16.0"}, {"name": "hf-xet", "version": "1.7.0"}, {"name": "httpcore2", "version": "2.16.0"}, {"name": "httpx2", "version": "2.16.0"}, {"name": "huggingface_hub", "version": "2.2.0"}, {"name": "idna", "version": "3.20"}, {"name": "iniconfig", "version": "2.3.1"}, {"name": "Jinja2", "version": "3.1.6"}, {"name": "MarkupSafe", "version": "3.0.4"}, {"name": "numpy", "version": "2.5.4"}, {"name": "packaging", "version": "26.3"}, {"name": "pinfer", "version": "0.1.0"}, {"name": "pip", "version": "26.2.2"}, {"name": "pluggy", "version": "1.7.0"}, {"name": "Pygments", "version": "2.21.0"}, {"name": "pytest", "version": "9.1.1"}, {"name": "PyYAML", "version": "6.0.3"}, {"name": "tokenizers", "version": "0.23.3"}, {"name": "tqdm", "version": "4.70.1"}, {"name": "truststore", "version": "0.10.5"}, {"name": "typing_extensions", "version": "4.16.0"}], "binary_before": {"pinfer_run_fast": "508f1d742e0168282fb94b3c3cd0afc7", "pinfer_ppl_fast": "98f7c5e1376abc9e2acbdc34db39f05c"}}}
+
+[exit 0]

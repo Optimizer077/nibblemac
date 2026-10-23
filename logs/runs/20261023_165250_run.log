@@ -1,0 +1,24 @@
+# 2026-10-23T16:52:50 pi@10.42.0.2
+$ set -eu
+venvs/pinfer/bin/python - <<'PY'
+from pathlib import Path
+import hashlib,importlib.metadata,json
+from pinfer._lib import load_library
+root=Path.cwd()
+pkg=Path('venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so')
+print('RESULT '+json.dumps({'bench':'v03_final_inventory','package':importlib.metadata.version('pinfer'),
+ 'library':load_library().version,'library_md5':hashlib.md5(pkg.read_bytes()).hexdigest(),
+ 'checkpoint_export':load_library().has('pinfer_checkpoint'),
+ 'scratch_remaining':[str(p) for p in map(Path,('tmp/gpu-c','tmp/gpu-engine','tmp/csp')) if p.exists()],
+ 'rollback':json.loads(Path('tmp/install-v03/pinfer-pre-v03.json').read_text())['matching_rollback_wheels']}))
+PY
+md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast
+vcgencmd get_throttled
+
+
+RESULT {"bench": "v03_final_inventory", "package": "0.3.0", "library": "0.3.0", "library_md5": "9d3bbc18cdb8aaf41c9492f406e0573a", "checkpoint_export": true, "scratch_remaining": [], "rollback": ["wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl"]}
+c6dcc1953fd7fb5e20a672a94e651f61  engine/pinfer_run_fast
+069d034d5ad18ccc3cf7a316c79dab1d  engine/pinfer_ppl_fast
+throttled=0x0
+
+[exit 0]

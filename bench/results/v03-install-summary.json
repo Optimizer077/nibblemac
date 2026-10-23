@@ -1,0 +1,199 @@
+{
+  "base": "7499dab",
+  "build": {
+    "build/aarch64/engine/pinfer_run": {
+      "md5": "c6dcc1953fd7fb5e20a672a94e651f61",
+      "sha256": "fd1009d78c38b69ba81a11fd9cc9fbed129055fcda57e41f7241fb18858ea216",
+      "bytes": 1004336
+    },
+    "build/aarch64/engine/pinfer_ppl": {
+      "md5": "069d034d5ad18ccc3cf7a316c79dab1d",
+      "sha256": "7baa66c70b96da372c9557d05b5c9ad49cd8144a27691588cae5e251f56c2142",
+      "bytes": 1004576
+    },
+    "build/aarch64/engine/lib/libpinfer.so": {
+      "md5": "9d3bbc18cdb8aaf41c9492f406e0573a",
+      "sha256": "f9f301f2bc939efa6487e2029da99fb0bd5b31c12743a7ed44dd363028c79419",
+      "bytes": 214296
+    },
+    "build/dist/pinfer-0.3.0-py3-none-manylinux_2_34_aarch64.whl": {
+      "md5": "78c80e6b845b98b473c5bb275ce51b5c",
+      "sha256": "fbf8e7ebe9d75c0fef513c491af949558f815359d8f4d559f1a14e1e87b0ebbc",
+      "bytes": 163718
+    }
+  },
+  "v03-install-spec": {
+    "file": "v03-install-spec_20261023_164906.json",
+    "rows": 58
+  },
+  "spec_before_identical": 58,
+  "v03-install-ctx": {
+    "file": "v03-install-ctx_20261023_165034.json",
+    "rows": 5
+  },
+  "cerno-v03-install-off": {
+    "file": "cerno-v03-install-off_20261023_165107.json",
+    "rows": 1,
+    "before_identical": true,
+    "options": 8,
+    "checkpoint": true,
+    "before_source": "cerno-gpu-eng-decide-000-r1_20261023_134643.json"
+  },
+  "cerno-v03-install-gpu": {
+    "file": "cerno-v03-install-gpu_20261023_165130.json",
+    "rows": 1,
+    "before_identical": true,
+    "options": 8,
+    "checkpoint": true,
+    "before_source": "cerno-gpu-eng-decide-033-r1_20261023_135004.json"
+  },
+  "v03_install": {
+    "bench": "v03_install",
+    "installed": true,
+    "binary_md5": {
+      "pinfer_run_fast": "c6dcc1953fd7fb5e20a672a94e651f61",
+      "pinfer_ppl_fast": "069d034d5ad18ccc3cf7a316c79dab1d"
+    },
+    "library_md5": "9d3bbc18cdb8aaf41c9492f406e0573a",
+    "rollback": {
+      "before_package": "0.1.0",
+      "before_library_md5": "50fff71a50b8711c70a57903b754bc60",
+      "matching_rollback_wheels": [
+        "wheels/pinfer/pinfer-0.1.0-py3-none-manylinux_2_34_aarch64.whl"
+      ],
+      "archive": "tmp/install-v03/pinfer-pre-v03.tar.gz",
+      "archive_sha256": "8f8c222cb0b7c4f516dfea5ca0498933bd9fe424eb418d6b4874c3b3cb96abb2",
+      "packages": [
+        {
+          "name": "anyio",
+          "version": "4.15.1"
+        },
+        {
+          "name": "click",
+          "version": "8.5.0"
+        },
+        {
+          "name": "filelock",
+          "version": "4.2.4"
+        },
+        {
+          "name": "fsspec",
+          "version": "2026.9.0"
+        },
+        {
+          "name": "h11",
+          "version": "0.16.0"
+        },
+        {
+          "name": "hf-xet",
+          "version": "1.7.0"
+        },
+        {
+          "name": "httpcore2",
+          "version": "2.16.0"
+        },
+        {
+          "name": "httpx2",
+          "version": "2.16.0"
+        },
+        {
+          "name": "huggingface_hub",
+          "version": "2.2.0"
+        },
+        {
+          "name": "idna",
+          "version": "3.20"
+        },
+        {
+          "name": "iniconfig",
+          "version": "2.3.1"
+        },
+        {
+          "name": "Jinja2",
+          "version": "3.1.6"
+        },
+        {
+          "name": "MarkupSafe",
+          "version": "3.0.4"
+        },
+        {
+          "name": "numpy",
+          "version": "2.5.4"
+        },
+        {
+          "name": "packaging",
+          "version": "26.3"
+        },
+        {
+          "name": "pinfer",
+          "version": "0.1.0"
+        },
+        {
+          "name": "pip",
+          "version": "26.2.2"
+        },
+        {
+          "name": "pluggy",
+          "version": "1.7.0"
+        },
+        {
+          "name": "Pygments",
+          "version": "2.21.0"
+        },
+        {
+          "name": "pytest",
+          "version": "9.1.1"
+        },
+        {
+          "name": "PyYAML",
+          "version": "6.0.3"
+        },
+        {
+          "name": "tokenizers",
+          "version": "0.23.3"
+        },
+        {
+          "name": "tqdm",
+          "version": "4.70.1"
+        },
+        {
+          "name": "truststore",
+          "version": "0.10.5"
+        },
+        {
+          "name": "typing_extensions",
+          "version": "4.16.0"
+        }
+      ],
+      "binary_before": {
+        "pinfer_run_fast": "508f1d742e0168282fb94b3c3cd0afc7",
+        "pinfer_ppl_fast": "98f7c5e1376abc9e2acbdc34db39f05c"
+      }
+    }
+  },
+  "v03_cleanup": {
+    "bench": "v03_cleanup",
+    "removed": [
+      "tmp/gpu-c",
+      "tmp/gpu-engine",
+      "tmp/csp"
+    ],
+    "archive": "tmp/install-v03/scratch-pre-v03.tar.gz",
+    "archive_bytes": 86209174,
+    "archive_sha256": "62744128f960e4112269f9c4f2c297a0d14abc0a9b52a031d82e0629a90497b7"
+  },
+  "run_logs": [
+    "logs/runs/20261023_164013_run.log",
+    "logs/runs/20261023_165038_run.log",
+    "logs/runs/20261023_165131_run.log",
+    "logs/runs/20261023_165250_run.log"
+  ],
+  "snapshot": "logs/snapshots/20261023_165034_before-pinfer-v03-install",
+  "powershell_wrapper": {
+    "exit": 1,
+    "reason": "PowerShell NativeCommandError formatted informational V3D stderr during redirection; controller reached DONE, every underlying harness exit was 0."
+  },
+  "gpu_default": 0,
+  "final_package": "0.3.0",
+  "final_throttled": "0x0"
+}

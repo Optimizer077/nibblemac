@@ -1,0 +1,47 @@
+# 2026-10-23T16:51:31 pi@10.42.0.2
+$ set -eu
+venvs/pinfer/bin/python - <<'PY'
+from pathlib import Path
+import hashlib,json,os,shutil,tarfile
+root=Path.cwd().resolve()
+targets=[root/'tmp'/name for name in ('gpu-c','gpu-engine','csp')]
+for p in targets:assert p.resolve()==p and p.parent==root/'tmp'
+busy=[]
+for proc in Path('/proc').iterdir():
+    if not proc.name.isdigit():continue
+    paths=[]
+    try:
+        paths += [Path(os.readlink(proc/name)) for name in ('cwd','exe')]
+    except OSError:pass
+    try:
+        for line in (proc/'maps').read_text().splitlines():
+            bits=line.split(None,5)
+            if len(bits)==6 and bits[5].startswith('/'):paths.append(Path(bits[5].removesuffix(' (deleted)')))
+    except OSError:pass
+    try:
+        for fd in (proc/'fd').iterdir():
+            try:paths.append(Path(os.readlink(fd)))
+            except OSError:pass
+    except OSError:pass
+    for t in targets:
+        if any(p==t or t in p.parents for p in paths):busy.append({'pid':proc.name,'directory':str(t.relative_to(root))})
+assert not busy,busy
+existing=[p for p in targets if p.is_dir()]
+archive=root/'tmp/install-v03/scratch-pre-v03.tar.gz'
+with tarfile.open(archive,'x:gz',compresslevel=1) as tar:
+    for p in existing:tar.add(p,arcname=str(p.relative_to(root)))
+for p in existing:shutil.rmtree(p)
+print('RESULT '+json.dumps({'bench':'v03_cleanup','removed':[str(p.relative_to(root)) for p in existing],
+      'archive':str(archive.relative_to(root)),'archive_bytes':archive.stat().st_size,
+      'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest()}))
+PY
+md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast engine/pinfer_run_fast.pre-v03 engine/pinfer_ppl_fast.pre-v03
+
+
+RESULT {"bench": "v03_cleanup", "removed": ["tmp/gpu-c", "tmp/gpu-engine", "tmp/csp"], "archive": "tmp/install-v03/scratch-pre-v03.tar.gz", "archive_bytes": 86209174, "archive_sha256": "62744128f960e4112269f9c4f2c297a0d14abc0a9b52a031d82e0629a90497b7"}
+c6dcc1953fd7fb5e20a672a94e651f61  engine/pinfer_run_fast
+069d034d5ad18ccc3cf7a316c79dab1d  engine/pinfer_ppl_fast
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_fast.pre-v03
+98f7c5e1376abc9e2acbdc34db39f05c  engine/pinfer_ppl_fast.pre-v03
+
+[exit 0]

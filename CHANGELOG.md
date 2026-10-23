@@ -23,6 +23,10 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-23
 
+### Pi: pinfer 0.3 installed (channel agent t010, 16:55)
+- `engine/pinfer_run_fast` `c6dcc195` and the Pi's Python package 0.3.0: checkpoint and opt-in GPU now available on the Pi;
+  GPU off by default, output identical to the previous build (58/58, 5/5). Backups `*.pre-v03`; undo in `docs/pi-state.md`.
+
 ### Pi: shared binary = gated 4B-prefill build (channel agent t003, 11:41)
 - `engine/pinfer_run_fast` `d48ffda1` → `508f1d74` (prefill tail + groups of 7s + 5s; Cerno decisions −4.4%, bit-identical);
   spec_exact 58/58 on the installed binary; old builds kept as `*.pre-csp`. `docs/pi-state.md` "Files we placed".

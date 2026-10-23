@@ -1,0 +1,9 @@
+# 2026-10-23T16:55:06 pi@10.42.0.2
+$ md5sum engine/pinfer_run_fast engine/pinfer_run_fast.pre-v03 venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so; venvs/pinfer/bin/python -c 'import pinfer; print("pinfer", pinfer.__version__)'; ls tmp/ | tr '\n' ' '
+
+c6dcc1953fd7fb5e20a672a94e651f61  engine/pinfer_run_fast
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_fast.pre-v03
+9d3bbc18cdb8aaf41c9492f406e0573a  venvs/pinfer/lib/python3.13/site-packages/pinfer/libpinfer.so
+pinfer 0.3.0
+ab audit cerno ck install-v03 num pyctx tools 
+[exit 0]

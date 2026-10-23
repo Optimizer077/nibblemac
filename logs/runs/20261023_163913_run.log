@@ -1,0 +1,46 @@
+# 2026-10-23T16:39:13 pi@10.42.0.2
+$ set -eu
+printf 'Shared binaries before install\n'
+md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast
+printf 'Existing gates\n'
+find engine -maxdepth 3 -type f \( -name '*spec_exact*' -o -name '*ctx_check*' \) -print
+printf 'Python environment locations\n'
+for v in venvs/pinfer "$HOME/venvs/pinfer"; do
+  if [ -x "$v/bin/python" ]; then
+    "$v/bin/python" -c 'import sys,importlib.metadata as m,pinfer; print(sys.executable); print("pinfer",m.version("pinfer"),pinfer.__file__); print("checkpoint",hasattr(pinfer.Model,"checkpoint"))'
+  fi
+done
+printf 'Cerno paths\n'
+find . -maxdepth 3 -type d -name 'cerno*' -print
+printf 'Scratch directories\n'
+for p in tmp/gpu-c tmp/gpu-engine tmp/csp; do if [ -d "$p" ]; then du -sh "$p"; fi; done
+printf 'Existing backups\n'
+find engine -maxdepth 1 -name '*.pre-v03' -print
+
+
+Shared binaries before install
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_fast
+98f7c5e1376abc9e2acbdc34db39f05c  engine/pinfer_ppl_fast
+Existing gates
+engine/ctx_check.sh
+engine/spec_exact.sh
+Python environment locations
+/home/pi/pinfer/venvs/pinfer/bin/python
+pinfer 0.1.0 /home/pi/pinfer/venvs/pinfer/lib/python3.13/site-packages/pinfer/__init__.py
+checkpoint False
+Cerno paths
+./models/cerno-4b-q4_0.tokenizer
+./data/cerno
+./tmp/gpu-engine/cerno
+./tmp/cerno
+./tmp/cerno/cerno_pi
+./tmp/ck/cerno
+./tmp/num/cerno
+./tmp/csp/cerno
+Scratch directories
+31M	tmp/gpu-c
+88M	tmp/gpu-engine
+13M	tmp/csp
+Existing backups
+
+[exit 0]
