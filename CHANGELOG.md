@@ -21,6 +21,18 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - No extra training: the completed run's dev agreement plateaued at 42/49. No Pi changes;
   weights and full labels remain local because Cerno's weight repository has no licence file.
 
+## 2026-10-23
+
+### Pi: shared binary = gated 4B-prefill build (channel agent t003, 11:41)
+- `engine/pinfer_run_fast` `d48ffda1` → `508f1d74` (prefill tail + groups of 7s + 5s; Cerno decisions −4.4%, bit-identical);
+  spec_exact 58/58 on the installed binary; old builds kept as `*.pre-csp`. `docs/pi-state.md` "Files we placed".
+
+### Pilots
+- Distilled decider: **no-go** (0.8B student 39/52 = 75% top-answer agreement with Cerno 4B, bar 85%).
+
+### Added
+- `channel/channel.md`: conversation with a worker agent the owner runs; the lead writes tasks, reviews, commits.
+
 ## 2026-10-22
 
 ### Pilots closed (22:28): no-go for prompt economy, compilers, table-lookup / asm kernels, numeric approximations

@@ -1,0 +1,6 @@
+# 2026-10-23T11:32:41 pi@10.42.0.2
+$ set -eu; printf %s %s\n 508f1d742e0168282fb94b3c3cd0afc7 tmp/install-csp-t003/pinfer_run 98f7c5e1376abc9e2acbdc34db39f05c tmp/install-csp-t003/pinfer_ppl | md5sum -c -; test ! -e engine/pinfer_run_fast.pre-csp; test ! -e engine/pinfer_ppl_fast.pre-csp; cp -p engine/pinfer_run_fast engine/pinfer_run_fast.pre-csp; cp -p engine/pinfer_ppl_fast engine/pinfer_ppl_fast.pre-csp; cp -p tmp/install-csp-t003/pinfer_run engine/pinfer_run_fast.install-t003; cp -p tmp/install-csp-t003/pinfer_ppl engine/pinfer_ppl_fast.install-t003; mv -f engine/pinfer_run_fast.install-t003 engine/pinfer_run_fast; mv -f engine/pinfer_ppl_fast.install-t003 engine/pinfer_ppl_fast; md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast engine/pinfer_run_fast.pre-csp engine/pinfer_ppl_fast.pre-csp
+
+md5sum: 'standard input': no properly formatted checksum lines found
+
+[exit 1]

@@ -190,3 +190,26 @@ Change of rule (owner): **the lead manages all commits and logs.** From now on d
 your worktree and report it (files, numbers, evidence paths, for Pi tasks the exact Pi-side changes and their undo)
 in your reply; the lead commits it and writes the records. Steps in t003 / t004 that say "commit" or "Records" are
 replaced by this. Nothing to undo for t002 (already merged by the lead).
+
+## Agent → Claude — note-records
+_2026-10-23 11:34 KST · done_
+
+Acknowledged. No further commits or manual edits to CHANGELOG, journals, PILOTS, plan, or pi-state. t003 has no worktree edits/commits; its Pi smoke test is running through the required harness. I will report exact changes, undo commands, and automatic harness evidence here, then do t004 without the former WIP commit/record steps.
+
+## Agent → Claude — t003-pi-install-speed4b
+_2026-10-23 11:40 KST · done_
+
+Done — installed the gated build as the Pi's shared binaries; **58/58 match:true**, benchmark exit 0, valid=true, throttled=0x0.
+
+Changes: no source/worktree edits or commits, per note-records. Built main with `make -C engine pi MATVEC=fast`. Installed `~/pinfer/engine/pinfer_run_fast` MD5 `508f1d742e0168282fb94b3c3cd0afc7`, `pinfer_ppl_fast` MD5 `98f7c5e1376abc9e2acbdc34db39f05c`. Backups: `pinfer_run_fast.pre-csp` MD5 `d48ffda1a5999d071358c80041b9c591`, `pinfer_ppl_fast.pre-csp` MD5 `9cdfe9c75d371cc1497278cbbfa04c86`. Removed only `engine/pinfer_run_cerno1`, `engine/pinfer_run_ck1`, `engine/pinfer_run_csp0` plus my two staged installer files/directory. Kept `pinfer_run_cerno2` (`537fb9a3baa8e949cbe6fe6618bc82c9`), `pinfer_run_csp1` (same hash as shared), and both backups. Pi configuration unchanged.
+
+Verified: required main build hash matched before Pi mutation; staged and installed hashes checked under lock; `bench install-csp-smoke -- bash engine/spec_exact.sh ./engine/pinfer_run_fast` yielded 58/58, 0 unparsed, valid=true. Evidence (main checkout; shared harness used for existing credentials/redaction): `bench/results/install-csp-smoke_20261023_113908.json`; snapshot `logs/snapshots/20261023_113236_before-install-csp-t003/`; precheck `logs/runs/20261023_113212_run.log`; installation `logs/runs/20261023_113330_run.log`; cleanup/final hashes `logs/runs/20261023_113944_run.log`; audit events in `logs/harness.jsonl`. Worktree `agent-t003-pi-install-speed4b` is clean.
+
+Undo (through the harness, from ~/pinfer): `cp engine/pinfer_run_fast.pre-csp engine/pinfer_run_fast && cp engine/pinfer_ppl_fast.pre-csp engine/pinfer_ppl_fast` under `run --lock`. No record files edited; the lead can add the Files we placed row and journal/CHANGELOG entries.
+
+Failures: the first staged checksum formatting was altered by PowerShell (`logs/runs/20261023_113241_run.log`, exit 1); set -e stopped before replacing any binary, corrected check then passed. A progress diagnostic also had a quoting error (`logs/runs/20261023_113638_run.log`); later `ps -C pinfer_run_fast` exit 1 (`113911`) simply meant the smoke had finished. No unresolved installation issue. No new speed measurement claimed.
+
+## Agent → Claude — t004-layerskip-finish (started)
+_2026-10-23 11:40 KST · started_
+
+Using the specified existing worktree; no WIP commit or manual records per note-records. Reading the single-layer results, then one greedy accumulation until the bar breaks. PC/GPU only; no Pi access for t004.

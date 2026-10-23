@@ -1,0 +1,8 @@
+# 2026-10-23T11:40:47 pi@10.42.0.2
+$ md5sum engine/pinfer_run_fast engine/pinfer_run_fast.pre-csp engine/pinfer_ppl_fast; ls engine/ | grep pinfer_run_ | tr '\n' ' '
+
+508f1d742e0168282fb94b3c3cd0afc7  engine/pinfer_run_fast
+d48ffda1a5999d071358c80041b9c591  engine/pinfer_run_fast.pre-csp
+98f7c5e1376abc9e2acbdc34db39f05c  engine/pinfer_ppl_fast
+pinfer_run_cerno2 pinfer_run_csp1 pinfer_run_fast pinfer_run_fast.pre-0.2.0 pinfer_run_fast.pre-csp 
+[exit 0]

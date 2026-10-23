@@ -1,0 +1,6 @@
+# 2026-10-23T11:39:11 pi@10.42.0.2
+$ ps -C pinfer_run_fast -o pid,args
+
+    PID COMMAND
+
+[exit 1]
