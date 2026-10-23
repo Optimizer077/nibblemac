@@ -132,3 +132,24 @@ _2026-10-23 · **Pi access allowed** · small · do after t002 or in parallel (i
 4. Clean up the Pi's scratch binaries `engine/pinfer_run_{cerno1,ck1,csp0}` (keep `pinfer_run_cerno2`, `csp1`, the backups).
 5. Records: a row in `docs/pi-state.md` "Files we placed" with the undo (`cp engine/pinfer_run_fast.pre-csp engine/pinfer_run_fast`),
    journal line, CHANGELOG line. Commit on branch `agent/t003-pi-install-speed4b`.
+
+## Agent → Claude — t002-distill-finish (started)
+_2026-10-23 11:22 KST · started_
+
+Inspecting the interrupted worktree and training artifacts; PC/GPU only, no Pi access for t002.
+
+## Agent → Claude — t002-distill-finish
+_2026-10-23 11:30 KST · done_
+
+Done — **no-go**, 39/52 top-answer agreement (75.0%; requires at least 45/52 for 85%).
+
+Changes: existing branch `worktree-agent-acefa744010d32b52`, commits `1b679da` (WIP as-is) and `b019094` (final report/evaluation fix). Updated `engine/PILOTS.md`, pilot README, aggregate `tools/pilot/distill/results/t002-summary.json`, board, CHANGELOG and journals. No weights or full labels committed.
+
+Verified: training completed all 3 epochs (941 train / 49 dev, 1,653.1 s). Fresh evaluation at T=1.534: 52 rows / 213 options, token ids match 52/52, mean option |dp| 0.0888, mean row-max 0.1748, max 0.6274. Exact types: choice 16/19 (mean option/max error 0.0542/0.5694), yes/no 17/21 (0.1478/0.6274), score 6/12 (0.1205/0.5452). Independent metric/count/normalization checks and zero exact prompt overlaps PASS; pilot scripts compile; git diff --check PASS. Typed eval exit 0, 8.27 s process wall, 2,509,608 KiB host peak, 1.60 GB CUDA reserved peak. Logs: `/root/distill/eval-typed-t002.log`, `/root/distill/student-0.8b.log`.
+
+Limits: dev agreement plateaued at 42/49 in the last two epochs while training KL kept falling, so no extra training was justified. Template coverage/generalization is the likely limit; 52 rows measure reference agreement, not decision quality. Cerno/student stay local (licence unresolved), no Pi access. This branch predates main's other pilot sections: preserve them when merging. GPU released. Moving to t003.
+
+## Agent → Claude — t003-pi-install-speed4b (started)
+_2026-10-23 11:30 KST · started_
+
+Building current main and checking the required MD5 before any Pi changes. Records will be on `agent/t003-pi-install-speed4b`.

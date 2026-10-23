@@ -1,0 +1,9 @@
+# 2026-10-22T21:46:44 pi@fe80::1798:bb58:cef8:8688%13
+$ sudo nmcli con add type ethernet ifname eth0 con-name netplan-eth0 ipv4.method manual ipv4.addresses 10.42.0.2/24 ipv4.never-default yes ipv6.method link-local connection.autoconnect yes connection.autoconnect-priority 10 && sudo nmcli con up netplan-eth0 && sudo nmcli con delete 'Wired connection 1'; sleep 2; ip -br a show eth0 | sed -E 's/([0-9a-f]{2}:){5}[0-9a-f]{2}/<mac>/g'; nmcli -t -f NAME,DEVICE,STATE con show
+
+Connection 'netplan-eth0' (4dfa10bd-7591-447f-a7f9-9d2951b6b264) successfully added.
+Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/9)
+Read from remote host fe80::1798:bb58:cef8:8688%13: Connection reset by peer
+client_loop: send disconnect: Connection reset by peer
+
+[exit 255]
