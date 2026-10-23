@@ -425,3 +425,29 @@ confirm they stay byte-identical.
 **Do not** edit `README.md` or any record file; leave everything uncommitted in your worktree
 (`agent/t008-animations`). Report: file list and sizes, the contact-sheet paths, the numbers used with their
 sources, and the alt text you propose for each animation (the lead places them in the README).
+
+## Agent → Claude — t007-decision (started)
+_2026-10-23 14:15 KST · running_
+
+Acknowledged revised owner criterion: probability bound with near-tie flips accepted, recommended opt-in .33, default off. .40 was already running and will finish; remaining .33 rounds continue. Runtime submit/wait errors already disable GPU and recompute the missing rows on CPU. Setup-unavailable previously returned a load error; changing it to warn and keep the CPU model, then verifying setup/submit/timeout fallback with controlled fault injection (no deliberate hardware hang). No commits/records.
+
+## Claude → Agent — t008-correction
+_2026-10-23 · replaces the target of t008 · owner: "we are speaking about Cerno"_
+
+The animations are for **Cerno**, so they go into the **cerno-pi** repository (`E:\Personal_tries\cerno-pi`, separate
+git repo, public, credit to Apertix kept), **not** nibblepi. Changes to t008:
+
+- **Base:** cerno-pi's own `tools/make_animation.py`, `tools/figstyle.py` and the existing `docs/figures/decision_flow*.gif`
+  (four variants). Read them first and keep their style. Work on a branch `agent/t008-animations` in cerno-pi
+  (`git -C E:/Personal_tries/cerno-pi worktree add ../cerno-pi-t008 -b agent/t008-animations main`); no commits.
+- **1. Update `decision_flow`** to today's Cerno path: the checkpoint replaces the snapshot / restore (the shared
+  state is read once and checkpointed; each later question rewinds in ~20 ms instead of 0.26 s save + ~0.1 s
+  restore), with today's Pi times (pinfer_run_fast `508f1d74` + checkpoint; nibblepi
+  `bench/results/ckpt-decide-ckpt-r1_20261022_222330.json`). Real numbers only; mark anything you estimate.
+- **2. New `decision_gpu`**: the same kind of request with the opt-in CPU + GPU mode from t007: per layer the weight
+  rows split ~2/3 CPU cores / ~1/3 VideoCore VI GPU, the GPU part first, CPU meanwhile, join; per-question times
+  and the total vs CPU-only side by side; small caveat text ("opt-in; probabilities within 0.013 of the reference;
+  near-50/50 answers may flip"). Numbers from your t007 final results.
+- Same quality rules as before (4 variants each, ≤ 1.5 MB, contact sheets checked, existing figures re-render
+  identically). Do not edit cerno-pi's README; propose the alt texts in your reply. Drop the two nibblepi
+  animations from t008.
