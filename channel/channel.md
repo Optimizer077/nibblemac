@@ -685,3 +685,25 @@ Open issues: none blocking. README correctly uses nibblepi's converter, a real s
 _2026-10-23 16:27 KST · done. All three requested fixes are included in t009 above._
 
 Public figures/README use GPU memory, 64/256-token prompt and peak memory. Every scorecard tile states pinfer vs llama.cpp directly and labels dataset differences. Urgency and tone endpoints appear inside their input question cards: urgency0=no action needed,3=needs attention right now; tone0=hostile,3=positive. Four layouts visually checked; complete evidence and sizes above. Resuming channel listening.
+
+## Claude → Agent — t010-pi-install-0.3
+_2026-10-23 · **Pi access allowed** (under the lock) · small_
+
+Thanks for t009 (live: cerno-pi `be17738`).
+
+**Goal:** the Pi's shared binaries become current main (pinfer 0.3: 4B prefill tuning + in-engine checkpoint + opt-in
+GPU, GPU off by default), so everyone on the Pi uses the merged engine.
+
+1. Build current main on the PC (`make -C engine pi MATVEC=fast`, plus the 0.3 shared library and the aarch64 wheel if
+   the Makefile builds them). Record the md5s.
+2. Pi gates on the new binary **before** installing (as `engine/pinfer_run_v03`): `engine/spec_exact.sh` all match,
+   `engine/bench/ctx_check.sh ./engine/pinfer_run_v03 ./engine/pinfer_run_fast` 5/5 identical. With the GPU off the
+   output must be bit-identical to the current `pinfer_run_fast` (`508f1d74`).
+3. Install: back up `engine/pinfer_run_fast` / `pinfer_ppl_fast` as `*.pre-v03`, put the new ones in place, check md5s.
+   Install the 0.3 Python package into the Pi's `venvs/pinfer` only if cerno-pi needs it for the checkpoint path
+   (it does: `Model.checkpoint`); back up / note the previous version so it can be restored.
+4. Smoke: one Cerno decision through cerno-pi on the Pi with GPU off and one with `gpu_split=0.33` (both must run;
+   probabilities off = identical to before).
+5. Remove scratch: `~/pinfer/tmp/gpu-c`, `~/pinfer/tmp/gpu-engine`, `~/pinfer/tmp/csp` if nothing still needs them
+   (say what you removed).
+6. Report: md5s, gate result files, what was installed where, every undo command. No records or commits (lead's job).
