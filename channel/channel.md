@@ -787,3 +787,45 @@ After rollback, remove the new aliases/backups/staging if wanted: `python harnes
 Snapshot `logs/snapshots/20261023_165034_before-pinfer-v03-install`. Install / cleanup / final inventory logs: `logs/runs/20261023_165038_run.log`, `20261023_165131_run.log`, `20261023_165250_run.log`. All underlying harness calls exited 0. The PC PowerShell `*>` wrapper returned 1 because it classified the GPU's informational stderr banner as NativeCommandError; the controller completed, both harness smoke records are valid=true, and independent final inventory passed. A subsequent local log-read initially assumed UTF8; corrected for PowerShell's UTF16 output. No engine, installation or gate failure.
 
 Open issues: none blocking. Starting the queued t011 Q4K pilot next.
+
+## Agent → Claude — t011-gpu-q4k-0.8b (update)
+_2026-10-23 17:13 KST · pilot running_
+
+Worktree `.claude/worktrees/agent-t011-gpu-q4k`, branch `agent/t011-gpu-q4k`, base `7499dab`. Isolated Q4K shader preserves original u4 codes and exact fp32 D*s6 / M*m6 coefficients; packed integer sums remain exact. Added double-buffered coefficients so the two-thread TMU queue stays <=8 words (Mesa primary source checked). PC emulator: passes1-8, random and extreme/zero inputs, all16 cases bit-exact against independent float model; legacy Q4 emulator still passes. Real 0.8B first-layer qkv/gate/up/down and tied output-head fixtures; distributed32-row reference tiles cover all n7/n64 vectors. Starting small Pi smoke before the ten shape/batch pilot cases. Pilot gate follows the original GPU.md aggregate co-run throughput method, with a same-window ratio also recorded. No engine integration yet.
+
+## Agent → Claude — t011-gpu-q4k-0.8b
+_2026-10-23 17:22 KST · done (pilot no-go)_
+
+**No-go at the pilot gate; stopped as requested.** Three batch 7 cases miss 1.2x: gate 1.193x, up 1.108x, down 1.173x. Batch 64 passes on all five shapes, but this implementation does not meet the stated gate across both batches. No engine integration or scale-up/quality run started.
+
+Worktree `.claude/worktrees/agent-t011-gpu-q4k`, branch `agent/t011-gpu-q4k`, base `7499dab`; all files uncommitted, no records/commits. Added `engine/gpu/q4kgpu.py`, `emit_q4k.py`, generated `q4kgpu_kernels.h`, `qemu_q4k.py`, `q4k_fixture.py`, `q4k_pilot.c`. Changed GPU Makefile (standalone `emit-q4k` / `q4k-pilot` targets) and added fsub to the existing emulator. Runtime engine source/API/defaults untouched; its rebuilt CLI SHA256 is exactly the installed t010 build (`fd1009d7...ea216`).
+
+Design: preserve Q4K u4 codes and expand D*s6 / M*m6 once into exact fp32 scale/offset pairs, with no fp16 re-quantization. Keep the existing centered packed integer MACs; recover raw dot products with 8*sum(q), then separate multiply/add/subtract. Double-buffer coefficients and hold the TMU output queue to **8 words** for the two-thread shader. [Mesa's primary FIFO definition](https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/91ab53b4b904a515324390908f652909ff501344/src/broadcom/compiler/v3d_compiler.h#49) specifies 16/threads. Own DRM client reused; only the MIT assembler files of py-videocore6 `175741a` were extracted into an ignored dependency cache, no GPL driver source incorporated.
+
+Validation:
+- `qemu_q4k.py`: passes 1-8, two seeds including all-0/all-15 codes, +/-127 activations and zero vectors: **16/16 exact** vs independent fp32 model; FIFO<=8. n7/n8 assemble to 509/561 instructions. Legacy Q4 emulator still passes all three plans at n1/2/7/8. Generated Q4K header repeat byte-identical.
+- Cross-compiled pilot `-O3 -mcpu=cortex-a72 -std=c11 -ffp-contract=off -Wall -Wextra -Werror`; Makefile command resolves; `git diff --check` clean.
+- Pi small smoke 256x1024, n7: all 896 reference words exact. Actual first-layer 0.8B weights for qkv 6144x1024, gate/up 3584x1024, down 1024x3584, and tied output head 248320x1024. Four distributed 32-row reference tiles per matrix, all 7/64 vectors: **45440 independently checked fp32 words, zero differences**. All full outputs finite; CPU/GPU full-output hashes remain unchanged after timing. GPU vs NEON differs as expected from float order: maximum sampled |difference|/max|reference| **5.59e-7**.
+
+Pi stock 1.5 GHz / V3D 500 MHz, four CPU threads, three rounds; medians below. CPU baseline is the paired mean of CPU-alone before/after each co-run. GPU times include uniform construction, submits/wait and output readback. Combined is **aggregate simultaneous throughput of two full-matrix streams**, not an integrated row-split latency; speedup is the median of paired ratios, so it need not equal a ratio of column medians.
+
+| shape | n | CPU alone GOP/s | GPU alone GOP/s | combined GOP/s | gain |
+|---|---:|---:|---:|---:|---:|
+| qkv | 7 | 56.23 | 22.64 | 68.47 | 1.224x |
+| qkv | 64 | 55.63 | 23.69 | 68.98 | 1.246x |
+| gate | 7 | 56.42 | 22.54 | 67.15 | 1.193x |
+| gate | 64 | 54.17 | 23.50 | 67.46 | 1.225x |
+| up | 7 | 56.66 | 22.51 | 63.29 | 1.108x |
+| up | 64 | 54.05 | 23.57 | 67.10 | 1.241x |
+| down | 7 | 52.82 | 21.56 | 61.96 | 1.173x |
+| down | 64 | 49.89 | 22.09 | 62.54 | 1.254x |
+| head | 7 | 58.29 | 24.17 | 73.52 | 1.251x |
+| head | 64 | 57.03 | 24.64 | 74.01 | 1.290x |
+
+The separately recorded same-window ratios confirm the decision: gate/up/down batch 7 are 1.193/1.107/1.172x. The n64 cases are 1.219-1.274x by that conservative window measure. Source files: `gpu-q4k-pilot-{qkv,gate,up,down,head}-n{7,64}_20261023_*.json`; exact names, per-round spread, CPU/GPU co-run rates, fixture/model hashes and criteria in **`bench/results/gpu-q4k/t011-summary.json`**. All 13 pilot/smoke/health harness records valid=true, copies in that folder; no failed hardware run.
+
+Health: `gpu-q4k-health-before_20261023_171318.json` / `gpu-q4k-health-after_20261023_171933.json`, same boot, last V3D reset remains boot+1580.940159 s from yesterday; **no new hang/reset**, throttle 0x0, ARM 1500 MHz / V3D 500 MHz. Shared t010 binaries remain md5 `c6dcc1953fd7fb5e20a672a94e651f61` / `069d034d5ad18ccc3cf7a316c79dab1d`. No system/configuration/package changes during this task.
+
+Pi files: only `~/pinfer/tmp/gpu-q4k/` (~150 MiB): standalone pilot, health helper, ignored raw-weight/reference fixtures. Undo: `python harness/pi.py run --lock 'rm -rf ~/pinfer/tmp/gpu-q4k'`. PC dependency/fixtures/logs under ignored worktree `build/t011/`.
+
+Open point: this is a no-go for this implementation under the requested **both-batch, every-shape** pilot criterion; the n64 measurements show useful aggregate throughput, but they do not establish an engine speedup. Per the stop condition, prefill/decode/perplexity/spec quality integration tests were not reached. Resuming channel listening.

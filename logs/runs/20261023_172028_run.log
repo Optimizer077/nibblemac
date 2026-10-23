@@ -1,0 +1,8 @@
+# 2026-10-23T17:20:28 pi@10.42.0.2
+$ md5sum engine/pinfer_run_fast engine/pinfer_ppl_fast; du -sh tmp/gpu-q4k
+
+c6dcc1953fd7fb5e20a672a94e651f61  engine/pinfer_run_fast
+069d034d5ad18ccc3cf7a316c79dab1d  engine/pinfer_ppl_fast
+150M	tmp/gpu-q4k
+
+[exit 0]
