@@ -1,0 +1,98 @@
+{
+  "name": "numerics-optcheck-aq1",
+  "command": "bash tmp/num/num_opt_check.sh ./tmp/num/pinfer_run_num1 ./engine/pinfer_run_fast --act-quant 1",
+  "timestamp": "2026-10-22T21:50:27",
+  "exit_code": 0,
+  "valid": true,
+  "results": [
+    {
+      "bench": "num_opt_check",
+      "check": "qwen35-0.8b-q4k-headq4k opt b64==b1 hidden",
+      "flags": "--act-quant",
+      "identical": false
+    },
+    {
+      "bench": "num_opt_check",
+      "check": "qwen35-0.8b-q4k-headq4k opt b64==b1 logits",
+      "flags": "--act-quant",
+      "identical": false
+    },
+    {
+      "bench": "num_opt_check",
+      "check": "qwen35-0.8b-q4k-headq4k default==ref logits",
+      "flags": "--act-quant",
+      "identical": true
+    },
+    {
+      "bench": "num_opt_check",
+      "check": "qwen35-0.8b-q4k-headq4k opt differs from default",
+      "flags": "--act-quant",
+      "identical": false
+    },
+    {
+      "bench": "num_opt_check",
+      "check": "cerno-4b-q4_0 opt b64==b1 hidden",
+      "flags": "--act-quant",
+      "identical": false
+    },
+    {
+      "bench": "num_opt_check",
+      "check": "cerno-4b-q4_0 opt b64==b1 logits",
+      "flags": "--act-quant",
+      "identical": false
+    },
+    {
+      "bench": "num_opt_check",
+      "check": "cerno-4b-q4_0 default==ref logits",
+      "flags": "--act-quant",
+      "identical": false
+    },
+    {
+      "bench": "num_opt_check",
+      "check": "cerno-4b-q4_0 opt differs from default",
+      "flags": "--act-quant",
+      "identical": false
+    }
+  ],
+  "unparsed": [],
+  "stdout": "bin ./tmp/num/pinfer_run_num1 md5 7e41e9dc ref ./engine/pinfer_run_fast md5 d48ffda1 flags '--act-quant'\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"qwen35-0.8b-q4k-headq4k opt b64==b1 hidden\",\"flags\":\"--act-quant\",\"identical\":false}\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"qwen35-0.8b-q4k-headq4k opt b64==b1 logits\",\"flags\":\"--act-quant\",\"identical\":false}\n  qwen35-0.8b-q4k-headq4k default new: load 0.009 s | warm-up 0.000 s | prefill 64 tok in 3.288 s = 19.467 tok/s | decode 1 tok in 0.126 s = 7.931 tok/s | peak RSS 492.5 MB | matvec=fast threads=4\n  qwen35-0.8b-q4k-headq4k default ref: load 0.007 s | warm-up 0.000 s | prefill 64 tok in 2.121 s = 30.170 tok/s | decode 1 tok in 0.146 s = 6.846 tok/s | peak RSS 492.1 MB | matvec=fast threads=4\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"qwen35-0.8b-q4k-headq4k default==ref logits\",\"flags\":\"--act-quant\",\"identical\":true}\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"qwen35-0.8b-q4k-headq4k opt differs from default\",\"flags\":\"--act-quant\",\"identical\":false}\n  qwen35-0.8b-q4k-headq4k bb05dee85a5d58224fa906cc6dc0db90  tmp/numck/d_new.bin\n  qwen35-0.8b-q4k-headq4k bb05dee85a5d58224fa906cc6dc0db90  tmp/numck/d_ref.bin\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"cerno-4b-q4_0 opt b64==b1 hidden\",\"flags\":\"--act-quant\",\"identical\":false}\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"cerno-4b-q4_0 opt b64==b1 logits\",\"flags\":\"--act-quant\",\"identical\":false}\n  cerno-4b-q4_0 default new: load 0.009 s | warm-up 0.000 s | prefill 64 tok in 17.995 s = 3.557 tok/s | decode 1 tok in 0.712 s = 1.404 tok/s | peak RSS 2689.3 MB | matvec=fast threads=4\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"cerno-4b-q4_0 default==ref logits\",\"flags\":\"--act-quant\",\"identical\":false}\nRESULT {\"bench\":\"num_opt_check\",\"check\":\"cerno-4b-q4_0 opt differs from default\",\"flags\":\"--act-quant\",\"identical\":false}\n  cerno-4b-q4_0 4384ba11c38c881890c91a4e5af7a685  tmp/numck/d_new.bin\n",
+  "stderr": "usage: pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] [-b batch] (--ids 1,2,3 | --ids-file f)\n                  [--dump-logits f] [--dump-hidden f] [--bench]\n                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n                  [--save-state f] [--load-state f] [--ngram N]\n                  [--dump-last f] [--act-quant 0|1]\nusage: pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] [-b batch] (--ids 1,2,3 | --ids-file f)\n                  [--dump-logits f] [--dump-hidden f] [--bench]\n                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n                  [--save-state f] [--load-state f] [--ngram N]\n                  [--dump-last f] [--act-quant 0|1]\nusage: pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] [-b batch] (--ids 1,2,3 | --ids-file f)\n                  [--dump-logits f] [--dump-hidden f] [--bench]\n                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n                  [--save-state f] [--load-state f] [--ngram N]\n                  [--dump-last f] [--act-quant 0|1]\nusage: pinfer_run -m model.pq [-t threads] [-n N] [-c max_ctx] [-b batch] (--ids 1,2,3 | --ids-file f)\n                  [--dump-logits f] [--dump-hidden f] [--bench]\n                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n                  [--save-state f] [--load-state f] [--ngram N]\n                  [--dump-last f] [--act-quant 0|1]\npinfer: untied output head not supported\nload failed: -2\n",
+  "state_before": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 21:04:15",
+    "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "41.3'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3584",
+    "python": "Python 3.13.5"
+  },
+  "state_after": {
+    "model": "Raspberry Pi 4 Model B Rev 1.1",
+    "boot_time": "2026-10-22 21:36:59",
+    "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+    "kernel": "6.18.50+rpt-rpi-v8",
+    "cmdline": "coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory numa_policy=interleave nvme.max_host_mem_size_mb=32 snd_bcm2835.enable_headphones=1 snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  numa=fake=2 system_heap.max_order=0 iommu_dma_numa_policy=interleave smsc95xx.macaddr=<mac> vc_mem.mem_base=0x3eb00000 vc_mem.mem_size=0x3ff00000  console=ttyS0,115200 console=tty1 root=PARTUUID=393ab1fb-02 rootfstype=ext4 fsck.repair=yes rootwait cfg80211.ieee80211_regdom=KR",
+    "page_size": "4096",
+    "cpu_features": "fp asimd evtstrm crc32 cpuid",
+    "governor": "ondemand",
+    "freq_khz": "1500000 1500000 1500000 1500000",
+    "isolated": "",
+    "nohz_full": "",
+    "temp": "46.2'C",
+    "throttled": "0x0",
+    "hugepages_total": "",
+    "thp": "",
+    "mem_avail_mb": "3457",
+    "python": "Python 3.13.5"
+  }
+}

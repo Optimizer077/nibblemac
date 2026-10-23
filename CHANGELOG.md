@@ -88,6 +88,27 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Scratchpad incident: three pre-existing files in the shared session scratchpad root overwritten (17:39–17:54)
   and removed (18:18); nothing in the repo or on the Pi affected; details in the journal.
 
+
+### GPU co-processing pilot (GPU agent, 17:30–22:12; branch `worktree-agent-a459e8864e2e5ea3b`)
+- Added: `engine/gpu/` — an integer Q4_0 x int8 matmul kernel for the Pi 4's V3D 4.2 QPUs
+  (two rows packed per `smul24` operand, exact int16 block sums, activations as a uniform stream;
+  generator `q4gpu.py`, dual-issue list scheduler `qsched.py`, numpy emulator check
+  `qemu_check.py` bit-exact for n = 1–12, Pi benchmarks `bench_q4.py` / `corun.sh`, hardware
+  diagnostics `diag.py`); notebook `engine/GPU.md`; pilot record `engine/PILOTS.md`
+  ("GPU co-processing"); `engine/bench/kbench.c` gets the Qwen3.5-4B shapes `c4*` (same hunk
+  as speed4b, selected by name only).
+- Measured (Pi, stock 1.5 GHz, V3D 500 MHz): GPU alone 27–28 GOP/s on 9216x2560 / 2560x9216 /
+  8192x2560 at batch 7 and 64, bit-exact vs the kernel's fp32 model; CPU + GPU together
+  77.8 / 78.0 / 74.1 GOP/s vs CPU alone 55.2 / 55.4 / 50.3 = **1.41x / 1.41x / 1.47x**, CPU keeps
+  94 %, throttled 0x0 (`bench/results/gpu-q4-alone_20261022_221029.json`,
+  `gpu-corun_20261022_221209.json`). Verdict: go; scale-up design (DRM ioctls, class (b) opt-in)
+  in `engine/GPU.md`.
+- Found: py-videocore6 is GPL-2.0 (driver) / MIT (assembler), not BSD-3: used only as a venv
+  dependency on the Pi, never vendored; numpy 2.5 breaks it (pinned 2.3.1). TMU loads without
+  the `thrsw` signal hang the V3D 4.2 (two slots lost to it).
+- Pi: `~/pinfer/venvs/gpu` (numpy 2.3.1, ioctl-opt, py-videocore6 @ `175741a` packages copied
+  in, licence note) kept for the scale-up; `~/pinfer/tmp/gpu` removed. Rows in `docs/pi-state.md`.
+
 ### Pi: overclock test reverted (21:01)
 - Boot partition edited on the PC (F:): `tryboot.txt` back to the custom-kernel test file, overclock files removed; `config.txt` / `cmdline.txt` unchanged; standard 1.5 GHz profile. `docs/pi-state.md` #5.
 
