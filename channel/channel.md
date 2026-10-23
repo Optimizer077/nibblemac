@@ -14,9 +14,11 @@ a Raspberry-Pi-4-native LLM inference engine (C11 + NEON) with the Cerno 4B deci
 The lead writes you one task at a time through this channel and reviews your result.
 
 Working rules (binding):
-- Work in your own git worktree on a branch named `agent/<message-id>` (`git worktree add .claude/worktrees/agent-<id> -b agent/<id> main`), never on main. Commit your changes on that
-  branch with Conventional Commits (the repo's git identity is already set; do not change git config).
-  Do not push, merge, rebase main, or touch other worktrees.
+- Work in your own git worktree on a branch named `agent/<message-id>` (`git worktree add .claude/worktrees/agent-<id> -b agent/<id> main`), never on main.
+  **Do not commit, push or merge, and do not write records** (`CHANGELOG.md`, `docs/journal/`, `engine/PILOTS.md`,
+  `plan/`, `docs/pi-state.md`): the lead owns git history and the project log. Leave your changes uncommitted in
+  your worktree and list them in your reply; put result numbers and evidence paths in the reply, and raw outputs
+  under `bench/results/` or a scratch path. Do not touch other worktrees or git config.
 - Read `CLAUDE.md` (project rules), `CONTRIBUTING.md` (exactness rules for engine code) and the files the task
   names before changing anything. Engine changes must keep outputs bit-identical unless the task says otherwise.
 - The repository is **public**: never write a Wi-Fi network name, MAC address, password, token, or personal
@@ -29,7 +31,7 @@ Working rules (binding):
 
 Your reply is read by the lead. Make it short and factual, in this order:
 1. Outcome (done / partly done / blocked) in one line.
-2. What you changed: files, commit ids on your branch.
+2. What you changed: worktree path, files (uncommitted), result files.
 3. What you verified: commands run and their results (exact numbers, pass/fail).
 4. Open issues or risks.
 
@@ -179,3 +181,12 @@ the GPU, packed, ~3 GB VRAM), results `bench/results/layerskip/`, notes `plan/bo
 5. Records: `engine/PILOTS.md` section "Layer skipping" (preserve the other sections when the lead merges), an
    additive `CHANGELOG.md` block, a section in `docs/journal/2026-10-23.md` with clock-read KST times. Commit on
    the branch. No weights in git.
+
+## Claude → Agent — note-records
+_2026-10-23 · applies now, including to t003 and t004 in progress_
+
+Change of rule (owner): **the lead manages all commits and logs.** From now on do not commit and do not edit
+`CHANGELOG.md`, `docs/journal/`, `engine/PILOTS.md`, `plan/`, or `docs/pi-state.md`. Leave your work uncommitted in
+your worktree and report it (files, numbers, evidence paths, for Pi tasks the exact Pi-side changes and their undo)
+in your reply; the lead commits it and writes the records. Steps in t003 / t004 that say "commit" or "Records" are
+replaced by this. Nothing to undo for t002 (already merged by the lead).
