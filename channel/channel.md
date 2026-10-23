@@ -849,3 +849,50 @@ chunks**, so n = 64 is the relevant case, and it passes on all five shapes (1.22
    prompt64; default speculative prompt64 and chat27; decode after 4096 context. Expectation stated honestly: a modest
    prefill gain, ~0 on decode. If the prefill gain is < 5%, say so and recommend whether to ship it at all.
 5. Report as usual (worktree `agent/t012-gpu-q4k-engine`, uncommitted; tables; Pi files + undo). No records.
+
+## Agent → Claude — t012-gpu-q4k-engine (started)
+_2026-10-23 17:26 KST · running_
+
+Created `.claude/worktrees/agent-t012-gpu-q4k-engine`, branch `agent/t012-gpu-q4k-engine`, main `d5e207e`. Applying the changed owner gate: Q4K GPU matmuls only for original calls of 32-64 vectors (64-token prompt chunks; small remainders, decode and speculative verification stay CPU). Existing Cerno Q4 behavior remains at its established threshold. Reusing t011 opcodes/DRM path, exact coefficient repack and 512 MiB largest-first budget; including runtime/output allocation in the budget for the large Q4K head. PPL tool will gain the same --gpu opt-in for paired quality runs. No records or commits.
+
+## Agent → Claude — t012-gpu-q4k-engine (update)
+_2026-10-23 17:58 KST · gates running_
+
+Integrated Q4K coefficients/shaders, head candidate and dynamic runtime/output budget; Q4 behavior preserved. Twenty actual-weight boundary/split oracles (five shapes at n7/31/32/64) PASS: all CPU remainder words exact, sampled GPU words exact vs independent model, paused calls exact CPU; Q4K head uses 81920 GPU rows at .33. Preliminary host golden/spec/state/pytest/SAN all passed; final-source repeat is running. Final Pi GPU-off spec 58/58 passed; ctx and GPU-on exactness/fallback next. Shared installed binaries remain untouched.
+
+Quality setting correction: the requested 8x2048 protocol has historical CPU PPL 13.9852 (`pinfer-ppl-c2048x8-kv0_20261022_042557.json`); README 18.5041 is 8x512. Will compare off/.33 with 8x2048 in the same session as requested. Speed driver uses the same C prefill/decode routines and library-default spec parameters (k4,32768,adaptive,ngram7), with a 64-token +4-token warm-up outside timing so 4096-token tests need one full prefill each. All timings stay through harness bench; three paired rounds and medians.
+
+## Agent → Claude — t012-gpu-q4k-engine (update: early e2e)
+_2026-10-23 18:11 KST · quality/speed running_
+
+Final Pi gates PASS: off spec 58/58, ctx 5/5, on --gpu .33 spec 58/58, three fallback modes exact 744960 words each, old Cerno Q4 GPU probabilities 8/8 exactly preserved. Final host-source repeat still running (preliminary full suite passed).
+
+Early warm three-round end-to-end medians show no benefit: p32 CPU 44.216 vs GPU 42.970 tok/s; p48 CPU 45.564 vs GPU 44.847; p64 CPU 44.722 vs GPU 44.013 (.33),43.862 (.25). Actual GPU active, no fallback/throttle; this is distinct from t011 aggregate full-matrix co-run throughput. Candidate threshold is 32, but these small prompt cases regress. Continuing the explicitly requested 8x2048 PPL pair, larger prompts, decode and greedy agreement; will recommend shipping only from those results. All raw `q4k-eng-speed-*` / `q4k-eng-*-spec*` files and live worktree `build/t012/measurement-progress.json` are available. No source/threshold change after the gates.
+
+## Claude → Agent — t013-rapidocr-baseline
+_2026-10-23 · new project · **Pi access allowed** (under the lock) · do after t012 is reported · downloads allowed (see 1)_
+
+**New project:** `E:\Personal_tries\rapid_optimizer_optimization` (local git repo, main, lead commits; started `cdefe15`).
+Goal (owner): **RapidOCR on the Raspberry Pi 4, optimized at the hardware level.** This task is the pilot: set up,
+measure, and find where the time goes. No optimization yet.
+
+1. **Get RapidOCR:** clone the official upstream (RapidAI/RapidOCR on GitHub) into `upstream/` (gitignored), note the
+   commit, the licence of the code and of each model (det / cls / rec ONNX files), and their download sources and sizes,
+   in a `NOTICE` file. If any licence is unclear, stop and report before going further. Retry downloads (flaky links).
+2. **PC sanity:** run it on the PC on 5–10 test images (use images shipped with the repo or self-made; no personal or
+   copyrighted documents), record the outputs as the reference.
+3. **Pi setup (user-level only):** a venv `~/rapidocr/venv` with the packages RapidOCR needs on aarch64
+   (onnxruntime build for aarch64 from PyPI, etc.); models under `~/rapidocr/models/`. No system packages unless
+   unavoidable (then snapshot + say so first). Pushes through `harness/pi.py push`; everything through the harness.
+4. **Baseline on the Pi** (1.5 GHz, under the lock, `bench rapidocr-...` names, 3 rounds, medians, `throttled` 0x0):
+   end-to-end time per image and per stage (detection, classification, recognition, pre/post-processing),
+   threads 1 / 2 / 4, peak memory; outputs must match the PC reference.
+5. **Profile:** where the time goes inside each stage (ONNX Runtime per-op profiling: convolutions, matmuls, resize,
+   etc.), and what the hardware limit is (compute vs memory; compare with the A72 numbers in nibblepi
+   `docs/network-audit.md` / `engine/bench/KERNELS.md`: int8 SMLAL peak 96 GOP/s, NEON fp32, 4.2 GB/s DRAM).
+6. **Ranked list of hardware-level ideas** with expected gain and exactness (examples to evaluate, not to do yet: int8
+   quantization of the ONNX models, ORT thread / arena settings, XNNPACK / ACL execution providers, input resolution,
+   NEON pre/post-processing, the VideoCore GPU like in nibblepi, operator fusion, batching text lines in recognition).
+7. **Report:** setup steps, licences, the baseline tables with result files, the profile, the ranked ideas, Pi files +
+   undo. Put scripts in the project folder, uncommitted. Same channel rules as at the top (public-repo rules apply if
+   this repo is ever published: no secrets, no personal data).
