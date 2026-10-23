@@ -1,0 +1,20 @@
+..F
+=================================== FAILURES ===================================
+_________________________ test_version_matches_library _________________________
+
+lib = <pinfer._lib.Lib object at 0x7f090b1906e0>
+
+    def test_version_matches_library(lib: Any) -> None:
+>       assert lib.version == pinfer.__version__
+E       AssertionError: assert '0.2.0' == '0.3.0'
+E         
+E         - 0.3.0
+E         ?   ^
+E         + 0.2.0
+E         ?   ^
+
+tests/python/test_api.py:13: AssertionError
+=========================== short test summary info ============================
+FAILED tests/python/test_api.py::test_version_matches_library - AssertionErro...
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+1 failed, 2 passed in 2.81s

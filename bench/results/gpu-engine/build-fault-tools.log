@@ -1,0 +1,3 @@
+make: Entering directory '/mnt/e/Personal_tries/Raspberry_Pi/.claude/worktrees/agent-t007-gpu-engine/engine/gpu'
+aarch64-linux-gnu-gcc -O3 -std=c11 -ffp-contract=off -Wall -Wextra -Werror -I../src -I../include -shared -fPIC fault_ioctl.c -ldl -o ../../build/gpu-c/fault_ioctl.so
+make: Leaving directory '/mnt/e/Personal_tries/Raspberry_Pi/.claude/worktrees/agent-t007-gpu-engine/engine/gpu'

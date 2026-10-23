@@ -5,6 +5,7 @@ import contextlib
 import ctypes
 import json
 import logging
+import math
 import os
 import time
 from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -42,7 +43,7 @@ class Model:
     """
 
     def __init__(self, lib: Lib, ctx: int, path: Path, tokenizer: Tokenizer | None,
-                 n_threads: int, max_ctx: int, kv_dtype: str = "fp32") -> None:
+                 n_threads: int, max_ctx: int, kv_dtype: str = "fp32", gpu_split: float = 0.0) -> None:
         self._lib = lib
         self._ctx: int | None = ctx
         self.path = path
@@ -50,6 +51,7 @@ class Model:
         self.n_threads = n_threads
         self.max_ctx = max_ctx
         self.kv_dtype = kv_dtype
+        self.gpu_split = gpu_split
         self.n_vocab = int(lib.pinfer_n_vocab(ctx))
         self.eos_id = int(lib.pinfer_eos_id(ctx))
         self._logits = np.zeros(self.n_vocab, dtype=np.float32)
@@ -63,7 +65,8 @@ class Model:
     @classmethod
     def load(cls, path: str | os.PathLike[str], tokenizer: str | os.PathLike[str] | Tokenizer
              | None | bool = None, n_threads: int = 4, max_ctx: int = 4096,
-             lib_path: str | os.PathLike[str] | None = None, kv_dtype: str | int = "fp32"
+             lib_path: str | os.PathLike[str] | None = None, kv_dtype: str | int = "fp32",
+             gpu_split: float = 0.0
              ) -> Model:
         """Load a ``.pq`` model.
 
@@ -78,6 +81,10 @@ class Model:
             kv_dtype: KV-cache storage: ``"fp32"`` (exact, default), ``"fp16"`` or ``"int8"``
                 (smaller and faster at long context, slightly different numerics; see
                 ``engine/CONTEXT.md``). Needs a libpinfer with ``pinfer_params.kv_dtype``.
+            gpu_split: Opt-in Q4 row share on the Pi's V3D GPU, in [0,1]. Zero keeps
+                CPU-only exact behavior; 0.33 is recommended when enabled. Prefill changes
+                rounding and may flip near-tie answers. Unavailable GPU falls back to CPU
+                with a warning; this property records the requested share.
 
         Raises:
             ModelNotFoundError, ModelFormatError, ModelLoadError, LibraryNotFoundError,
@@ -86,6 +93,9 @@ class Model:
         if int(n_threads) < 1 or int(max_ctx) < 1:
             raise ValueError(f"n_threads and max_ctx must be >= 1 (got {n_threads}, {max_ctx})")
         kv_dtype, kv_code = parse_kv_dtype(kv_dtype)
+        gpu_split = float(gpu_split)
+        if not math.isfinite(gpu_split) or not 0.0 <= gpu_split <= 1.0:
+            raise ValueError("gpu_split must be finite and in [0,1]")
         p = Path(path)
         if not p.is_file():
             raise ModelNotFoundError(f"model file not found: {p}", errors.E_IO)
@@ -93,12 +103,15 @@ class Model:
         lib = load_library(lib_path)
         if kv_code != 0 and not lib.has("pinfer_state_size"):
             raise NotImplementedError("kv_dtype needs a libpinfer with the context-window API")
-        params = Params(n_threads=int(n_threads), max_ctx=int(max_ctx), kv_dtype=kv_code)
+        if gpu_split and tuple(int(x) for x in lib.version.split(".")[:2]) < (0, 3):
+            raise NotImplementedError("gpu_split needs libpinfer >= 0.3")
+        params = Params(n_threads=int(n_threads), max_ctx=int(max_ctx), kv_dtype=kv_code,
+                        gpu_split=gpu_split)
         err = ctypes.c_int(0)
         ctx = lib.pinfer_load(os.fsencode(p), ctypes.byref(params), ctypes.byref(err))
         if not ctx:
             raise errors.from_code(err.value or errors.E_IO, str(p))
-        model = cls(lib, ctx, p, tok, int(n_threads), int(max_ctx), kv_dtype)
+        model = cls(lib, ctx, p, tok, int(n_threads), int(max_ctx), kv_dtype, gpu_split)
         if tok is not None and tok.vocab_size > model.n_vocab:
             model.close()
             raise PinferError(f"tokenizer vocabulary ({tok.vocab_size}) is larger than the "
@@ -192,6 +205,7 @@ class Model:
         return {"model": str(self.path), "library": self._lib.path, "version": self.version,
                 "build": build, "n_vocab": self.n_vocab, "eos_id": self.eos_id,
                 "max_ctx": self.max_ctx, "n_threads": self.n_threads, "kv_dtype": self.kv_dtype,
+                "gpu_split": self.gpu_split,
                 "tokenizer": str(self.tokenizer.source) if self.tokenizer else None,
                 "has_mtp": self.has_mtp, "speculative": self.supports_speculative}
 

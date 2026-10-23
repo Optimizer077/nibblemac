@@ -22,6 +22,11 @@ pf_pool *pf_pool_create(int n_threads) {
 void pf_pool_destroy(pf_pool *pool) { free(pool); }
 
 int pf_pool_threads(const pf_pool *pool) { (void)pool; return 1; }
+int pf_pool_gpu_enable(pf_pool *pool, const pf_mat *const *weights, int count, float share) {
+    (void)pool; (void)weights; (void)count; (void)share;
+    return -1;
+}
+void pf_pool_gpu_pause(pf_pool *pool, int pause) { (void)pool; (void)pause; }
 
 void pf_pool_run(pf_pool *pool, pf_task fn, void *arg, int max_threads) {
     (void)pool;

@@ -327,7 +327,9 @@ int pf_spec_decode(pinfer_ctx *ctx, int32_t *out, int n_max, const pinfer_spec_p
         const double t1 = now_sec();   /* t0..t1: lookup, flush and MTP chain */
         ctx->lin_log_on = 1;
         if (batch < ke + 1) pf_set_batch(ctx, ke + 1);
+        pf_pool_gpu_pause(ctx->pool, 1);
         rc = pf_forward_h(ctx, vt, ke + 1, NULL, b->logits, NULL, b->normed);
+        pf_pool_gpu_pause(ctx->pool, 0);
         pf_set_batch(ctx, batch);
         ctx->lin_log_on = 0;
         if (rc != PINFER_OK) break;

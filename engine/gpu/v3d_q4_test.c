@@ -16,7 +16,13 @@
 #include <string.h>
 #include <time.h>
 
-enum { ROWS = 9216, COLS = 2560, NMAX = 64, BLOCKS = COLS / 32, QPUS = 8 };
+#ifndef TEST_ROWS
+#define TEST_ROWS 9216
+#endif
+#ifndef TEST_COLS
+#define TEST_COLS 2560
+#endif
+enum { ROWS = TEST_ROWS, COLS = TEST_COLS, NMAX = 64, BLOCKS = COLS / 32, QPUS = 8 };
 enum { CODE_BO, CODES_BO, SCALES_BO, STREAM_BO, Y_BO, PARAM_BO, NBO };
 static size_t align128(size_t x) { return (x + 127) & ~(size_t)127; }
 static double now(void) {
@@ -121,6 +127,38 @@ int main(int argc, char **argv) {
     const pf_mat weights = { .dtype = PQ_Q4_G32, .rows = ROWS, .cols = COLS, .data = cpu_weights };
     const pf_act act = { .cols = COLS, .n = n, .q = q, .d = dx, .fsum = fsum };
     kern_q4(&weights, x, &act, cpu, n, 0, ROWS);
+
+#ifdef PF_TEST_ENGINE
+    /* Integration oracle: GPU prefix must equal the separately produced Python QPU
+     * output, and every remaining row must equal the actual CPU kernel bit for bit. */
+    {
+        const float share = 0.33f;
+        int split = (int)((double)ROWS * share / 256) * 256;
+        const pf_mat *list[] = {&weights};
+        pf_pool *pool = pf_pool_create(4);
+        if (!pool || pf_pool_gpu_enable(pool, list, 1, share)) {
+            fprintf(stderr, "engine GPU setup failed\n"); pf_pool_destroy(pool); goto cleanup;
+        }
+        pf_matmul(pool, &weights, x, gpu, n);
+        pf_pool_destroy(pool);
+        size_t gpu_bad = 0, cpu_bad = 0;
+        float max_gpu = 0, max_cpu = 0;
+        for (int v = 0; v < n; v++) for (int r = 0; r < ROWS; r++) {
+            size_t pos = (size_t)v * ROWS + r;
+            float expected = r < split ? python[pos] : cpu[pos];
+            if (bits(gpu[pos]) != bits(expected)) {
+                if (r < split) gpu_bad++; else cpu_bad++;
+            }
+            if (r < split) max_gpu = fmaxf(max_gpu, fabsf(gpu[pos] - expected));
+            else max_cpu = fmaxf(max_cpu, fabsf(gpu[pos] - expected));
+        }
+        printf("RESULT {\"bench\":\"gpu-engine-split-oracle\",\"n\":%d,\"gpu_rows\":%d,"
+               "\"gpu_bad_words\":%zu,\"cpu_bad_words\":%zu,\"gpu_max_abs\":%.9g,\"cpu_max_abs\":%.9g}\n",
+               n, split, gpu_bad, cpu_bad, (double)max_gpu, (double)max_cpu);
+        rc = gpu_bad || cpu_bad ? 1 : 0;
+        goto cleanup;
+    }
+#endif
 
     const struct q4gpu_program *program = n == 7 ? &q4gpu_program_7 : &q4gpu_program_8;
     unsigned passes = (unsigned)n / program->n;

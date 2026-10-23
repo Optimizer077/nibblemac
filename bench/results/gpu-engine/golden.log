@@ -1,0 +1,56 @@
+[A] batched prefill: load 0.004 s | warm-up 0.000 s | prefill 10 tok in 9.794 s = 1.021 tok/s | decode 31 tok in 10.153 s = 3.053 tok/s | peak RSS 1470.1 MB | matvec=ref threads=4
+[B] token-by-token : load 0.002 s | warm-up 0.000 s | prefill 10 tok in 8.986 s = 1.113 tok/s | decode 0 tok in 0.000 s = 0.000 tok/s | peak RSS 1468.8 MB | matvec=ref threads=4
+golden: /mnt/e/Personal_tries/Raspberry_Pi/.claude/worktrees/agent-t007-gpu-engine/ref/golden/qwen35-0.8b
+model : /mnt/e/Personal_tries/Raspberry_Pi/.claude/worktrees/agent-t007-gpu-engine/models/pq/qwen35-0.8b-bf16.pq
+
+1. hidden states vs golden (entry 0 = embeddings, 24 = final-normed)
+   entry  max|gold|  max abs err  rel max err  rel rms err
+       0      0.153    0.000e+00    0.000e+00    0.000e+00
+       1      0.646    6.557e-07    1.015e-06    8.747e-07
+       2      0.923    4.768e-07    5.167e-07    9.736e-07
+       3      1.383    8.345e-07    6.036e-07    9.855e-07
+       4      0.874    4.172e-07    4.773e-07    1.084e-06
+       5      0.947    3.800e-07    4.014e-07    1.034e-06
+       6      1.025    5.960e-07    5.813e-07    9.919e-07
+       7      4.031    1.907e-06    4.732e-07    6.311e-07
+       8      2.051    1.907e-06    9.299e-07    1.119e-06
+       9      2.016    1.669e-06    8.278e-07    1.027e-06
+      10      1.965    1.550e-06    7.886e-07    1.004e-06
+      11      2.141    1.550e-06    7.238e-07    8.741e-07
+      12      1.034    1.550e-06    1.499e-06    1.256e-06
+      13      1.029    1.371e-06    1.332e-06    1.237e-06
+      14      1.090    1.252e-06    1.148e-06    1.159e-06
+      15      4.339    3.815e-06    8.791e-07    8.613e-07
+      16      1.350    4.303e-06    3.187e-06    1.737e-06
+      17      1.561    4.249e-06    2.722e-06    1.557e-06
+      18      2.082    3.789e-06    1.819e-06    1.476e-06
+      19      3.560    5.484e-06    1.540e-06    1.401e-06
+      20      3.178    3.632e-06    1.143e-06    1.438e-06
+      21      3.745    4.053e-06    1.082e-06    1.419e-06
+      22      4.087    3.934e-06    9.625e-07    1.391e-06
+      23      5.607    5.484e-06    9.780e-07    1.422e-06
+      24     32.248    4.768e-05    1.479e-06    1.614e-06
+   worst rel max err 3.187e-06 (limit 0.001) -> PASS
+
+2. prompt logits vs golden
+   pos 0: top1 ours   2614 gold   2614 ok  max abs err 4.673e-05 rel 3.757e-06
+   pos 1: top1 ours  20010 gold  20010 ok  max abs err 2.480e-05 rel 1.691e-06
+   pos 2: top1 ours    220 gold    220 ok  max abs err 2.050e-05 rel 1.445e-06
+   pos 3: top1 ours     19 gold     19 ok  max abs err 2.337e-05 rel 1.148e-06
+   pos 4: top1 ours     33 gold     33 ok  max abs err 2.122e-05 rel 1.410e-06
+   pos 5: top1 ours    264 gold    264 ok  max abs err 1.788e-05 rel 9.429e-07
+   pos 6: top1 ours   5243 gold   5243 ok  max abs err 1.669e-05 rel 1.039e-06
+   pos 7: top1 ours     11 gold     11 ok  max abs err 1.717e-05 rel 9.834e-07
+   pos 8: top1 ours    421 gold    421 ok  max abs err 1.764e-05 rel 9.558e-07
+   pos 9: top1 ours    628 gold    628 ok  max abs err 1.574e-05 rel 8.216e-07
+   max abs err 4.673e-05, rel max err 2.296e-06 (limit 0.001), top-1 10/10 -> PASS
+
+3. batched prefill (A) vs token-by-token decode path (B)
+   hidden rel max err 0.000e+00, logits rel max err 0.000e+00 (limit 1e-05) -> PASS
+
+4. greedy generation
+   ours: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   gold: [628, 381, 1429, 364, 264, 6669, 2020, 314, 8806, 13, 1049, 369, 264, 5243, 5576, 364, 45285, 321, 14939, 25161, 13, 561, 45980, 20010, 220, 19, 369, 264, 2526, 6165, 421, 628]
+   32/32 match -> PASS
+
+OVERALL: PASS

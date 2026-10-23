@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pinfer"
-version = "0.2.0"  # keep equal to PINFER_VERSION_* in engine/include/pinfer.h (tested)
+version = "0.3.0"  # keep equal to PINFER_VERSION_* in engine/include/pinfer.h (tested)
 description = "Raspberry-Pi-4-native inference engine for Qwen3.5 (C library + Python API + CLI)"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }

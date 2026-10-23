@@ -23,6 +23,10 @@ typedef struct pf_pool pf_pool; /* opaque; NULL means "run on the calling thread
 pf_pool *pf_pool_create(int n_threads);
 void pf_pool_destroy(pf_pool *pool);
 int pf_pool_threads(const pf_pool *pool);
+/* Upload an immutable subset once, bounded to 512 MiB including scratch. 0 success,
+ * -1 unavailable/error. The reference backend rejects enabled GPU use. */
+int pf_pool_gpu_enable(pf_pool *pool, const pf_mat *const *weights, int count, float share);
+void pf_pool_gpu_pause(pf_pool *pool, int pause); /* speculative verify stays on the CPU */
 
 /* Generic parallel job: fn(arg, tid, nthr) runs on nthr = min(pool threads, max_threads)
  * threads (tid 0 = the caller) and returns when all are done. The reference pool runs it on

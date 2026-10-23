@@ -1,0 +1,49 @@
+plan=mid4 n=1: emulator == reference_gpu: True; vs CPU formula: 51/64 differ, max |diff| / max|y| = 1.40e-07; max TMU FIFO 13; stats {'instr': 85, 'add': 72, 'mul': 69, 'macs_per_lane': 64, 'mac_per_instr': 0.719}
+   assembled 189 instructions
+plan=mid4 n=2: emulator == reference_gpu: True; vs CPU formula: 101/128 differ, max |diff| / max|y| = 1.06e-07; max TMU FIFO 13; stats {'instr': 125, 'add': 111, 'mul': 107, 'macs_per_lane': 128, 'mac_per_instr': 0.992}
+   assembled 237 instructions
+plan=mid4 n=3: emulator == reference_gpu: True; vs CPU formula: 146/192 differ, max |diff| / max|y| = 9.87e-08; max TMU FIFO 13; stats {'instr': 166, 'add': 150, 'mul': 145, 'macs_per_lane': 192, 'mac_per_instr': 1.129}
+   assembled 285 instructions
+plan=mid4 n=4: emulator == reference_gpu: True; vs CPU formula: 186/256 differ, max |diff| / max|y| = 9.87e-08; max TMU FIFO 13; stats {'instr': 208, 'add': 190, 'mul': 182, 'macs_per_lane': 256, 'mac_per_instr': 1.208}
+   assembled 335 instructions
+plan=mid4 n=5: emulator == reference_gpu: True; vs CPU formula: 238/320 differ, max |diff| / max|y| = 1.11e-07; max TMU FIFO 13; stats {'instr': 250, 'add': 230, 'mul': 219, 'macs_per_lane': 320, 'mac_per_instr': 1.26}
+   assembled 384 instructions
+plan=mid4 n=6: emulator == reference_gpu: True; vs CPU formula: 288/384 differ, max |diff| / max|y| = 2.47e-07; max TMU FIFO 13; stats {'instr': 292, 'add': 270, 'mul': 256, 'macs_per_lane': 384, 'mac_per_instr': 1.297}
+   assembled 434 instructions
+plan=mid4 n=7: emulator == reference_gpu: True; vs CPU formula: 332/448 differ, max |diff| / max|y| = 2.47e-07; max TMU FIFO 13; stats {'instr': 330, 'add': 308, 'mul': 295, 'macs_per_lane': 448, 'mac_per_instr': 1.341}
+   assembled 479 instructions
+plan=mid4 n=8: emulator == reference_gpu: True; vs CPU formula: 382/512 differ, max |diff| / max|y| = 2.13e-07; max TMU FIFO 13; stats {'instr': 371, 'add': 347, 'mul': 333, 'macs_per_lane': 512, 'mac_per_instr': 1.365}
+   assembled 528 instructions
+plan=end n=1: emulator == reference_gpu: True; vs CPU formula: 51/64 differ, max |diff| / max|y| = 1.40e-07; max TMU FIFO 9; stats {'instr': 85, 'add': 71, 'mul': 70, 'macs_per_lane': 64, 'mac_per_instr': 0.719}
+   assembled 189 instructions
+plan=end n=2: emulator == reference_gpu: True; vs CPU formula: 101/128 differ, max |diff| / max|y| = 1.06e-07; max TMU FIFO 9; stats {'instr': 124, 'add': 110, 'mul': 108, 'macs_per_lane': 128, 'mac_per_instr': 1.0}
+   assembled 236 instructions
+plan=end n=3: emulator == reference_gpu: True; vs CPU formula: 146/192 differ, max |diff| / max|y| = 9.87e-08; max TMU FIFO 9; stats {'instr': 168, 'add': 150, 'mul': 145, 'macs_per_lane': 192, 'mac_per_instr': 1.116}
+   assembled 287 instructions
+plan=end n=4: emulator == reference_gpu: True; vs CPU formula: 186/256 differ, max |diff| / max|y| = 9.87e-08; max TMU FIFO 9; stats {'instr': 210, 'add': 190, 'mul': 182, 'macs_per_lane': 256, 'mac_per_instr': 1.196}
+   assembled 337 instructions
+plan=end n=5: emulator == reference_gpu: True; vs CPU formula: 238/320 differ, max |diff| / max|y| = 1.11e-07; max TMU FIFO 9; stats {'instr': 252, 'add': 230, 'mul': 219, 'macs_per_lane': 320, 'mac_per_instr': 1.25}
+   assembled 386 instructions
+plan=end n=6: emulator == reference_gpu: True; vs CPU formula: 288/384 differ, max |diff| / max|y| = 2.47e-07; max TMU FIFO 9; stats {'instr': 294, 'add': 270, 'mul': 256, 'macs_per_lane': 384, 'mac_per_instr': 1.289}
+   assembled 436 instructions
+plan=end n=7: emulator == reference_gpu: True; vs CPU formula: 332/448 differ, max |diff| / max|y| = 2.47e-07; max TMU FIFO 9; stats {'instr': 329, 'add': 307, 'mul': 296, 'macs_per_lane': 448, 'mac_per_instr': 1.345}
+   assembled 478 instructions
+plan=end n=8: emulator == reference_gpu: True; vs CPU formula: 382/512 differ, max |diff| / max|y| = 2.13e-07; max TMU FIFO 9; stats {'instr': 373, 'add': 347, 'mul': 333, 'macs_per_lane': 512, 'mac_per_instr': 1.358}
+   assembled 530 instructions
+plan=split n=1: emulator == reference_gpu: True; vs CPU formula: 51/64 differ, max |diff| / max|y| = 1.40e-07; max TMU FIFO 7; stats {'instr': 84, 'add': 72, 'mul': 69, 'macs_per_lane': 64, 'mac_per_instr': 0.727}
+   assembled 177 instructions
+plan=split n=2: emulator == reference_gpu: True; vs CPU formula: 101/128 differ, max |diff| / max|y| = 1.06e-07; max TMU FIFO 7; stats {'instr': 123, 'add': 110, 'mul': 108, 'macs_per_lane': 128, 'mac_per_instr': 1.008}
+   assembled 224 instructions
+plan=split n=3: emulator == reference_gpu: True; vs CPU formula: 146/192 differ, max |diff| / max|y| = 9.87e-08; max TMU FIFO 7; stats {'instr': 164, 'add': 149, 'mul': 146, 'macs_per_lane': 192, 'mac_per_instr': 1.143}
+   assembled 272 instructions
+plan=split n=4: emulator == reference_gpu: True; vs CPU formula: 186/256 differ, max |diff| / max|y| = 9.87e-08; max TMU FIFO 7; stats {'instr': 206, 'add': 189, 'mul': 183, 'macs_per_lane': 256, 'mac_per_instr': 1.219}
+   assembled 322 instructions
+plan=split n=5: emulator == reference_gpu: True; vs CPU formula: 238/320 differ, max |diff| / max|y| = 1.11e-07; max TMU FIFO 7; stats {'instr': 248, 'add': 229, 'mul': 220, 'macs_per_lane': 320, 'mac_per_instr': 1.27}
+   assembled 371 instructions
+plan=split n=6: emulator == reference_gpu: True; vs CPU formula: 288/384 differ, max |diff| / max|y| = 2.47e-07; max TMU FIFO 7; stats {'instr': 290, 'add': 269, 'mul': 257, 'macs_per_lane': 384, 'mac_per_instr': 1.306}
+   assembled 421 instructions
+plan=split n=7: emulator == reference_gpu: True; vs CPU formula: 332/448 differ, max |diff| / max|y| = 2.47e-07; max TMU FIFO 7; stats {'instr': 328, 'add': 307, 'mul': 296, 'macs_per_lane': 448, 'mac_per_instr': 1.349}
+   assembled 466 instructions
+plan=split n=8: emulator == reference_gpu: True; vs CPU formula: 382/512 differ, max |diff| / max|y| = 2.13e-07; max TMU FIFO 7; stats {'instr': 369, 'add': 346, 'mul': 334, 'macs_per_lane': 512, 'mac_per_instr': 1.373}
+   assembled 515 instructions
+ALL OK

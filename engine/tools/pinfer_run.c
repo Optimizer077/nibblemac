@@ -46,6 +46,7 @@
  */
 #define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/resource.h>
@@ -153,7 +154,7 @@ static void usage(void) {
                     "[-b batch] (--ids 1,2,3 | --ids-file f)\n"
                     "                  [--dump-logits f] [--dump-hidden f] [--bench]\n"
                     "                  [--warmup | --no-warmup] [--spec k [--draft-vocab N]]\n"
-                    "                  [--dump-mtp f] [--kv-dtype 0|1|2] [--adaptive]\n"
+                    "                  [--dump-mtp f] [--kv-dtype 0|1|2] [--gpu SHARE] [--adaptive]\n"
                     "                  [--save-state f] [--load-state f] [--ngram N]\n"
                     "                  [--rewind-at S] [--dump-last f]\n");
 }
@@ -258,6 +259,7 @@ int main(int argc, char **argv) {
     int threads = 4, n_gen = 32, max_ctx = 0, batch = PF_MAX_BATCH, bench = 0;
     int spec_k = -1, draft_vocab = 0, warmup = -1, kv_dtype = 0, adaptive = 0, ngram = 0;
     int rewind_at = 0;
+    float gpu_split = 0.0f;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i], *v = i + 1 < argc ? argv[i + 1] : NULL;
         int used = 1;
@@ -274,6 +276,13 @@ int main(int argc, char **argv) {
         else if (!strcmp(a, "--draft-vocab") && v) draft_vocab = atoi(v);
         else if (!strcmp(a, "--dump-mtp") && v) dump_mtp_f = v;
         else if (!strcmp(a, "--kv-dtype") && v) kv_dtype = atoi(v);
+        else if (!strcmp(a, "--gpu") && v) {
+            char *end;
+            gpu_split = strtof(v, &end);
+            if (end == v || *end || !isfinite(gpu_split) || gpu_split < 0.0f || gpu_split > 1.0f) {
+                fprintf(stderr, "--gpu SHARE must be finite and in [0,1]\n"); return 2;
+            }
+        }
         else if (!strcmp(a, "--save-state") && v) save_state = v;
         else if (!strcmp(a, "--load-state") && v) load_state = v;
         else if (!strcmp(a, "--ngram") && v) ngram = atoi(v);
@@ -314,6 +323,7 @@ int main(int argc, char **argv) {
     p.max_ctx = max_ctx > 0 ? max_ctx : n_prompt + n_gen + (dump_mtp_f ? 4 : 0) +
                                             (load_state ? state_n_past(load_state) : 0);
     p.kv_dtype = kv_dtype;
+    p.gpu_split = gpu_split;
     int err = 0;
     double t0 = now_sec();
     pinfer_ctx *ctx = pinfer_load(model, &p, &err);
