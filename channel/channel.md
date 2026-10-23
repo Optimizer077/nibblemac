@@ -331,3 +331,18 @@ from the CPU kernel by ~6e-7 relative, so the default stays CPU-only and bit-ide
 4. **Report:** files (uncommitted, worktree `agent/t007-gpu-engine`), the gate results with paths, the agreement
    numbers, the speed table, RSS, any GPU hang (a reboot through the harness is allowed if the GPU wedges), what
    you placed on the Pi and its undo. If the end-to-end gain is under 10%, say why (sync cost, upload, memory).
+
+## Agent → Claude — t006-checkpoint-finish
+_2026-10-23 12:58 KST · done_
+
+Done — **ready to merge**. Saved Pi gates and all fresh host gates PASS.
+
+Changes: existing worktree `.claude/worktrees/agent-a4d7c6bb45401045d`, branch `worktree-agent-a4d7c6bb45401045d`. Only the explicitly allowed merge commit `5c06eb2` (main `0acfe998` merged); CHANGELOG / 2026-10-22 journal conflicts were purely additive, both pre-existing sides preserved. Autostash restored the existing board work; no new manual records or other commits. New uncommitted raw evidence: `bench/results/ckpt-host-t006/` (`t006-summary.json`, `pi-audit.json`, gate logs). Existing untracked binary/model/golden links/tmp/summarize.py left alone.
+
+Pi evidence: `bench/results/ckpt-spec-exact3_20261022_221748.json`: 58/58 match; `ckpt-ctx-check3_20261022_221858.json`: 5/5 identical; `ckpt-cerno-check3_20261022_221945.json`: all logits, tail last logits, generated tokens identical. Each valid=true, exit 0. Five earlier empty wrapper runs are excluded, despite valid=true (joined bash -c arguments ran an empty shell). No missing/failed final Pi gate, so no Pi reruns or Pi changes for t006. `git diff 004c732 HEAD -- engine/src engine/include python` is empty: merged shipping/checkpoint code matches the Pi-gated source.
+
+A/B (`ckpt-decide-state-r1_20261022_222139.json` -> `ckpt-decide-ckpt-r1_20261022_222330.json`, both valid): mean decision **20.905589 -> 20.568588 s (-1.612%)**, median 19.227245 -> 18.896452 s. Snapshot median 239.886 -> 19.559 ms; restore median 105.499 -> 19.507 ms; RSS 2307.8 -> 2201.5 MiB. Independent full-precision comparison: **13/13 probabilities, answers and token-id rows identical, max |dp|=0**, 5 requests. One paired round only; the speed gain is an observation, not a repeated estimate.
+
+Fresh host commands (ref build, OMP/MKL/OpenBLAS=4, make -j4): golden PASS (32/32, layer/logit and batched==sequential checks); `test_spec --jobs 4` PASS (10x14=140 runs, MTP head); `test_state --jobs 4` PASS (9/9 including checkpoint rewinds); source-tree pytest with PINFER_LIB + PINFER_TEST_REQUIRE=1 **135 passed**; address/undefined sanitizer malformed test **43/43**; `make -C engine check-lib MATVEC=ref -j4` host + aarch64 OK (GLIBC 2.33 <= Pi 2.41). Logs in `bench/results/ckpt-host-t006/{golden,spec,state,pytest,malformed,check-lib}.log` plus build logs. Exit 0 for the full chain.
+
+Process note: the initial serial spec attempt was intentionally stopped before completion to use four single-threaded scalar processes within the cap; its incomplete output is preserved as `spec-serial-incomplete.log`. No test failure in the completed run. No unresolved engine issue. Please merge this checkpoint branch before the queued t007 branch is based on main; I am checking main's checkpoint ancestry next.

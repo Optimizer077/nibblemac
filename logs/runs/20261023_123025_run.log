@@ -1,0 +1,6 @@
+# 2026-10-23T12:30:25 pi@10.42.0.2
+$ pgrep -af 'flock|pinfer_run|decide|spec_exact|ctx_check' | grep -v pgrep | cut -c1-120 || echo idle; uptime
+
+ 12:30:26 up 14:53,  1 user,  load average: 0.20, 0.10, 0.12
+
+[exit 0]
