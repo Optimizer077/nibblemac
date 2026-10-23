@@ -4,7 +4,7 @@ PYTHON ?= python3
 BUILD ?= ../../build/gpu-c
 CFLAGS = -O3 -std=c11 -ffp-contract=off -Wall -Wextra -Werror -I../src -I../include
 
-.PHONY: all emit split-test engine-fast fallback-tools
+.PHONY: all emit emit-q4k q4k-pilot split-test engine-fast fallback-tools
 all: $(BUILD)/v3d_q4_test
 
 $(BUILD)/v3d_q4_test: v3d.c v3d.h v3d_q4_test.c q4gpu_kernels.h ../src/kern_quant.c ../src/kern_act.c
@@ -13,6 +13,15 @@ $(BUILD)/v3d_q4_test: v3d.c v3d.h v3d_q4_test.c q4gpu_kernels.h ../src/kern_quan
 
 emit:
 	$(PYTHON) emit_q4.py --assembler-src "$(ASSEMBLER_SRC)" --out q4gpu_kernels.h
+
+emit-q4k:
+	$(PYTHON) emit_q4k.py --assembler-src "$(ASSEMBLER_SRC)" --out q4kgpu_kernels.h
+
+q4k-pilot: $(BUILD)/q4k_pilot
+
+$(BUILD)/q4k_pilot: q4k_pilot.c q4kgpu_kernels.h engine-fast
+	@mkdir -p $(BUILD)
+	$(CC) $(CFLAGS) -mcpu=cortex-a72 $< $(COREOBJ) -static -pthread -lm -o $@
 
 fallback-tools: $(BUILD)/fault_ioctl.so
 

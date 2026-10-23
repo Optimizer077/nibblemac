@@ -1,0 +1,330 @@
+{
+  "task": "t011-gpu-q4k-0.8b",
+  "base": "7499dab",
+  "verdict": "no-go",
+  "criterion": "Every shape/batch must have median aggregate simultaneous CPU+GPU throughput >=1.2x four-thread CPU alone.",
+  "failed_cases": [
+    {
+      "shape": "gate",
+      "n": 7,
+      "speedup": 1.19298159
+    },
+    {
+      "shape": "up",
+      "n": 7,
+      "speedup": 1.10752471
+    },
+    {
+      "shape": "down",
+      "n": 7,
+      "speedup": 1.17335707
+    }
+  ],
+  "cases": [
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/qkv.bin",
+      "n": 7,
+      "rounds": 3,
+      "median_speedup": 1.2243999,
+      "median_same_window_speedup": 1.22335641,
+      "shape": "qkv",
+      "file": "gpu-q4k-pilot-qkv-n7_20261023_171546.json",
+      "cpu_gops": 56.2265119,
+      "gpu_alone_gops": 22.636522,
+      "cpu_corun_gops": 48.6710195137225,
+      "gpu_corun_gops": 20.1727158044276,
+      "combined_gops": 68.4661833,
+      "round_speedups": [
+        1.1179556,
+        1.2243999,
+        1.24177236
+      ],
+      "reference_words": 896,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/qkv.bin",
+      "n": 64,
+      "rounds": 3,
+      "median_speedup": 1.245852,
+      "median_same_window_speedup": 1.23291186,
+      "shape": "qkv",
+      "file": "gpu-q4k-pilot-qkv-n64_20261023_171551.json",
+      "cpu_gops": 55.6265699,
+      "gpu_alone_gops": 23.6924055,
+      "cpu_corun_gops": 47.905222435192776,
+      "gpu_corun_gops": 20.891185448946004,
+      "combined_gops": 68.9836795,
+      "round_speedups": [
+        1.245852,
+        1.12720239,
+        1.30501468
+      ],
+      "reference_words": 8192,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/gate.bin",
+      "n": 7,
+      "rounds": 3,
+      "median_speedup": 1.19298159,
+      "median_same_window_speedup": 1.19291927,
+      "shape": "gate",
+      "file": "gpu-q4k-pilot-gate-n7_20261023_171557.json",
+      "cpu_gops": 56.4177116,
+      "gpu_alone_gops": 22.5429887,
+      "cpu_corun_gops": 46.622241496132965,
+      "gpu_corun_gops": 19.950555377279684,
+      "combined_gops": 67.1512651,
+      "round_speedups": [
+        1.15840112,
+        1.19298159,
+        1.19568376
+      ],
+      "reference_words": 896,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/gate.bin",
+      "n": 64,
+      "rounds": 3,
+      "median_speedup": 1.22495558,
+      "median_same_window_speedup": 1.21935694,
+      "shape": "gate",
+      "file": "gpu-q4k-pilot-gate-n64_20261023_171602.json",
+      "cpu_gops": 54.1667333,
+      "gpu_alone_gops": 23.5040858,
+      "cpu_corun_gops": 46.487085813038675,
+      "gpu_corun_gops": 20.919024921011275,
+      "combined_gops": 67.4563211,
+      "round_speedups": [
+        1.22495558,
+        1.2809384,
+        1.21261861
+      ],
+      "reference_words": 8192,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/up.bin",
+      "n": 7,
+      "rounds": 3,
+      "median_speedup": 1.10752471,
+      "median_same_window_speedup": 1.10678787,
+      "shape": "up",
+      "file": "gpu-q4k-pilot-up-n7_20261023_171607.json",
+      "cpu_gops": 56.661745,
+      "gpu_alone_gops": 22.5136919,
+      "cpu_corun_gops": 43.37538002889034,
+      "gpu_corun_gops": 19.786269479435763,
+      "combined_gops": 63.2893996,
+      "round_speedups": [
+        1.09644677,
+        1.21990159,
+        1.10752471
+      ],
+      "reference_words": 896,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/up.bin",
+      "n": 64,
+      "rounds": 3,
+      "median_speedup": 1.24135109,
+      "median_same_window_speedup": 1.24104969,
+      "shape": "up",
+      "file": "gpu-q4k-pilot-up-n64_20261023_171613.json",
+      "cpu_gops": 54.0538721,
+      "gpu_alone_gops": 23.5705298,
+      "cpu_corun_gops": 46.44245145830451,
+      "gpu_corun_gops": 20.65738126645158,
+      "combined_gops": 67.0998329,
+      "round_speedups": [
+        1.30785217,
+        1.1793092,
+        1.24135109
+      ],
+      "reference_words": 8192,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/down.bin",
+      "n": 7,
+      "rounds": 3,
+      "median_speedup": 1.17335707,
+      "median_same_window_speedup": 1.17235422,
+      "shape": "down",
+      "file": "gpu-q4k-pilot-down-n7_20261023_171618.json",
+      "cpu_gops": 52.8174982,
+      "gpu_alone_gops": 21.5568644,
+      "cpu_corun_gops": 42.616199220921544,
+      "gpu_corun_gops": 19.26998641329363,
+      "combined_gops": 61.960303,
+      "round_speedups": [
+        1.17335707,
+        1.23396026,
+        1.09433114
+      ],
+      "reference_words": 896,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/down.bin",
+      "n": 64,
+      "rounds": 3,
+      "median_speedup": 1.25355327,
+      "median_same_window_speedup": 1.24443171,
+      "shape": "down",
+      "file": "gpu-q4k-pilot-down-n64_20261023_171624.json",
+      "cpu_gops": 49.8912472,
+      "gpu_alone_gops": 22.0866736,
+      "cpu_corun_gops": 42.684297026603176,
+      "gpu_corun_gops": 19.562043908693376,
+      "combined_gops": 62.5413359,
+      "round_speedups": [
+        1.26705148,
+        1.25355327,
+        1.22092973
+      ],
+      "reference_words": 8192,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/head.bin",
+      "n": 7,
+      "rounds": 3,
+      "median_speedup": 1.25112021,
+      "median_same_window_speedup": 1.22562924,
+      "shape": "head",
+      "file": "gpu-q4k-pilot-head-n7_20261023_171633.json",
+      "cpu_gops": 58.2946953,
+      "gpu_alone_gops": 24.1692247,
+      "cpu_corun_gops": 52.19496325917412,
+      "gpu_corun_gops": 21.32648811902806,
+      "combined_gops": 73.5214514,
+      "round_speedups": [
+        1.23236874,
+        1.25112021,
+        1.30200845
+      ],
+      "reference_words": 896,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    },
+    {
+      "bench": "q4k_pilot_summary",
+      "fixture": "tmp/gpu-q4k/fixtures/head.bin",
+      "n": 64,
+      "rounds": 3,
+      "median_speedup": 1.29042829,
+      "median_same_window_speedup": 1.27351201,
+      "shape": "head",
+      "file": "gpu-q4k-pilot-head-n64_20261023_171725.json",
+      "cpu_gops": 57.0294024,
+      "gpu_alone_gops": 24.6433553,
+      "cpu_corun_gops": 52.4532875232444,
+      "gpu_corun_gops": 21.553410419809893,
+      "combined_gops": 74.0066979,
+      "round_speedups": [
+        1.28896221,
+        1.29042829,
+        1.29769373
+      ],
+      "reference_words": 8192,
+      "reference_bad_words": 0,
+      "all_finite": true,
+      "post_timing_hashes_equal": true
+    }
+  ],
+  "repetitions": 3,
+  "reference_rows_per_case": 128,
+  "independently_checked_words": 45440,
+  "cpu_vs_gpu_reference_max_relative": 5.58405929e-07,
+  "emulator": {
+    "passes": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "seeds": [
+      0,
+      1
+    ],
+    "exact": true,
+    "max_tmu_fifo_words": 8,
+    "instructions_n7": 509,
+    "instructions_n8": 561
+  },
+  "legacy_emulator": "all three plans x n1,2,7,8 pass",
+  "kernel_header_repeat_identical": true,
+  "health": [
+    {
+      "file": "gpu-q4k-health-before_20261023_171318.json",
+      "bench": "q4k_health",
+      "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+      "uptime": "70578.83",
+      "last_gpu_reset": "[ 1580.940159] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+      "throttle": "throttled=0x0",
+      "arm": "frequency(48)=1500345728",
+      "v3d": "frequency(46)=500000992"
+    },
+    {
+      "file": "gpu-q4k-health-after_20261023_171933.json",
+      "bench": "q4k_health",
+      "boot_id": "196bccb0-9d30-4574-afa1-5c54ba63cfc2",
+      "uptime": "70953.90",
+      "last_gpu_reset": "[ 1580.940159] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000",
+      "throttle": "throttled=0x0",
+      "arm": "frequency(48)=1500398464",
+      "v3d": "frequency(46)=500000992"
+    }
+  ],
+  "cpu_engine_sha256": "fd1009d78c38b69ba81a11fd9cc9fbed129055fcda57e41f7241fb18858ea216",
+  "pilot_binary_sha256": "70983e1736f829462928ae150960eb4548457189f6bb957465fa9d7bb4345c7e",
+  "model": {
+    "file": "qwen35-0.8b-q4k-headq4k.pq",
+    "bytes": 436507904,
+    "sha256": "3573deef290ff466f1295b023688ae3202c85d97600deadbe1e913c2a53ec350"
+  },
+  "assembler": {
+    "source": "https://github.com/Idein/py-videocore6/tree/175741a",
+    "archive_sha256": "cfcdd560de0db4e959eb23a8f63e54ecfa9b8eb0dbcbbe928328ce6c534d0569",
+    "only_mit_assembler_files_extracted": true
+  },
+  "fifo_primary_source": "https://chromium.googlesource.com/external/gitlab.freedesktop.org/mesa/mesa/+/91ab53b4b904a515324390908f652909ff501344/src/broadcom/compiler/v3d_compiler.h#49",
+  "stopped_after_pilot": true,
+  "engine_integration": false,
+  "pi_directory": "~/pinfer/tmp/gpu-q4k",
+  "undo": "rm -rf ~/pinfer/tmp/gpu-q4k"
+}

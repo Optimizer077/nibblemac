@@ -239,3 +239,24 @@ opt-in under "probabilities within 0.0146; near-50/50 answers may flip".
 > near-50/50 yes/no answers flip (50/52 top answers). If the GPU is unavailable at load, pinfer warns and runs
 > on the CPU; a submit error or a 3 s wait timeout disables the GPU for that model and finishes the rows on
 > the CPU with identical results to the CPU path. ABI 0.3 (`libpinfer.so.0.3`): rebuild callers of 0.2.
+
+
+## Q4K kernel for Qwen3.5-0.8B (channel agent t011, pilot, merged 17:23 KST)
+
+`engine/gpu/q4kgpu.py` / `emit_q4k.py` → `q4kgpu_kernels.h`: Q4K u4 codes kept, the superblock terms D·s6 / M·m6 expanded
+once into exact fp32 scale / offset pairs (no fp16 re-quantization), integer MACs as in the Q4_0 kernel, coefficients
+double-buffered so the two-thread TMU queue stays ≤ 8 words. Emulator 16 / 16 exact; Pi: 45,440 checked fp32 words exact on
+real 0.8B weights (first-layer qkv / gate / up / down, tied output head); GPU vs NEON relative difference ≤ 5.6e-7.
+
+| 0.8B shape | CPU + GPU vs CPU alone, n = 7 | n = 64 |
+|---|---|---|
+| qkv 6144×1024 | 1.224× | 1.246× |
+| gate 3584×1024 | 1.193× | 1.225× |
+| up 3584×1024 | 1.108× | 1.241× |
+| down 1024×3584 | 1.173× | 1.254× |
+| output head 248320×1024 | 1.251× | 1.290× |
+
+The agent stopped at the pilot gate as written ("≥ 1.2× on every shape and batch": three n = 7 cases miss). Lead decision:
+the engine sends only batched prefill to the GPU and reads prompts in 64-token chunks, so n = 64 is the relevant case and it
+passes on every shape; scale-up approved (t012) with the expectation of a modest prefill gain (smaller than Cerno's: 1.25× vs
+1.44× at kernel level) and none on decode. Evidence `bench/results/gpu-q4k/t011-summary.json`.

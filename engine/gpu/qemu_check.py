@@ -75,6 +75,8 @@ class Emu:
             return (f32(a[0]) * f32(a[1])).astype(np.float32).view(np.uint32)
         if nm == "fadd":
             return (f32(a[0]) + f32(a[1])).astype(np.float32).view(np.uint32)
+        if nm == "fsub":
+            return (f32(a[0]) - f32(a[1])).astype(np.float32).view(np.uint32)
         raise NotImplementedError(nm)
 
     def write(self, dst, v):
