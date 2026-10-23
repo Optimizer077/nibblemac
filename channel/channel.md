@@ -629,3 +629,59 @@ _2026-10-23 15:30 · lead looked at the draft scorecard and request figures: goo
    (e.g. "Prompt reading: 6.8 tok/s (8.2 with the GPU) vs llama.cpp 2.4"), so the cards don't need the footnote.
 3. Request figure: keep it; add the score scale meaning in the question cards (urgency 0 = no action … 3 = right now;
    tone 0 = hostile … 3 = positive), so "0.79" and "2.05" read without the footnote.
+
+## Agent → Claude — t009-feedback-1 (started)
+_2026-10-23 15:47 KST · running_
+
+Applying all three fixes: plain memory/prompt labels (including the embedded GPU animation), direct pinfer vs llama.cpp comparisons on each scorecard tile, and score endpoints inside the request's urgency/tone question cards. GitHub Markdown API rendering works; official GitHub CSS and local worktree images are being checked at the four requested viewport/theme combinations.
+
+## Agent → Claude — t009-cerno-pi-page
+
+_2026-10-23 16:27 KST · done. PC only; no Pi access, commits, pushes, records or publication._
+
+Worktree `E:\Personal_tries\cerno-pi-t009`, branch `agent/t009-page`, base `bbd120d`. All changes uncommitted and ready for lead review.
+
+Changed/added:
+- `README.md`: original logo, centered hero/tagline/badges/navigation, short measured hero animation, plain Cerno/Jev/System One/Index explanations, real request, direct engine scorecards, compact results table, both how-it-works animations, three-step quickstart, complete original credit and not-affiliated text after results. Reference/agreement figures remain in expandable sections.
+- `tools/make_page_assets.py`, `tools/page_data.py`: original SVG geometry and Pillow assets; numerical constants cite their measurement files. No third-party artwork, logos or model-card images used. `docs/assets/`: four SVG logo variants (699 bytes each), light/dark 1280x640 social previews (51697 / 52116 bytes).
+- `docs/figures/hero*.gif`, `decision_request*.png`, `results_scorecard*.png`: four variants each. `examples/support-triage.json` is an exact copy of the measured request, including all four questions and original criteria.
+- `tools/make_animation.py`, `tools/make_animation_gpu.py` and eight existing GIFs: plain memory/prompt labels; removed internal terms such as BOs, P64/P256, KV and Python blob copies from the public explanations. Original eight reference/agreement PNGs are byte-identical to HEAD.
+- `tools/preview_readme.py`: reproducible GitHub Markdown API rendering, GitHub's current official CSS, local image/badge cache and four Playwright screenshots. Preview environment and QA artifacts are ignored under `build/`.
+
+Asset sizes, bytes (columns: desktop light / desktop dark / phone light / phone dark):
+
+| filename family | bytes in variant order | pixels desktop / phone |
+|---|---|---|
+| hero GIF | 103112 / 102030 / 155533 / 155272 | 1676x780 / 1080x1753 |
+| decision_request PNG | 53116 / 53136 / 94248 / 94484 | 1676x951 / 1080x2650 |
+| results_scorecard PNG | 48994 / 49169 / 92063 / 92337 | 1676x1062 / 1080x3038 |
+| decision_flow GIF | 485191 / 484269 / 646888 / 645537 | 1676x1082 / 1080x2564 |
+| decision_gpu GIF | 381249 / 378138 / 600536 / 600728 | 1676x1373 / 1080x3180 |
+
+All figures use the existing four-way media queries and >=13 CSS px text at intended display width; badges are enlarged to 25 px high (13.75 px text). Every GIF is below 1.5 MB. Hero: 17 decoded frames / 6.3 s playback, labelled measured first-answer computation **12.3119 s** (prefix 2.2333 + checkpoint .0635 + first question 10.0151); full four-question request **29.9716 s**, model load excluded. Flow: 30 frames / 13.7 s; GPU: 63 / 18.2 s. End frames equal first frames.
+
+Verified:
+- `gh api markdown --method POST --input build/page-qa/markdown-payload.json` PASS; only the read-only Markdown renderer was called. `github-rendered.html` stores its untouched fragment. Wrapper uses local worktree assets and official GitHub CSS, adding heading IDs normally supplied by GitHub's repository UI.
+- `tools/preview_readme.py` PASS at desktop 1280 and phone 412, both light/dark: correct responsive/theme asset for all eight pictures, zero broken images, document width exactly 1280/412, including all details expanded. Visually reviewed hero, request/scorecards, how-it-works, quickstart, credits and social previews; fixed a malformed model-card link, command wrapping and a premature blank scroll capture.
+- `python build/page-qa/verify_final.py`: PASS, **34 assets / 440 decoded GIF frames / 32 screenshots**, exact frame durations and loop seams, all source/example/credit/local-link checks. New page assets repeat byte-identically. Source Python compiles; `git diff --check` clean. `build/page-qa/final-verification.json` contains current hashes, dimensions, sizes, sources and browser checks.
+
+Requested full-page screenshots:
+- `E:\Personal_tries\cerno-pi-t009\build\page-qa\readme-desktop-light.png`
+- `E:\Personal_tries\cerno-pi-t009\build\page-qa\readme-desktop-dark.png`
+- `E:\Personal_tries\cerno-pi-t009\build\page-qa\readme-phone-light.png`
+- `E:\Personal_tries\cerno-pi-t009\build\page-qa\readme-phone-dark.png`
+
+Same folder has `readme-{desktop,phone}-{light,dark}-top.png`, `-expanded.png`, and full-size section views suffixed `-what-a-decision-looks-like`, `-results-on-the-pi`, `-how-it-works`, `-quickstart`, `-credit-and-licence`. HTML: `github-rendered.html`, `preview-light.html`, `preview-dark.html`. Figure proofs: `figures-{desktop,phone}-{light,dark}.png`; animation contacts are under `build/page-qa` (hero) / `build/animation-qa` (flow/GPU).
+
+Primary facts and provenance (all three fetched HTTP200; downloaded texts match the supplied local sources after newline normalization; hashes/revisions in `source-checks.json`):
+- [Apertix Cerno 4B model card](https://huggingface.co/apertixai/cerno-4b), v1.1 dated19 October2026, fetched HF revision `ed4b5c59b542ee96c227ee874776c973980c640b`: Apertix's27B/9B/4B family, 4B base **Qwen3.5-4B**, typed probabilities without text generation, Jev1.13/TypeSafe identification, DI0.3 public suite **37 benchmarks / 140178 requests**, reported complete-public scores FP8 Cerno4B **57.60**, Jev1.13 **57.96**, GGUF llama.cpp **57.23**. Public-suite/model-quality results are explicitly separate from Pi compatibility/latency. Card says27B is Qwen3.8, so no incorrect whole-family Qwen3.5 claim.
+- [Original inference README](https://github.com/apertixsk/cerno-inference/blob/9941548d836ff53b56e326860f94b93adc79bee9/README.md): typed choice/yes-no/score protocol, calibration and one-forward-pass scoring. [System One adapter](https://github.com/apertixsk/cerno-inference/blob/9941548d836ff53b56e326860f94b93adc79bee9/third_party/decider/decider/systemone.py): System One request shape and TypeSafe endpoint. Jev and System One are explicitly TypeSafe AI's names; original non-affiliation sentence kept intact. No long primary-source quotations.
+- Pi numbers: `page_data.py` / `animation_measurements.py` cite exact files. **4.4736x** is `results/speed_vs_llama.json`, matched8-request26-question total211.9057 vs947.974 s. Today's separate5-request13-question, three-round mean is **20.6686 / 17.2645 s**, load excluded; CPU/GPU prompt means and current memory come from t007 sources listed in animation_measurements. Memory stays in **MiB**, process peak~2200 vs3554, with499 additional GPU memory. Agreement from `results/compare_all_reuse2.json`, GPU t007 source and matched llama check; datasets/counts are labelled. Hero/request timings cite nibblepi `ckpt-decide-ckpt-r1_20261022_222330.json`; support probabilities are the published Cerno result and were exact under checkpoint. No new timings invented or Pi runs made.
+
+Open issues: none blocking. README correctly uses nibblepi's converter, a real single-request sample and Python `gpu_split=0.33` (the Cerno CLI has no GPU flag). Social-preview PNGs are ready; repository settings were not changed. CERNO.md, CHANGELOG, NOTICE and LICENSE untouched. Lead owns integration.
+
+## Agent → Claude — t009-feedback-1
+
+_2026-10-23 16:27 KST · done. All three requested fixes are included in t009 above._
+
+Public figures/README use GPU memory, 64/256-token prompt and peak memory. Every scorecard tile states pinfer vs llama.cpp directly and labels dataset differences. Urgency and tone endpoints appear inside their input question cards: urgency0=no action needed,3=needs attention right now; tone0=hostile,3=positive. Four layouts visually checked; complete evidence and sizes above. Resuming channel listening.
