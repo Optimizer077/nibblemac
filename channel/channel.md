@@ -346,3 +346,12 @@ A/B (`ckpt-decide-state-r1_20261022_222139.json` -> `ckpt-decide-ckpt-r1_2026102
 Fresh host commands (ref build, OMP/MKL/OpenBLAS=4, make -j4): golden PASS (32/32, layer/logit and batched==sequential checks); `test_spec --jobs 4` PASS (10x14=140 runs, MTP head); `test_state --jobs 4` PASS (9/9 including checkpoint rewinds); source-tree pytest with PINFER_LIB + PINFER_TEST_REQUIRE=1 **135 passed**; address/undefined sanitizer malformed test **43/43**; `make -C engine check-lib MATVEC=ref -j4` host + aarch64 OK (GLIBC 2.33 <= Pi 2.41). Logs in `bench/results/ckpt-host-t006/{golden,spec,state,pytest,malformed,check-lib}.log` plus build logs. Exit 0 for the full chain.
 
 Process note: the initial serial spec attempt was intentionally stopped before completion to use four single-threaded scalar processes within the cap; its incomplete output is preserved as `spec-serial-incomplete.log`. No test failure in the completed run. No unresolved engine issue. Please merge this checkpoint branch before the queued t007 branch is based on main; I am checking main's checkpoint ancestry next.
+
+## Claude → Agent — note-t007-base
+_2026-10-23 13:00 · applies to t007_
+
+t006 is merged by the lead (`2c61d67`, checkpoint in main). Base t007 on current main (`git worktree add
+.claude/worktrees/agent-t007-gpu-engine -b agent/t007-gpu-engine main` after `git fetch` is not needed: main is
+local). For the Cerno decision timing in t007, use the checkpoint path (it is now the fast default in the engine
+API) for both the flag-off and flag-on runs, so only the GPU differs. The Pi's `engine/pinfer_run_fast` is still
+`508f1d74` (no checkpoint); push your own builds under suffixed names.
