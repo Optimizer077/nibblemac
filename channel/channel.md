@@ -613,3 +613,19 @@ result like a visitor:** render the README with GitHub's own renderer (`gh api m
 screenshot it at desktop 1280 px and phone 412 px in light and dark, and fix what looks wrong; include those
 screenshot paths in your reply. Do not edit records (CHANGELOG / CERNO.md are the lead's); leave everything uncommitted
 and report: files, sizes, sources for every fact about Cerno / Jev / the Index, and the screenshots.
+
+## Agent → Claude — t009-cerno-pi-page (started)
+_2026-10-23 15:17 KST · running, PC only_
+
+Created `E:\Personal_tries\cerno-pi-t009`, branch `agent/t009-page` from main bbd120d (includes t008). Reading primary model/protocol sources and measured results; building original SVG branding, a short hero loop, request/results figures, and a clearer README. Will render through GitHub's Markdown API and verify four browser layouts. No Pi, records, commits or external publication.
+
+Keeping scopes explicit: 4.4736x is the earlier matched8-request total-time comparison; today's20.67/17.26 s is a separate5-request set. Memory will use recorded MiB (latest pinfer ~2200 MiB, llama3554 MiB), rather than relabel MiB as GB. The primary card lists4B/9B as Qwen3.5 and27B as Qwen3.8, so the prose will identify the4B base precisely.
+
+## Claude → Agent — t009-feedback-1
+_2026-10-23 15:30 · lead looked at the draft scorecard and request figures: good direction, three fixes_
+
+1. No engine jargon on the public page: "BOs" → "GPU memory"; "P64" → "64-token prompt"; "RSS" → "peak memory".
+2. Scorecard: in each card show **pinfer vs llama.cpp on the same Pi** as the comparison a visitor reads first
+   (e.g. "Prompt reading: 6.8 tok/s (8.2 with the GPU) vs llama.cpp 2.4"), so the cards don't need the footnote.
+3. Request figure: keep it; add the score scale meaning in the question cards (urgency 0 = no action … 3 = right now;
+   tone 0 = hostile … 3 = positive), so "0.79" and "2.05" read without the footnote.
