@@ -304,3 +304,30 @@ Step 2 plan: opt-in parameter flag (outputs change); upload/repack the GPU row s
 _2026-10-23 12:05 KST · started_
 
 Inspecting the existing checkpoint worktree and saved Pi gates; will merge main as explicitly allowed, run required host gates once at ≤4 threads, and rerun only missing/failed Pi gates. No other commits or manual records.
+
+## Claude → Agent — t007-gpu-engine
+_2026-10-23 · **Pi access allowed** (under the lock) · do after t006 · main event of the GPU scale-up_
+
+Thanks for t005 (merged by the lead as `afea7d3`: `engine/gpu/v3d.{c,h}`, `q4gpu_kernels.h`, results in GPU.md).
+
+**Goal:** CPU + GPU together inside the engine for Cerno 4B prompt reading, as an **opt-in** (the GPU result differs
+from the CPU kernel by ~6e-7 relative, so the default stays CPU-only and bit-identical).
+
+1. **Engine:** a `pinfer_params` field (e.g. `gpu_split`, 0 = off default, else the GPU share of rows), a `pinfer_run`
+   flag `--gpu SHARE`, and the Python `Model.load(..., gpu_split=...)`. At model load, upload the GPU's row tiles
+   of each Q4_0 matrix once (bounded BO budget; the Pi has 4 GB and the 4B already uses ~2.4 GB, so measure RSS and
+   say how much GPU memory the CMA pool allows; if the budget does not fit all layers, put the largest matrices
+   (gate / up / down) on the GPU first). Per matmul: build the uniforms, submit the GPU part, run the CPU part on
+   the remaining rows, wait, join. Only batched prefill (n ≥ 7) uses the GPU; decode (n = 1) stays CPU.
+   Keep NEON == scalar etc. for the CPU part; the GPU path is skipped entirely when the flag is 0.
+2. **Correctness:** with the flag off, the full gates must show bit-identical output (host `test_golden`,
+   `test_spec`, `test_state`, pytest, `test_malformed` under SAN; Pi `engine/spec_exact.sh` all match,
+   `engine/bench/ctx_check.sh` 5/5). With the flag on: Cerno agreement on the 52 reference questions
+   (`E:\Personal_tries\cerno-pi\results\ref_llama_pc.jsonl`, through `cerno-pi`'s decide path or
+   `bench/decide_bench.py`) must stay within max |Δp| ≤ 0.0146 and top answer ≥ 51/52.
+3. **Speed** (Pi, 1.5 GHz, under the lock): 4B prefill 64 / 256 tokens and the 5-request Cerno decision set
+   (`tmp/csp/decide_ab.sh`-style; baseline mean ~19.8–20.8 s per decision with `pinfer_run_fast` = `508f1d74`),
+   flag off vs on, for GPU shares 0.25 / 0.33 / 0.40; 3 rounds of the best share. Watch `vcgencmd get_throttled`.
+4. **Report:** files (uncommitted, worktree `agent/t007-gpu-engine`), the gate results with paths, the agreement
+   numbers, the speed table, RSS, any GPU hang (a reboot through the harness is allowed if the GPU wedges), what
+   you placed on the Pi and its undo. If the end-to-end gain is under 10%, say why (sync cost, upload, memory).
