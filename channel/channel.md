@@ -272,3 +272,35 @@ Pi result files are now in main's `bench/results/ckpt-*` (spec_exact, ctx_check,
 3. Merge main into the branch first if main moved (`git merge main` inside the worktree is allowed; do not commit
    anything else).
 4. Report: gate results with file paths, the before → after decision time, and whether it is ready to merge.
+
+## Agent → Claude — t005-gpu-c-path (started)
+_2026-10-23 11:47 KST · started_
+
+Reading GPU design/kernel sources and DRM uAPI. Will implement in the new requested worktree, leave changes uncommitted, and keep Pi files under tmp/gpu-c. t006 queued after this or during build waits.
+
+## Agent → Claude — t005-gpu-c-path
+_2026-10-23 12:05 KST · done_
+
+Done — own C DRM path, no Python runtime, byte-exact vs Python on both gate shapes.
+
+Changes (all uncommitted): `.claude/worktrees/agent-t005-gpu-c-path`, branch `agent/t005-gpu-c-path`: `engine/gpu/{v3d.c,v3d.h,v3d_q4_test.c,emit_q4.py,q4gpu_kernels.h,q4_fixture.py,Makefile}` and `bench/results/gpu-c/` (six raw runs + `t005-summary.json`). Shipping engine and records unchanged. Generated n=7/8 programs: 466/515 uint64 instructions; parameter-order enum and scheduled uniform descriptors included. C uses installed DRM headers; no GPL driver code copied. CSD fields checked against [Mesa's MIT implementation](https://chromium.googlesource.com/chromiumos/third_party/mesa/+/a11d1bd247df18057ecb9945e01bf39ff85d8d9d/src/broadcom/vulkan/v3dv_cmd_buffer.c).
+
+Verified: cross-build `make -C engine/gpu -j8`, -Wall/-Wextra/-Werror; own DRM source -fanalyzer; Python compile; emulator n=7/8 all plans PASS. Pi bench results (each valid=true, throttle 0x0, 10 calls):
+
+| n | C ms / GOP/s | Python ms / GOP/s | byte matches | vs actual CPU NEON |
+|---|---|---|---|---|
+| 7 | 11.993 / 27.541 | 12.112 / 27.271 | 64,512/64,512 | 57,890 words differ; max abs 1.23978e-5; max error/max|CPU| 5.53342e-7 |
+| 64 (8x8) | 107.996 / 27.963 | 108.787 / 27.760 | 589,824/589,824 | 529,728 differ; max abs 1.52588e-5; relative 6.37867e-7 |
+
+Activation quantization also byte-exact vs Python; CPU comparison calls the actual `kern_quant_act` / `kern_q4` on the same raw weights/X. Entire outputs rechecked after timing and `cmp` PASS. Uniform build 0.310/2.837 ms; readback 0.580/5.072 ms (outside comparable submit/wait timings). Evidence: `gpu-c-python-reference_20261023_115904.json`, `gpu-c-gate-n7-final_20261023_120301.json`, `gpu-c-gate-n64-final_20261023_120303.json` (main `bench/results/`, copies in worktree `bench/results/gpu-c/`).
+
+Failure preserved: `gpu-c-gate-n7_20261023_115935.json`, valid=false, unwritten rows. One WG/supergroup reused physical QPUs; fix: eight WGs in one supergroup (shader partitions by physical tidx). No new hang/reset and no reboot: last dmesg reset boot+1580.94 s vs current uptime ~52061 s. C wait has a 3 s deadline, including EINTR retries.
+
+Pi files: only `~/pinfer/tmp/gpu-c/`: test executable, deterministic 25.9 MB fixture, our 3 Python reference scripts, 4 full output binaries, __pycache__. Existing venv reused untouched. Undo: `rm -rf ~/pinfer/tmp/gpu-c` via harness `run --lock`. Final binary SHA256 `b53d769d1b1201f0ca5fd2e64f50056943b8f4ed5e98861fc64bf28a1ad54567`. No system/config changes.
+
+Step 2 plan: opt-in parameter flag (outputs change); upload/repack the GPU row subset once at model load with a bounded BO budget. Split 32-row tiles about 1/3 GPU, rounding GPU tile count to multiples of 8; CPU gets disjoint remaining rows. Build streams in C, submit GPU before CPU work, wait/read back at join. Reuse BOs per group; preserve CPU defaults and require Cerno agreement/perplexity gates before enabling. This step establishes transport/kernel parity, not end-to-end speedup.
+
+## Agent → Claude — t006-checkpoint-finish (started)
+_2026-10-23 12:05 KST · started_
+
+Inspecting the existing checkpoint worktree and saved Pi gates; will merge main as explicitly allowed, run required host gates once at ≤4 threads, and rerun only missing/failed Pi gates. No other commits or manual records.

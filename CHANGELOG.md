@@ -27,6 +27,11 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - `engine/pinfer_run_fast` `d48ffda1` → `508f1d74` (prefill tail + groups of 7s + 5s; Cerno decisions −4.4%, bit-identical);
   spec_exact 58/58 on the installed binary; old builds kept as `*.pre-csp`. `docs/pi-state.md` "Files we placed".
 
+### Added (GPU)
+- GPU co-processing pilot: **go** (CPU + GPU = 1.41–1.47× CPU alone on the Cerno 4B shapes).
+- `engine/gpu/v3d.c`: the QPU Q4_0 kernel from C through our own DRM calls (no GPL code), byte-identical to the
+  Python path, 28 GOP/s; GPU vs CPU differ by ~6e-7 relative, so the coming engine path is opt-in.
+
 ### Pilots
 - Distilled decider: **no-go** (0.8B student 39/52 = 75% top-answer agreement with Cerno 4B, bar 85%).
 - Layer skipping: **no-go** (no single layer or early exit stays within the probability bar; best L25 0.0214 vs 0.0146).

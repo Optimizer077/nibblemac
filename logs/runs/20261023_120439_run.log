@@ -1,0 +1,10 @@
+# 2026-10-23T12:04:39 pi@10.42.0.2
+$ set -eu; cmp tmp/gpu-c/gate.python-y7.bin tmp/gpu-c/gate.c-y7.bin; cmp tmp/gpu-c/gate.python-y64.bin tmp/gpu-c/gate.c-y64.bin; sha256sum tmp/gpu-c/v3d_q4_test tmp/gpu-c/gate-fixture.bin; cat /proc/uptime; dmesg | grep v3d_reset | tail -2
+
+b53d769d1b1201f0ca5fd2e64f50056943b8f4ed5e98861fc64bf28a1ad54567  tmp/gpu-c/v3d_q4_test
+081f6013be29a2ea57de9739d965fe5df5ed9d1ef895e8f24a23c57aa19caefe  tmp/gpu-c/gate-fixture.bin
+52061.24 198971.42
+[ 1580.940122] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.
+[ 1580.940159] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000
+
+[exit 0]

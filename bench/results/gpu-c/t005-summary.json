@@ -1,0 +1,91 @@
+{
+    "outcome":  "done",
+    "python":  [
+                   {
+                       "bench":  "gpu-python-reference",
+                       "n":  7,
+                       "rows":  9216,
+                       "cols":  2560,
+                       "passes":  1,
+                       "seconds":  0.012111862997699063,
+                       "gops":  27.270902920776813,
+                       "all_finite":  true,
+                       "sample_exact_vs_model":  true,
+                       "checked_words":  896,
+                       "output":  "tmp/gpu-c/gate.python-y7.bin"
+                   },
+                   {
+                       "bench":  "gpu-python-reference",
+                       "n":  64,
+                       "rows":  9216,
+                       "cols":  2560,
+                       "passes":  8,
+                       "seconds":  0.10878695649807923,
+                       "gops":  27.759751510773444,
+                       "all_finite":  true,
+                       "sample_exact_vs_model":  true,
+                       "checked_words":  8192,
+                       "output":  "tmp/gpu-c/gate.python-y64.bin"
+                   }
+               ],
+    "c":  [
+              {
+                  "bench":  "gpu-c-q4",
+                  "rows":  9216,
+                  "cols":  2560,
+                  "n":  7,
+                  "passes":  1,
+                  "iterations":  10,
+                  "seconds":  0.011992923,
+                  "gops":  27.541363,
+                  "all_finite":  true,
+                  "checked_words":  64512,
+                  "python_bad_words":  0,
+                  "exact_vs_python":  true,
+                  "cpu_bad_words":  57890,
+                  "exact_vs_cpu":  false,
+                  "cpu_max_abs":  1.23977661E-05,
+                  "cpu_relative_max":  5.53341716E-07,
+                  "activation_quantization_exact":  true,
+                  "uniform_build_seconds":  0.000309511997,
+                  "readback_seconds":  0.000579766005
+              },
+              {
+                  "bench":  "gpu-c-q4",
+                  "rows":  9216,
+                  "cols":  2560,
+                  "n":  64,
+                  "passes":  8,
+                  "iterations":  10,
+                  "seconds":  0.10799573,
+                  "gops":  27.963132,
+                  "all_finite":  true,
+                  "checked_words":  589824,
+                  "python_bad_words":  0,
+                  "exact_vs_python":  true,
+                  "cpu_bad_words":  529728,
+                  "exact_vs_cpu":  false,
+                  "cpu_max_abs":  1.52587891E-05,
+                  "cpu_relative_max":  6.37867024E-07,
+                  "activation_quantization_exact":  true,
+                  "uniform_build_seconds":  0.002836516,
+                  "readback_seconds":  0.005071896
+              }
+          ],
+    "kernel_header_sha256":  "d96c4d2b8855b2dfac5a916eea1c62d78123eb5bf8e33c81111c86c299588df9",
+    "test_binary_sha256":  "b53d769d1b1201f0ca5fd2e64f50056943b8f4ed5e98861fc64bf28a1ad54567",
+    "fixture_sha256":  "081f6013be29a2ea57de9739d965fe5df5ed9d1ef895e8f24a23c57aa19caefe",
+    "failed_attempt":  "gpu-c-gate-n7_20261023_115935.json",
+    "failure":  "One workgroup per supergroup reused physical QPUs; grouped all eight in one supergroup. No new GPU reset; last reset boot+1580.94 s vs uptime about 52000 s.",
+    "pi_directory":  "~/pinfer/tmp/gpu-c",
+    "undo":  "rm -rf ~/pinfer/tmp/gpu-c",
+    "source_reference":  "https://chromium.googlesource.com/chromiumos/third_party/mesa/+/a11d1bd247df18057ecb9945e01bf39ff85d8d9d/src/broadcom/vulkan/v3dv_cmd_buffer.c",
+    "results":  [
+                    "gpu-c-python-reference_20261023_115904.json",
+                    "gpu-c-gate-n7_20261023_115935.json",
+                    "gpu-c-gate-n7-grouped_20261023_120101.json",
+                    "gpu-c-gate-n64-grouped_20261023_120104.json",
+                    "gpu-c-gate-n7-final_20261023_120301.json",
+                    "gpu-c-gate-n64-final_20261023_120303.json"
+                ]
+}

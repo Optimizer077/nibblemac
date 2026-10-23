@@ -1,0 +1,28 @@
+# 2026-10-23T12:01:33 pi@10.42.0.2
+$ dmesg | grep v3d | tail -12; ls -l tmp/gpu-c
+
+[ 1575.148045] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.
+[ 1575.148083] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000
+[ 1576.172056] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.
+[ 1576.172088] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000
+[ 1577.868121] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.
+[ 1577.868166] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000
+[ 1578.892100] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.
+[ 1578.892141] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000
+[ 1579.916112] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.
+[ 1579.916152] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000
+[ 1580.940122] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* Resetting GPU for hang.
+[ 1580.940159] v3d fec00000.v3d: [drm:v3d_reset [v3d]] *ERROR* V3D_ERR_STAT: 0x00001000
+total 31216
+-rw-rw-r-- 1 pi pi  2359296 Oct 23 12:01 gate.c-y64.bin
+-rw-rw-r-- 1 pi pi   258048 Oct 23 12:01 gate.c-y7.bin
+-rwxr-xr-x 1 pi pi 25907232 Oct 23 11:58 gate-fixture.bin
+-rw-rw-r-- 1 pi pi  2359296 Oct 23 11:59 gate.python-y64.bin
+-rw-rw-r-- 1 pi pi   258048 Oct 23 11:59 gate.python-y7.bin
+drwxrwxr-x 2 pi pi     4096 Oct 23 11:59 __pycache__
+-rwxr-xr-x 1 pi pi     5506 Oct 23 11:55 q4_fixture.py
+-rwxr-xr-x 1 pi pi    16037 Oct 23 11:47 q4gpu.py
+-rwxr-xr-x 1 pi pi     9132 Oct 23 11:47 qsched.py
+-rwxr-xr-x 1 pi pi   776952 Oct 23 12:00 v3d_q4_test
+
+[exit 0]

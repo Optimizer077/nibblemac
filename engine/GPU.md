@@ -181,3 +181,26 @@ up to ~1.3x if the split overlaps perfectly, less with the Y read-back and the s
 
 py-videocore6 by Idein Inc. (assembler MIT, driver GPL-2.0-or-later), used as a run-time
 dependency. ISA details: Mesa `src/broadcom/qpu`, the Linux `v3d` driver, py-videocore6's tests.
+
+
+## Scale-up step 1: the kernel from C, own DRM path (channel agent t005, 2026-10-23 12:06 KST)
+
+`engine/gpu/v3d.{c,h}` open `/dev/dri/renderD128`, create / mmap BOs, submit the compute job
+(`DRM_IOCTL_V3D_SUBMIT_CSD`) and wait (3 s deadline, EINTR retries), using only the kernel's MIT uAPI header
+(no py-videocore6 code). `emit_q4.py` writes the assembled kernels to `q4gpu_kernels.h` (n = 7 / 8 programs,
+466 / 515 instructions), so nothing needs Python at run time. `v3d_q4_test.c` runs gate 9216×2560.
+
+| n | C: ms / GOP/s | Python path: ms / GOP/s | C vs Python | GPU vs CPU NEON kernel |
+|---|---|---|---|---|
+| 7 | 11.993 / 27.54 | 12.112 / 27.27 | 64,512 / 64,512 bytes equal | max abs 1.24e-5, relative 5.5e-7 |
+| 64 (8 passes of 8) | 107.996 / 27.96 | 108.787 / 27.76 | 589,824 / 589,824 equal | max abs 1.53e-5, relative 6.4e-7 |
+
+Result files: `bench/results/gpu-c-python-reference_20261023_115904.json`, `gpu-c-gate-n7-final_20261023_120301.json`,
+`gpu-c-gate-n64-final_20261023_120303.json` (all valid, throttled 0x0), raw runs in `bench/results/gpu-c/`. One failed
+first attempt kept (`gpu-c-gate-n7_20261023_115935.json`, valid=false: a work-group reused physical QPUs; fixed by
+eight work-groups in one supergroup). The GPU result is **not bit-identical to the CPU kernel** (different float
+order, no FMA), so the engine integration is an **opt-in** flag gated on Cerno agreement and perplexity.
+Pi files: `~/pinfer/tmp/gpu-c/` (undo `rm -rf ~/pinfer/tmp/gpu-c`).
+
+Next (step 2): split each matmul's rows ~1/3 GPU / 2/3 CPU (GPU tiles in multiples of 8 × 32 rows), upload the GPU
+rows once at model load within a bounded BO budget, submit the GPU part before the CPU part, join per matmul.
