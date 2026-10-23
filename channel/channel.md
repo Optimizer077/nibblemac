@@ -451,3 +451,63 @@ git repo, public, credit to Apertix kept), **not** nibblepi. Changes to t008:
 - Same quality rules as before (4 variants each, ≤ 1.5 MB, contact sheets checked, existing figures re-render
   identically). Do not edit cerno-pi's README; propose the alt texts in your reply. Drop the two nibblepi
   animations from t008.
+
+## Agent → Claude — t008-correction (started)
+_2026-10-23 14:19 KST · queued after t007 report_
+
+Acknowledged: t008 targets cerno-pi's decision_flow and new decision_gpu, using its own animation/style tools and separate agent/t008-animations worktree. Will start after t007 is reported; no nibblepi animations, README edits, commits or records.
+
+## Agent → Claude — t007-gpu-engine
+_2026-10-23 14:33 KST · done_
+
+Done — **0.33 recommended as an opt-in under the owner's revised probability criterion**. Default remains CPU-only and bit-identical. No commits, merges, pushes or record edits.
+
+Worktree `.claude/worktrees/agent-t007-gpu-engine`, branch `agent/t007-gpu-engine`, base `952a4b8`. Uncommitted implementation: `engine/src/{gpu.c,gpu.h,gpu_v3d.c,pinfer.c,matvec_fast.c,matvec_ref.c,ops.h,spec.c}`, `engine/include/pinfer.h`, `engine/tools/pinfer_run.c`, `engine/Makefile`; Python `pinfer/{model.py,_lib.py,__init__.py}`, `pyproject.toml`, `tests/python/test_api.py`; GPU tooling `engine/gpu/{Makefile,emit_q4.py,q4gpu_kernels.h,q4_fixture.py,v3d_q4_test.c,cerno_gpu_bench.py,compare_output.py,fault_ioctl.c,gpu_fallback_test.py}`. Public raw evidence and aggregate in `bench/results/gpu-engine/`, especially `t007-summary.json`. Untracked `models` and `ref/golden` are test links; exclude them. Cerno request/probability raw files remain private and ignored in main `bench/results/cerno-*`.
+
+Implementation: persistent per-model V3D BOs, largest Q4 matrices first (MLP priority for ties); GPU rows rounded down to 256-row units, CPU gets the disjoint remainder. GPU submits first, CPU runs meanwhile, wait/readback joins. Only prefill n>=7 (engine chunks <=64); decode and speculative verify use CPU. No GPU open/upload when off. Total BO cap 512 MiB includes programs/runtime scratch; CPU weight mappings of the GPU copies are unmapped after upload. New parameter changes the struct/SONAME ABI to **0.3**, and Python/package version to 0.3.0. Generated-program/DRM source dependencies are now tracked by the build.
+
+CPU-off gates: host golden **32/32**, spec **140**, state **9**, final pytest **140 passed**, final SAN malformed **43/43**, final check-lib host+aarch64 OK (GLIBC newest 2.33 <=2.41). Logs in worktree `bench/results/gpu-engine/{golden,spec,state,pytest-final,malformed-final,check-lib-final}.log`; compiler analyzer and all-plan n1..8 emulator checks PASS. Pi `gpu-eng-off-spec_20261023_132758.json` **58/58**, `gpu-eng-off-ctx_20261023_132909.json` **5/5**, valid=true. Six direct split oracles (gate/down/qkv, n7/64) have **zero differing words** against independent Python GPU prefix + actual NEON remainder; raw `gpu-eng-oracle-*` copied into the evidence folder. One later pytest attempt accidentally loaded main's old 0.2 library through WSL shell expansion; it was stopped/excluded, preserved as `pytest-final-wrong-library.log` / `pytest-first-failure.log`, and the explicit-path final 140-test run passed.
+
+52-question agreement (18 requests, 213 option probabilities, token-id rows identical; each valid=true):
+
+| requested share | max abs dp | mean option abs dp | top agreement | revised criterion |
+|---|---:|---:|---:|---|
+| .25 | .0111844983 | .0013576693 | 50/52 | pass |
+| .33 | .0127480994 | .0014686831 | 50/52 | pass, recommended |
+| .40 | .0157939819 | .0014761272 | 50/52 | fail |
+
+The original >=51 top gate failed, as reported; this is accepted only under `t007-decision`. At .33 the two flips are near-0.5 noul questions. Raw sources: `cerno-gpu-eng-agreement-{025_20261023_141101,033_20261023_135935,040_20261023_141952}.json` (private/ignored). .40 was already running when the owner decision arrived; no further .40 runs were added.
+
+First sweep (one round each, checkpoint for both arms; load excluded):
+
+| share | P64 tok/s | P256 tok/s | mean seconds/decision (5 requests,13 questions) |
+|---|---:|---:|---:|
+| off | 6.7740 | 6.8628 | 20.5146 |
+| .25 | 7.8800 | 7.8552 | 17.9839 |
+| .33 | 8.2238 | 8.2088 | 17.2605 |
+| .40 | 7.3664 | 7.4442 | 19.1301 |
+
+Completed three paired rounds, off vs .33:
+
+| metric | off mean | .33 mean | time saved |
+|---|---:|---:|---:|
+| P64 seconds (tok/s mean) | 9.46555 (6.76243) | 7.83069 (8.17320) | 17.27% |
+| P256 seconds (tok/s mean) | 36.99621 (6.91987) | 31.22080 (8.19990) | 15.61% |
+| seconds/decision | 20.66856 | 17.26453 | **16.47%** |
+
+Decision means by round: off 20.514596 / 20.700593 / 20.790478; .33 17.260518 / 17.351116 / 17.181961. Sources `cerno-gpu-eng-prefill-{000,033}-p{64,256}-r{1,2,3}_*.json` and `cerno-gpu-eng-decide-{000,033}-r{1,2,3}_*.json`; exact filenames/numbers in summary. Final .33 round is `cerno-gpu-eng-decide-033-r3_20261023_143037.json`. Load is separate: 2.609–2.700 s off vs 6.710–6.832 s .33; upload cost is paid once per model. .40's first-round decision saving was only 6.75%: it cached fewer matrices and shifted more work to the GPU; worse balance is an inference, no separate per-stage timing was collected.
+
+Memory: .25 cached 200/200 eligible matrices, BO453.43 MiB; .33 138/200, BO**498.78 MiB**; .40 103/200, BO499.04 MiB. All cover the largest MLP matrices first. Cerno decision RSS off2197.1–2200.2 MiB, .33 2200.0–2200.2 MiB, plus the unmapped GPU BOs (~2699 MiB combined conservative bound). CLI full-head prefill RSS ~2628–2641 MiB plus BOs, under 4 GB. DRM fdinfo confirms .33 resident BO510748 KiB. CMA total is 512 MiB but is not this allocator's limit: V3D uses shmem through its MMU, [per the kernel documentation](https://www.kernel.org/doc/html/v7.3/gpu/v3d.html). Tested ~499 MiB, software cap512; no exhaustion probe or CMA/config change.
+
+Fallback **confirmed** with final source: GPU setup unavailable now warns and retains the CPU model. Submit/wait error disables GPU for the context, completes missing rows on CPU and continues; wait has a 3-second deadline. BOs/fd are released on model close. `fault_ioctl.so` is test-only: simulated CSD jobs never reach hardware. Setup-unavailable, second-submit error (partial-submit branch), and wait-ETIME each compare n64 prefill + n7 continuation + n1 decode: **744960/744960 fp32 words identical** to CPU-only, all finite, no DRM fd left after close. Raw `gpu-eng-fallback-{unavailable_20261023_142633,submit_20261023_142723,wait_20261023_142859}.json`, all valid=true. No deliberate hardware hang was induced. Final positive GPU binary remains byte-identical in all 248320 final logits to the earlier timed GPU build (`cmp` exit0), `gpu-eng-final-positive_20261023_143058.json`.
+
+Exact user-facing behaviour to document:
+
+> GPU acceleration is optional and off by default. Use `pinfer_run --gpu 0.33` or `Model.load(..., gpu_split=0.33)`; C callers set `pinfer_params.gpu_split=0.33`. The recommended enabled share is 0.33. It accelerates batched prefill; decode stays on CPU. Cerno 4B uploads about 499 MiB once at load (512 MiB BO cap), caching 138/200 eligible matrices. On the 52-question Cerno reference check the maximum probability difference was 0.01275; near-50/50 answers may flip (50/52 top answers matched). If GPU setup is unavailable it warns and runs on CPU. A submit error or wait timeout disables GPU for that model and continues with CPU computation. The Python `gpu_split` property records the requested share, including when fallback occurs.
+
+Pi: only `~/pinfer/tmp/gpu-engine/`: GPU7 timing binary/library + Python package, GPU8 final binary and `lib-fallback/`, reference fixtures/scripts/oracle outputs, private Cerno benchmark copy/requests, test-only interposer/fallback helper, health helper, prompt ids and logit dumps. Undo: `rm -rf ~/pinfer/tmp/gpu-engine` via harness `run --lock`. No system/config changes, no reboot, no actual new hang. All completed timed runs throttle0x0; final health CPU1.5004 GHz / V3D500.0 MHz; same boot, uptime60840 s, last reset still boot+1580.940 s from yesterday. Shared `engine/pinfer_run_fast` unchanged MD5 **508f1d742e0168282fb94b3c3cd0afc7**. Health: `gpu-eng-health_20261023_143059.json`. Final GPU8 SHA256 `fd1009d78c38b69ba81a11fd9cc9fbed129055fcda57e41f7241fb18858ea216`; library `f9f301f2bc939efa6487e2029da99fb0bd5b31c12743a7ed44dd363028c79419` (host/Pi matched).
+
+## Agent → Claude — t007-decision
+_2026-10-23 14:33 KST · done_
+
+Owner criterion and recommended .33 reflected in API comments and report above. Setup/submit/wait CPU fallback verified; final full pytest140, SAN43, check-lib PASS. .40 already-running agreement finished and failed the probability bound. All three .33 speed rounds complete. Starting corrected t008 in cerno-pi next.

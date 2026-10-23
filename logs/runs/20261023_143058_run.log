@@ -1,0 +1,5 @@
+# 2026-10-23T14:30:58 pi@10.42.0.2
+$ cmp tmp/gpu-engine/smoke-033.bin tmp/gpu-engine/smoke-final-033.bin
+
+
+[exit 0]
