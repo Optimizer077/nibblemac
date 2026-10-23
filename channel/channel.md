@@ -360,3 +360,40 @@ API) for both the flag-off and flag-on runs, so only the GPU differs. The Pi's `
 _2026-10-23 13:01 KST · started_
 
 Checkpoint is now on main; using current main as requested. Both Cerno flag-off/on measurements will use checkpoint. Implementing the opt-in API/row split with a bounded GPU BO budget; suffixed Pi artifacts only, no shared-binary replacement or configuration changes.
+
+## Agent → Claude — note-t007-base
+_2026-10-23 13:26 KST · done_
+
+Acknowledged. t007 is based on main 952a4b8, including checkpoint merge 2c61d67. Both Cerno timing arms use checkpoint, and builds are under tmp/gpu-engine/pinfer_run_gpu7 plus its private library. Shared pinfer_run_fast is untouched.
+
+## Agent → Claude — t007-gpu-engine (update)
+_2026-10-23 13:49 KST · running_
+
+CPU-off full host gates PASS: golden 32, spec 140, state 9, pytest 139, SAN malformed 43, check-lib host/aarch64 OK. Pi off spec 58/58 and ctx 5/5 valid=true. Direct split oracles PASS with zero word differences across gate/down/qkv at n=7/64 (GPU prefix vs independent Python GPU, remaining rows vs actual NEON).
+
+Initial prefill sweep (one round) favors .33: P64 6.7740 -> 8.2238 tok/s; P256 6.8628 -> 8.2088. BO bounded to 512 MiB; .25 caches 200/200 eligible matrices at 453.43 MiB, .33 caches 138 at 498.78, .40 caches 103 at 499.04. No new hang/throttle. Five-request Cerno sweep running, then full 52-reference agreement and repeated best-share timing. GPU output drift is measurable (first .25 subset 12/13 tops, max |dp| .0101665), so no correctness/go claim yet. Both arms checkpoint, shared binaries untouched.
+
+## Agent → Claude — t007-gpu-engine (agreement update)
+_2026-10-23 14:01 KST · running_
+
+Full .33 agreement completed (18 requests/52 questions), valid=true: max |dp| **.01274810**, mean option |dp| .00146868, token-id rows identical, **50/52 top answers**, so .33 fails the >=51 gate. Two near-0.5 noul flips (support_triage/needs_human and sentiment_review/price_complaint). Evidence stays private/ignored: `bench/results/cerno-gpu-eng-agreement-033_20261023_135935.json`.
+
+First five-request mean: off20.5146 s, .25 17.9839, .33 17.2605, .40 19.1301 (all checkpoint). Finishing requested repeated .33 speed measurements and testing full agreement at .25/.40 before a final recommendation. No hang or throttle; no gate relaxation.
+
+## Agent → Claude — t007-gpu-engine (25% agreement update)
+_2026-10-23 14:11 KST · running_
+
+Full .25: valid=true, **50/52 tops**, max |dp| **.01118450**, mean option |dp| .00135767; all token-id rows identical. It also fails the >=51 gate. Raw: `bench/results/cerno-gpu-eng-agreement-025_20261023_141101.json` (private/ignored). .40 full run and remaining .33 speed rounds are queued/running under the lock. Aggregate evidence now exists at worktree `bench/results/gpu-engine/t007-summary.json` and will be refreshed when complete.
+
+## Claude → Agent — t007-decision
+_2026-10-23 · owner decision_
+
+The owner accepts the GPU mode **as an opt-in** with the criterion "probabilities within 0.0146 of the reference;
+near-50/50 answers may flip" (measured: 50/52 tops, max |Δp| 0.0127 at 1/3, 0.0112 at 1/4). The default stays
+CPU-only and bit-identical.
+
+Finish t007 with: the remaining 1/3 speed rounds (3 rounds total) and the 0.40 agreement only if already running
+(don't start new work for it). Then make **1/3 the recommended share** when the flag is on, write in the reply the
+exact user-facing behaviour to document (flag names, default off, memory used, the near-tie caveat, what happens if
+the GPU is unavailable or hangs: it must fall back to CPU-only cleanly, please confirm that path), and report.
+No commits or records, as before; the lead integrates.
