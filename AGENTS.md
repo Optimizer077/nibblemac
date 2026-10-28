@@ -14,6 +14,8 @@
 - `make cpu-reference`: inherited scalar model tools. Linux-only V3D must stay guarded by OS AND ISA.
 - `python3 tools/bench_metal.py`: correctness-gated local measurements with source hashes and metadata.
 - `make mac-cpu-baseline mac-cpu mac-infer`: SMULL baseline, native SDOT, opt-in Metal hybrid model tools.
+- `make mac-cpu-i8mm test-i8mm`: experimental exact Q4/Q4K token-pair SMMLA build and no-SDOT
+  oracle tests; requires I8MM-capable Apple Silicon. Keep SDOT/default builds as controls.
 - `make test-a8`: exact Metal integer-activation kernels vs the inherited NEON implementation.
 - `python3 tools/check_graphs_macos.py`: record exact MLP graph, persistent DeltaNet and invalid-input
   tests for every GPU kernel variant. `make test-graphs` runs the low-level graph suite directly.
@@ -21,6 +23,11 @@
 - `.venv/bin/python tests/test_real_macos.py`: real-model parity, state/rewind, speculation and WikiText PPL.
 - Use `--graphs` for persistent DeltaNet + single-submit MLP gates; `--kernel packed4` also checks
   the experimental four-token weight-reuse tile. All graph features remain opt-in.
+- `NM_METAL_SPLIT_PERCENT=1..99` opts into decode-only cooperative Q4K row partitioning;
+  CPU suffix and Metal prefix use identical quantized activations. Finish each submission before
+  reading outputs, reusing scratch or reset/save/load/rewind. Zero keeps legacy full offload.
+- Use `tests/test_real_macos.py --split-percent N` and benchmark config suffix `:none:N` to
+  gate/tune cooperative execution. Preserve slow splits and compare against CPU, not only full GPU.
 - `.venv/bin/python tools/bench_inference_macos.py`: locked real-model benchmarks, exact-output gated.
 - Do not claim model-level parity, exact speculation, or token throughput from standalone kernel tests.
 - Standalone Metal fp32 kernels differ from the upstream int8 CPU path; inference Q4K/A8 kernels

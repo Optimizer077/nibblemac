@@ -30,9 +30,13 @@ def main() -> int:
     ap.add_argument("--skip-quality", action="store_true")
     ap.add_argument("--graphs", action="store_true", help="Enable single-submit MLP and persistent GPU DeltaNet for Metal")
     ap.add_argument("--kernel", choices=("simd", "row", "packed", "packed4"), default="packed")
+    ap.add_argument("--split-percent", type=int, default=0, help="Experimental GPU prefix share for decode, 0..99")
+    ap.add_argument("--i8mm", action="store_true", help="Also gate the optional I8MM CPU build")
     args = ap.parse_args()
     if args.quality_chunks < 1:
         ap.error("--quality-chunks must be positive")
+    if not 0 <= args.split_percent <= 99:
+        ap.error("--split-percent must be 0..99")
     model = ROOT / "models/qwen35-0.8b-q4k.pq"
     tokenizer = Tokenizer.from_file(str(ROOT / "models/Qwen3.5-0.8B/tokenizer.json"))
     ids = prompts(tokenizer, ROOT / "models/Qwen3.5-0.8B")["prose64"]
@@ -42,7 +46,9 @@ def main() -> int:
     record = {"kind": "real_model_correctness_and_quality", "valid": False,
               "model_sha256": sha256(model), "source_sha256": source_hashes(),
               "test_sha256": sha256(Path(__file__)), "metal_graphs": args.graphs,
-              "metal_kernel": args.kernel, "runs": []}
+               "metal_kernel": args.kernel, "runs": []}
+    record["metal_split_percent"] = args.split_percent
+    record["i8mm"] = args.i8mm
     work = ROOT / "build/real-macos-gates"
     work.mkdir(parents=True, exist_ok=True)
     lock = (ROOT / "build/macos-bench.lock").open("a")
@@ -54,9 +60,10 @@ def main() -> int:
             argv += ["-n", str(generate), "--ids", ",".join(map(str, ids if tokens is None else tokens))]
         argv += list(extra)
         env = os.environ.copy()
-        for key in ("NM_METAL_MIN_BYTES", "NM_METAL_KERNEL", "PF_FWD_STATS", "PF_KERN_STATS", "NM_METAL_MLP", "NM_METAL_RECURRENCE"):
+        for key in ("NM_METAL_MIN_BYTES", "NM_METAL_KERNEL", "PF_FWD_STATS", "PF_KERN_STATS", "NM_METAL_MLP", "NM_METAL_RECURRENCE", "NM_METAL_SPLIT_PERCENT"):
             env.pop(key, None)
         env.update(NM_METAL_MIN_BYTES=minimum, NM_METAL_KERNEL=args.kernel)
+        env["NM_METAL_SPLIT_PERCENT"] = str(args.split_percent)
         if backend == "metal" and args.graphs:
             env.update(NM_METAL_MLP="1", NM_METAL_RECURRENCE="1")
         p = subprocess.run(argv, cwd=ROOT, env=env, capture_output=True, text=True, timeout=240)
@@ -68,6 +75,8 @@ def main() -> int:
             raise ValueError(f"{name} failed with code {p.returncode}")
         if backend == "metal" and "Metal calls=" not in p.stderr:
             raise ValueError(f"{name} did not execute GPU work")
+        if backend == "metal" and args.split_percent and tool == "pinfer_run" and not re.search(r"split_calls=([1-9]\d*)", p.stderr):
+            raise ValueError(f"{name} did not execute cooperative CPU/Metal work")
         if tool == "pinfer_run":
             match = re.search(r"^generated:\s*([\d,]+)", p.stdout, re.M)
             if not match:
@@ -86,13 +95,17 @@ def main() -> int:
             baseline, expected = run("cpu-baseline", "plain reference", ["--dump-last", str(ref_file)])
             baseline["exact"] = True
             reference_logits = ref_file.read_bytes()
-            for backend, name, extra, minimum in [
+            plain_cases = [
                 ("cpu", "SDOT plain", [], "67108864"),
                 ("metal", "packed head offload", [], "67108864"),
                 ("metal", "packed all Q4K matrices", [], "0"),
                 ("cpu", "SDOT sequential prefill", ["-b", "1"], "67108864"),
                 ("metal", "packed sequential prefill", ["-b", "1"], "67108864"),
-            ]:
+            ]
+            if args.i8mm:
+                plain_cases += [("cpu-i8mm", "I8MM batched prefill", [], "67108864"),
+                                ("cpu-i8mm", "I8MM sequential decode", ["-b", "1"], "67108864")]
+            for backend, name, extra, minimum in plain_cases:
                 last = td / "last.f32"
                 item, got = run(backend, name, [*extra, "--dump-last", str(last)], minimum=minimum)
                 item.update(tokens_exact=got == expected, logits_exact=last.read_bytes() == reference_logits)
@@ -110,7 +123,7 @@ def main() -> int:
             if not item["exact"]:
                 raise ValueError("GPU-saved state bytes differ from CPU-saved state")
             print("PASS GPU/CPU prefix state bytes match exactly", flush=True)
-            for backend in ("cpu", "metal"):
+            for backend in (("cpu", "metal", "cpu-i8mm") if args.i8mm else ("cpu", "metal")):
                 for name, extra, prompt in [
                     ("restore CPU prefix state", ["--load-state", str(state)], ids[32:]),
                     ("restore GPU prefix state", ["--load-state", str(gpu_state)], ids[32:]),
@@ -141,7 +154,7 @@ def main() -> int:
                     "protocol": "reset each chunk; score positions 256..510 predicting 257..511",
                     "note": "CPU/Metal agreement, not a fresh comparison against unquantized teacher weights."}
                 reference_ppl = None
-                for backend in ("cpu-baseline", "cpu", "metal"):
+                for backend in (("cpu-baseline", "cpu", "metal", "cpu-i8mm") if args.i8mm else ("cpu-baseline", "cpu", "metal")):
                     item, metrics = run(backend, "WikiText-2 perplexity", ["-f", str(token_file),
                         "-c", "512", "--chunks", str(args.quality_chunks)], tool="pinfer_ppl")
                     if reference_ppl is None:

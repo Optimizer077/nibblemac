@@ -22,6 +22,8 @@ jobs:
         run: make -s -C engine/macos BACKEND=cpu-baseline CPU=apple-m2 CC="xcrun clang -arch arm64"
       - name: Cross-compile SDOT model backend for Apple Silicon
         run: make -s -C engine/macos BACKEND=cpu CPU=apple-m2 CC="xcrun clang -arch arm64"
+      - name: Cross-compile experimental I8MM model and exactness tools
+        run: make -s -C engine/macos BACKEND=cpu-i8mm CPU=apple-m2 CC="xcrun clang -arch arm64" all i8mm-tools
       - name: Cross-compile hybrid model backend for Apple Silicon
         run: make -s -C engine/macos BACKEND=metal CPU=apple-m2 CC="xcrun clang -arch arm64"
       - name: Cross-compile GPU graph correctness tools (no hosted GPU required)

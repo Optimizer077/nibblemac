@@ -19,6 +19,9 @@ struct nm_inference {
     nm_buffer *q, *d, *fs, *y;
     size_t qcap, fcap, ycap;
     unsigned long calls;
+    int split_percent, pending_rows;
+    unsigned long split_calls;
+    nm_submission *pending;
     int recurrence, mlp;
     unsigned long lin_calls, mlp_calls;
     state_buffer states[32];
@@ -47,6 +50,17 @@ nm_inference *nm_inference_create(void) {
     m->recurrence = option("NM_METAL_RECURRENCE");
     m->mlp = option("NM_METAL_MLP");
     if (m->recurrence < 0 || m->mlp < 0) { nm_inference_destroy(m); return NULL; }
+    const char *split = getenv("NM_METAL_SPLIT_PERCENT");
+    if (split) {
+        char *end;
+        errno = 0;
+        unsigned long value = strtoul(split, &end, 10);
+        if (!*split || *split == '-' || *end || errno == ERANGE || value > 99) {
+            fprintf(stderr, "nibblemac: NM_METAL_SPLIT_PERCENT must be an integer 0..99\n");
+            nm_inference_destroy(m); return NULL;
+        }
+        m->split_percent = (int)value;
+    }
     /* Measured on the M2 Pro: offloading small layer matrices loses to CPU SDOT.
      * Default to the large vocabulary projection; keep the threshold explicit. */
     m->minimum_bytes = 64 * 1024 * 1024;
@@ -65,12 +79,20 @@ nm_inference *nm_inference_create(void) {
             nm_metal_device_name(m->context), m->minimum_bytes);
     if (m->recurrence || m->mlp) fprintf(stderr, "nibblemac: experimental persistent_DeltaNet=%d single_submit_MLP=%d\n",
                                        m->recurrence, m->mlp);
+    if (m->split_percent) fprintf(stderr, "nibblemac: experimental decode CPU/Metal split, GPU prefix=%d%% (32-row aligned)\n",
+                                 m->split_percent);
     return m;
 }
 void nm_inference_destroy(nm_inference *m) {
     if (!m) return;
+    if (m->pending) {
+        char error[4096];
+        if (nm_metal_matmul_a8_finish(m->pending, error, sizeof error))
+            fprintf(stderr, "nibblemac: pending split failed during destruction: %s\n", error);
+    }
     if (m->calls) fprintf(stderr, "nibblemac: Metal calls=%lu cached_matrices=%zu packed_bytes=%zu\n",
-                          m->calls, m->count, m->weight_bytes);
+                           m->calls, m->count, m->weight_bytes);
+    if (m->split_calls) fprintf(stderr, "nibblemac: Metal split_calls=%lu gpu_percent=%d\n", m->split_calls, m->split_percent);
     if (m->lin_calls || m->mlp_calls) fprintf(stderr, "nibblemac: Metal graph lin_calls=%lu mlp_calls=%lu shared_state_bytes=%zu\n",
                                              m->lin_calls, m->mlp_calls, m->state_bytes);
     for (size_t i = 0; i < m->count; i++) nm_metal_buffer_destroy(m->weights[i].buffer);
@@ -117,7 +139,8 @@ static nm_buffer *get_weight(nm_inference *m, const pf_mat *w) {
     }
     return buffer;
 }
-void nm_inference_matmul(nm_inference *m, const pf_mat *w, const pf_act *a, float *y) {
+static nm_buffer *prepare_matmul(nm_inference *m, const pf_mat *w, const pf_act *a) {
+    if (m->pending) { fprintf(stderr, "nibblemac: Metal scratch still in flight\n"); abort(); }
     nm_buffer *buffer = get_weight(m, w);
     const size_t qb = (size_t)a->n * a->cols;
     const size_t fb = (size_t)a->n * (a->cols / 32) * 4;
@@ -132,13 +155,43 @@ void nm_inference_matmul(nm_inference *m, const pf_mat *w, const pf_act *a, floa
     memcpy(nm_metal_buffer_contents(m->q), a->q, qb);
     memcpy(nm_metal_buffer_contents(m->d), a->d, fb);
     memcpy(nm_metal_buffer_contents(m->fs), a->fsum, fb);
+    return buffer;
+}
+void nm_inference_matmul(nm_inference *m, const pf_mat *w, const pf_act *a, float *y) {
+    nm_buffer *buffer = prepare_matmul(m, w, a);
     char error[4096];
     if (nm_metal_matmul_a8(m->context, w->rows, w->cols, a->n, buffer, m->q, m->d, m->fs,
                             m->y, error, sizeof error)) {
         fprintf(stderr, "nibblemac: Metal inference failed: %s\n", error); abort();
     }
-    memcpy(y, nm_metal_buffer_contents(m->y), yb);
+    memcpy(y, nm_metal_buffer_contents(m->y), (size_t)a->n * w->rows * 4);
     m->calls++;
+}
+
+int nm_inference_split_begin(nm_inference *m, const pf_mat *w, const pf_act *a) {
+    if (!m->split_percent || a->n != 1) return 0;
+    int rows = (int)((uint64_t)w->rows * m->split_percent / 100 / 32 * 32);
+    if (rows < 32 || rows >= w->rows) return 0;
+    pf_mat prefix = *w;
+    prefix.rows = rows;
+    nm_buffer *buffer = prepare_matmul(m, &prefix, a);
+    char error[4096];
+    if (nm_metal_matmul_a8_begin(m->context, rows, w->cols, 1, buffer, m->q, m->d, m->fs,
+                                m->y, &m->pending, error, sizeof error)) {
+        fprintf(stderr, "nibblemac: Metal split submission failed: %s\n", error); abort();
+    }
+    m->pending_rows = rows;
+    m->calls++; m->split_calls++;
+    return rows;
+}
+void nm_inference_split_finish(nm_inference *m, float *y) {
+    char error[4096];
+    if (!m->pending) { fprintf(stderr, "nibblemac: missing Metal split submission\n"); abort(); }
+    int status = nm_metal_matmul_a8_finish(m->pending, error, sizeof error);
+    m->pending = NULL;
+    if (status) { fprintf(stderr, "nibblemac: Metal split execution failed: %s\n", error); abort(); }
+    memcpy(y, nm_metal_buffer_contents(m->y), (size_t)m->pending_rows * 4);
+    m->pending_rows = 0;
 }
 
 int nm_inference_recurrence_enabled(const nm_inference *m) { return m && m->recurrence; }

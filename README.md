@@ -64,6 +64,15 @@ cache precision and model provenance differ. Timings are noisy (CPU chat range
 The earlier table is a separate historical run, not a contemporaneous control.
 **[Public baseline details, ranges, request time, memory and reproduction](docs/PUBLIC_BASELINES.md).**
 
+### Deeper CPU + Metal experiments
+
+An opt-in cooperative path now runs a vocabulary-row prefix on Metal while NEON
+computes the suffix. It is 45–64% faster than the slow full-head GPU offload in
+one matched sweep, **not consistently faster than CPU-only**. A separate native
+I8MM/SMMLA CPU experiment passes exactness but is slower at prefill than SDOT.
+Both stay experimental; CPU SDOT remains recommended.
+See [implementation, all results, exactness gates and deeper optimization proposals](docs/COOPERATIVE_MAC.md).
+
 **Not implemented yet:** GPU-resident full attention, efficient large-tile prefill GEMM, full-model
 Metal execution, and macOS library/wheel packaging. The Pi engine's Python package does **not**
 automatically use the new Metal runtime.
@@ -79,9 +88,11 @@ make test-metal      # Numerical and validation tests on the actual GPU
 make bench-metal     # Correctness-gated, three-round microbenchmark + JSON record
 make cpu-reference   # Build the legacy scalar inference tools, not a Metal model runner
 make mac-cpu         # Native NEON/SDOT model runner
+make mac-cpu-i8mm    # Optional I8MM-capable CPU experiment (currently slower prefill)
 make mac-infer       # Experimental CPU/Metal hybrid model runner
 make test-a8         # Exact Q4K/A8 Metal vs NEON checks on Apple Silicon
 make test-graphs     # Exact GPU MLP graph and persistent DeltaNet checks
+make test-i8mm       # Exact I8MM vs inherited no-SDOT kernel checks
 ```
 
 ### Real model setup and tokens/sec

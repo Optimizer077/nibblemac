@@ -18,6 +18,10 @@ class ConfigurationTests(unittest.TestCase):
     def test_baseline(self):
         self.assertEqual(config("cpu-baseline:4")["backend"], "cpu-baseline")
 
+    def test_i8mm(self):
+        self.assertEqual(config("cpu-i8mm:6")["backend"], "cpu-i8mm")
+        self.assertEqual(config("cpu-i8mm-spec3:6")["spec_k"], 3)
+
     def test_speculative(self):
         value = config("metal-spec4:6:67108864:packed")
         self.assertEqual(value["backend"], "metal")
@@ -47,6 +51,14 @@ class ConfigurationTests(unittest.TestCase):
                       "metal:4:1:packed:unknown"):
             with self.subTest(value=value), self.assertRaises(argparse.ArgumentTypeError):
                 config(value)
+
+    def test_split_percent(self):
+        value = config("metal:6:67108864:packed:none:15")
+        self.assertEqual(value["metal_split_percent"], 15)
+        self.assertEqual(config("metal:6:67108864")["metal_split_percent"], 0)
+        for invalid in ("-1", "100", "nan", "", "1.5"):
+            with self.subTest(value=invalid), self.assertRaises(argparse.ArgumentTypeError):
+                config(f"metal:6:67108864:packed:none:{invalid}")
 
 
 if __name__ == "__main__":

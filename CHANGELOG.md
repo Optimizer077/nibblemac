@@ -7,6 +7,15 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ### Real inference, optimization and measurements
 
+- Add opt-in asynchronous Metal prefix + concurrent NEON suffix for single-vector Q4K matmuls.
+  A 10% GPU split improves observed decode medians 45–64% over full head offload, but does not
+  consistently beat CPU. Final separate controls: CPU 223/220/211 vs split 216/222/203 tok/s.
+- Add an optional I8MM/SMMLA CPU build for Q4/Q4K token pairs; preserve its negative prefill
+  finding (15–16% slower than SDOT in the final sweep), with no default or precision change.
+- Extend async/invalid-submission gates, 88 primitive I8MM oracle checks, synthetic/real
+  state/speculation/quality gates and CI cross-compiles. All four builds match PPL 18.5061.
+  Details and next optimization proposals: `docs/COOPERATIVE_MAC.md`.
+
 - Add a same-Mac public comparison: pinned llama.cpp Metal / Unsloth Q4_K_M and MLX-LM
   affine Q4/group-32, 36 throughput runs plus matched WikiText quality checks. Public GPU
   runtimes lead prefill; CPU leads short-prompt decode medians but not the 512-token case.

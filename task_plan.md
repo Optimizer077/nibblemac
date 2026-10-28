@@ -36,6 +36,14 @@
   in `docs/PUBLIC_BASELINES.md`; verify MLX adapter tokens against its native generation API.
 - [ ] Match weights/precision across public backends and isolate timing variability before any
   equal-quality or stable runtime-superiority claim.
+- [x] Profile head offload; implement exact asynchronous Metal prefix / concurrent NEON suffix,
+  with bounded cached prefix, explicit join and opt-in percentage. Preserve all slow split results.
+- [x] Test native I8MM/SMMLA token-pair kernels against no-SDOT, synthetic models and real quality;
+  retain the slower prefill finding and keep CPU SDOT as the default recommendation.
+- [x] Publish the cooperative/I8MM architecture, repeated controls and deeper proposals in
+  `docs/COOPERATIVE_MAC.md`; no consistent end-to-end win over CPU claimed.
+- [ ] Instrument submit/CPU suffix/GPU/join times, prepack CPU I8MM operands, and develop exact
+  GPU tiles before promoting any new scheduling or full-model graph strategy.
 - [ ] Native `.dylib`, Python package and CLI integration; retain legacy APIs until migration is tested.
 
 ## Archived upstream task plan: pinfer (Pi 4 native LLM runtime + split-core OS)

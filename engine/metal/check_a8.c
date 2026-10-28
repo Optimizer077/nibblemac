@@ -46,6 +46,19 @@ static int check(nm_metal *ctx, int rows, int cols, int n) {
             }
         goto done;
     }
+    memset(nm_metal_buffer_contents(y), 0xff, yb);
+    nm_submission *pending = NULL;
+    if (nm_metal_matmul_a8_begin(ctx, rows, cols, n, gpuw, q, d, fs, y, &pending, error, sizeof error)) {
+        fprintf(stderr, "%s\n", error); goto done;
+    }
+    /* Independent CPU output while the command may be running; join before reads. */
+    kern_q4k(&mat, x, &a, expected, n, 0, rows);
+    if (nm_metal_matmul_a8_finish(pending, error, sizeof error)) {
+        fprintf(stderr, "%s\n", error); goto done;
+    }
+    if (memcmp(expected, nm_metal_buffer_contents(y), yb)) {
+        fprintf(stderr, "Async A8 output differs from CPU\n"); goto done;
+    }
     printf("PASS exact Q4K/A8 NEON==Metal rows=%d cols=%d batch=%d\n", rows, cols, n);
     result = 0;
 done:
@@ -76,9 +89,13 @@ static int invalid(nm_metal *ctx) {
     if (nm_metal_a8_weights(ctx, 4, 256, packed, sizeof packed - 1)) failed++;
     if (nm_metal_a8_weights(ctx, 3, 256, packed, sizeof packed)) failed++;
     if (nm_metal_a8_weights(ctx, 4, 256, NULL, sizeof packed)) failed++;
+    if (!nm_metal_matmul_a8_finish(NULL, error, sizeof error)) failed++;
+    if (!nm_metal_matmul_a8_begin(ctx, 4, 256, 1, w, q, d, fs, y, NULL, error, sizeof error)) failed++;
+    nm_submission *pending = (nm_submission *)(uintptr_t)1;
+    if (!nm_metal_matmul_a8_begin(ctx, 3, 256, 1, w, q, d, fs, y, &pending, error, sizeof error) || pending) failed++;
     nm_metal_buffer_destroy(y); nm_metal_buffer_destroy(fs); nm_metal_buffer_destroy(d);
     nm_metal_buffer_destroy(q); nm_metal_buffer_destroy(w);
-    if (!failed) puts("PASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected");
+    if (!failed) puts("PASS 15 Q4K/A8 invalid buffer, shape, upload and submission cases rejected");
     return failed ? -1 : 0;
 }
 

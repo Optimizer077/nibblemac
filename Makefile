@@ -32,6 +32,12 @@ mac-cpu:
 mac-cpu-baseline:
 	$(MAKE) -C engine/macos BACKEND=cpu-baseline
 
+mac-cpu-i8mm:
+	$(MAKE) -C engine/macos BACKEND=cpu-i8mm
+
+test-i8mm:
+	$(MAKE) -C engine/macos BACKEND=cpu-i8mm test-i8mm
+
 # Cross-compile Pi 4 binaries. Run inside WSL Ubuntu from the project root:
 #   make            -> build/aarch64/*
 #   make test-qemu  -> run them under qemu-aarch64 (correctness only, not speed)
@@ -54,4 +60,4 @@ test-qemu: all
 clean:
 	rm -rf build
 
-.PHONY: all test-qemu clean metal test-metal test-a8 test-graphs bench-metal cpu-reference mac-infer mac-cpu mac-cpu-baseline
+.PHONY: all test-qemu clean metal test-metal test-a8 test-graphs bench-metal cpu-reference mac-infer mac-cpu mac-cpu-baseline mac-cpu-i8mm test-i8mm

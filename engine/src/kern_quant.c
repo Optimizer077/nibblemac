@@ -23,6 +23,10 @@
 #include "kern.h"
 #include "pq_quant.h"
 
+#if defined(NM_USE_I8MM) && (!defined(__APPLE__) || !defined(__ARM_FEATURE_MATMUL_INT8) || defined(NM_NO_DOTPROD))
+#error "The experimental I8MM build requires Apple Silicon with integer matrix multiply support"
+#endif
+
 #define INLINE static inline __attribute__((always_inline))
 
 #ifndef NV_MAX
@@ -103,6 +107,44 @@ INLINE void q8_tile(const uint8_t *p, int nsb, const pf_act *A, float *Y, int ro
  * folded into acc right after the block's FMA for every nv, so a vector gets bit-identical
  * results whether it runs alone (pf_matvec) or inside a batch: speculative verification
  * relies on batched logits equalling the plain-decode logits exactly (KERNELS.md v11). */
+#ifdef NM_USE_I8MM
+INLINE int q4_pairs(const int8x16_t *lo, const int8x16_t *hi, const int8_t *xb,
+                     const float *db, const float *fs, float32x4_t d4, float32x4_t o4,
+                     int nv, float32x4_t *acc) {
+    if (nv < 2) return 0;
+    /* SMMLA: two contiguous 8-byte rows x two contiguous 8-byte columns.
+     * All 32 integer products are exact before the unchanged per-block FMAs. */
+    int8x16_t a01[4], a23[4];
+    for (int pair = 0; pair < 2; pair++) {
+        int8x16_t *a = pair ? a23 : a01;
+        int r = pair * 2;
+        a[0] = vcombine_s8(vget_low_s8(lo[r]), vget_low_s8(lo[r + 1]));
+        a[1] = vcombine_s8(vget_high_s8(lo[r]), vget_high_s8(lo[r + 1]));
+        a[2] = vcombine_s8(vget_low_s8(hi[r]), vget_low_s8(hi[r + 1]));
+        a[3] = vcombine_s8(vget_high_s8(hi[r]), vget_high_s8(hi[r + 1]));
+    }
+    for (int v = 0; v + 1 < nv; v += 2) {
+        int8x16_t x00 = vld1q_s8(xb + 32 * v), x01 = vld1q_s8(xb + 32 * v + 16);
+        int8x16_t x10 = vld1q_s8(xb + 32 * (v + 1)), x11 = vld1q_s8(xb + 32 * (v + 1) + 16);
+        int8x16_t b[4] = {vcombine_s8(vget_low_s8(x00), vget_low_s8(x10)),
+                          vcombine_s8(vget_high_s8(x00), vget_high_s8(x10)),
+                          vcombine_s8(vget_low_s8(x01), vget_low_s8(x11)),
+                          vcombine_s8(vget_high_s8(x01), vget_high_s8(x11))};
+        int32x4_t s01 = vdupq_n_s32(0), s23 = vdupq_n_s32(0);
+        for (int k = 0; k < 4; k++) {
+            s01 = vmmlaq_s32(s01, a01[k], b[k]);
+            s23 = vmmlaq_s32(s23, a23[k], b[k]);
+        }
+        int32x4_t t0 = vuzp1q_s32(s01, s23), t1 = vuzp2q_s32(s01, s23);
+        acc[v] = vfmaq_f32(acc[v], vcvtq_f32_s32(t0), vmulq_n_f32(d4, db[v]));
+        acc[v] = vfmsq_n_f32(acc[v], o4, fs[v]);
+        acc[v + 1] = vfmaq_f32(acc[v + 1], vcvtq_f32_s32(t1), vmulq_n_f32(d4, db[v + 1]));
+        acc[v + 1] = vfmsq_n_f32(acc[v + 1], o4, fs[v + 1]);
+    }
+    return nv & ~1;
+}
+#endif
+
 INLINE void q4_block(const uint8_t *q, float32x4_t d4, float32x4_t o4, int blk,
                      const pf_act *A, int v0, int nv, float32x4_t *acc) {
     const size_t base = (size_t)blk * A->n + v0; /* block-major activations */
@@ -115,8 +157,12 @@ INLINE void q4_block(const uint8_t *q, float32x4_t d4, float32x4_t o4, int blk,
         lo[i] = vreinterpretq_s8_u8(vandq_u8(b, m4b));
         hi[i] = vreinterpretq_s8_u8(vshrq_n_u8(b, 4));
     }
+    int first = 0;
+#ifdef NM_USE_I8MM
+    first = q4_pairs(lo, hi, xb, db, fs, d4, o4, nv, acc);
+#endif
 #pragma GCC unroll 8
-    for (int v = 0; v < nv; v++) {
+    for (int v = first; v < nv; v++) {
         const int8x16_t x0 = vld1q_s8(xb + 32 * v), x1 = vld1q_s8(xb + 32 * v + 16);
 #if defined(__APPLE__) && defined(__ARM_FEATURE_DOTPROD) && !defined(NM_NO_DOTPROD)
         int32x4_t s[4];

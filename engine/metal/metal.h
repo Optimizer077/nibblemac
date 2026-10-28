@@ -1,5 +1,6 @@
 /* nibblemac's experimental Metal backend, standalone and hybrid inference.
- * Handles are private, buffers use shared unified memory, calls are synchronous.
+ * Handles are private, buffers use shared unified memory. Calls are synchronous
+ * except the explicit begin/finish submission pair.
  * A context and its buffers must be used from a single thread at a time.
  * All functions report errors rather than silently switching to a CPU backend. */
 #ifndef NIBM_METAL_H
@@ -10,6 +11,7 @@
 
 typedef struct nm_metal nm_metal;
 typedef struct nm_buffer nm_buffer;
+typedef struct nm_submission nm_submission;
 
 enum { NM_F32 = 0, NM_Q4K = 4 }; /* same dtype IDs and packed layout as .pq */
 
@@ -42,6 +44,14 @@ int nm_metal_matmul(nm_metal *context, uint32_t dtype, uint32_t rows, uint32_t c
 int nm_metal_matmul_a8(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t batch,
                        nm_buffer *w, nm_buffer *q, nm_buffer *d, nm_buffer *fs,
                        nm_buffer *y, char *error, size_t error_size);
+
+/* Submit without waiting so the caller can compute disjoint CPU output rows.
+ * Consume the returned handle exactly once with finish, before reading outputs,
+ * reusing any input/workspace, or destroying the context. No CPU fallback. */
+int nm_metal_matmul_a8_begin(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t batch,
+                             nm_buffer *w, nm_buffer *q, nm_buffer *d, nm_buffer *fs,
+                             nm_buffer *y, nm_submission **pending, char *error, size_t error_size);
+int nm_metal_matmul_a8_finish(nm_submission *pending, char *error, size_t error_size);
 
 /* One submission: fp32 input -> A8 -> gate/up -> SiLU*up -> A8 -> down -> fp32.
  * Workspace is caller-owned; no CPU intermediate activations or waits. All

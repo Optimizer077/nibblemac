@@ -7,6 +7,10 @@ nm_inference *nm_inference_create(void);
 void nm_inference_destroy(nm_inference *m);
 int nm_inference_wants(const nm_inference *m, const pf_mat *w, int n);
 void nm_inference_matmul(nm_inference *m, const pf_mat *w, const pf_act *a, float *y);
+/* Optional decode-only cooperative partition. Returns submitted GPU prefix rows,
+ * or zero when not eligible. CPU computes the suffix before the mandatory join. */
+int nm_inference_split_begin(nm_inference *m, const pf_mat *w, const pf_act *a);
+void nm_inference_split_finish(nm_inference *m, float *y);
 int nm_inference_recurrence_enabled(const nm_inference *m);
 void *nm_inference_state_alloc(nm_inference *m, size_t bytes);
 void nm_inference_state_free(nm_inference *m, void *state);

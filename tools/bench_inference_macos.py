@@ -2,8 +2,8 @@
 
 Example: .venv/bin/python tools/bench_inference_macos.py --config cpu:6
          --config metal:6:67108864 --rounds 3 --cases prose64,chat,long512
-Configurations: cpu:THREADS, cpu-baseline:THREADS or
-metal:THREADS:MIN_WEIGHT_BYTES[:simd|row|packed|packed4[:none|mlp|rec|graph]].
+Configurations: cpu:THREADS, cpu-baseline:THREADS, cpu-i8mm:THREADS or
+metal:THREADS:MIN_WEIGHT_BYTES[:simd|row|packed|packed4[:none|mlp|rec|graph[:SPLIT_PERCENT]]].
 Append -specK to the backend for exact speculative decoding, e.g. cpu-spec3:4.
 Run make mac-cpu mac-infer first. NumPy, tokenizers and Jinja2 are required.
 """
@@ -58,28 +58,32 @@ def source_hashes() -> dict[str, str]:
 
 def config(value: str) -> dict:
     parts = value.split(":")
-    prefix = re.fullmatch(r"(cpu|cpu-baseline|metal)(?:-spec([0-4]))?", parts[0])
-    if len(parts) not in (2, 3, 4, 5) or prefix is None:
+    prefix = re.fullmatch(r"(cpu|cpu-baseline|cpu-i8mm|metal)(?:-spec([0-4]))?", parts[0])
+    if len(parts) not in (2, 3, 4, 5, 6) or prefix is None:
         raise argparse.ArgumentTypeError("Use cpu:THREADS or metal:THREADS:MIN_BYTES")
     backend, spec = prefix.groups()
     try:
         threads = int(parts[1])
         minimum = int(parts[2]) if len(parts) >= 3 else None
+        split = int(parts[5]) if len(parts) == 6 else 0
     except ValueError as exc:
         raise argparse.ArgumentTypeError("Configuration needs integer values") from exc
     if threads < 1 or threads > 8 or (backend == "metal" and (minimum is None or minimum < 0)):
         raise argparse.ArgumentTypeError("Threads must be 1..8; Metal needs nonnegative MIN_BYTES")
     if backend.startswith("cpu") and minimum is not None:
         raise argparse.ArgumentTypeError("CPU configuration has no Metal threshold")
+    if split < 0 or split > 99:
+        raise argparse.ArgumentTypeError("Metal split percentage must be 0..99")
     kernel = parts[3] if len(parts) >= 4 else "packed"
     if kernel not in ("simd", "row", "packed", "packed4"):
         raise argparse.ArgumentTypeError("Metal kernel must be simd, row, packed or packed4")
-    graph = parts[4] if len(parts) == 5 else "none"
+    graph = parts[4] if len(parts) >= 5 else "none"
     if graph not in ("none", "mlp", "rec", "graph"):
         raise argparse.ArgumentTypeError("Graph mode must be none, mlp, rec or graph")
     return {"name": value, "backend": backend, "threads": threads, "metal_min_bytes": minimum,
             "metal_kernel": kernel if backend == "metal" else None,
             "metal_mlp": graph in ("mlp", "graph"), "metal_recurrence": graph in ("rec", "graph"),
+            "metal_split_percent": split,
             "spec_k": int(spec) if spec is not None else None}
 
 
@@ -186,13 +190,14 @@ def main() -> int:
                                 argv += ["--adaptive"]
                         env = os.environ.copy()
                         for key in ("PF_FWD_STATS", "PF_KERN_STATS", "NM_METAL_MIN_BYTES", "NM_METAL_SHADER", "NM_METAL_KERNEL",
-                                    "NM_METAL_MLP", "NM_METAL_RECURRENCE"):
+                                    "NM_METAL_MLP", "NM_METAL_RECURRENCE", "NM_METAL_SPLIT_PERCENT"):
                             env.pop(key, None)
                         if cfg["backend"] == "metal":
                             env["NM_METAL_MIN_BYTES"] = str(cfg["metal_min_bytes"])
                             env["NM_METAL_KERNEL"] = cfg["metal_kernel"]
                             env["NM_METAL_MLP"] = str(int(cfg["metal_mlp"]))
                             env["NM_METAL_RECURRENCE"] = str(int(cfg["metal_recurrence"]))
+                            env["NM_METAL_SPLIT_PERCENT"] = str(cfg["metal_split_percent"])
                         if args.profile:
                             env.update(PF_FWD_STATS="1", PF_KERN_STATS="1")
                         start = time.monotonic()
@@ -217,7 +222,8 @@ def main() -> int:
                         if cfg["backend"] == "metal" and "Metal calls=" not in p.stderr:
                             raise ValueError("Metal configuration performed no GPU calls")
                         for feature, pattern in (("metal_mlp", r"mlp_calls=([1-9]\d*)"),
-                                                 ("metal_recurrence", r"lin_calls=([1-9]\d*)")):
+                                                 ("metal_recurrence", r"lin_calls=([1-9]\d*)"),
+                                                 ("metal_split_percent", r"split_calls=([1-9]\d*)")):
                             if cfg[feature] and not re.search(pattern, p.stderr):
                                 raise ValueError(f"Requested {feature} performed no GPU work")
                         if case not in references:

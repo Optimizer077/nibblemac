@@ -248,10 +248,12 @@ int nm_metal_lin_apply(nm_metal *context, const nm_lin_shape *s, const nm_lin_bu
     }
 }
 
-int nm_metal_matmul_a8(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t batch,
+int nm_metal_matmul_a8_begin(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t batch,
                        nm_buffer *weights, nm_buffer *qbuf, nm_buffer *dbuf, nm_buffer *fsbuf,
-                       nm_buffer *outputs, char *error, size_t size) {
+                       nm_buffer *outputs, nm_submission **pending, char *error, size_t size) {
     @autoreleasepool {
+        if (!pending) return fail(error, size, @"Submission output is required");
+        *pending = NULL;
         NMContext *c = (__bridge NMContext *)context;
         id<MTLBuffer> w = (__bridge id<MTLBuffer>)weights, q = (__bridge id<MTLBuffer>)qbuf;
         id<MTLBuffer> d = (__bridge id<MTLBuffer>)dbuf, fs = (__bridge id<MTLBuffer>)fsbuf;
@@ -271,11 +273,28 @@ int nm_metal_matmul_a8(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t
         id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
         if (!command || !encoder) return fail(error, size, @"Unable to create Q4K/A8 encoder");
         encode_a8(c, encoder, rows, cols, batch, w, q, d, fs, y);
-        [encoder endEncoding]; [command commit]; [command waitUntilCompleted];
-        if (command.status != MTLCommandBufferStatusCompleted)
-            return fail(error, size, command.error.localizedDescription ?: @"Q4K/A8 execution failed");
+        [encoder endEncoding]; [command commit];
+        *pending = (nm_submission *)CFBridgingRetain(command);
         return 0;
     }
+}
+
+int nm_metal_matmul_a8_finish(nm_submission *pending, char *error, size_t size) {
+    @autoreleasepool {
+        if (!pending) return fail(error, size, @"A pending submission is required");
+        id<MTLCommandBuffer> command = CFBridgingRelease(pending);
+        [command waitUntilCompleted];
+        return command.status == MTLCommandBufferStatusCompleted ? 0 :
+            fail(error, size, command.error.localizedDescription ?: @"Q4K/A8 execution failed");
+    }
+}
+
+int nm_metal_matmul_a8(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t batch,
+                       nm_buffer *w, nm_buffer *q, nm_buffer *d, nm_buffer *fs,
+                       nm_buffer *y, char *error, size_t size) {
+    nm_submission *pending = NULL;
+    if (nm_metal_matmul_a8_begin(context, rows, cols, batch, w, q, d, fs, y, &pending, error, size)) return -1;
+    return nm_metal_matmul_a8_finish(pending, error, size);
 }
 
 void nm_metal_destroy(nm_metal *c) { if (c) (void)CFBridgingRelease(c); }

@@ -449,6 +449,23 @@ static void groups_task(void *arg, int tid, int nthr) {
     }
 }
 
+#ifdef NM_INFERENCE_METAL
+typedef struct {
+    kern_fn fn;
+    const pf_mat *w;
+    const pf_act *act;
+    float *y;
+    int row0;
+} metal_split_job;
+static void metal_split_cpu(void *arg, int tid, int nthr) {
+    const metal_split_job *j = arg;
+    int units = (j->w->rows - j->row0) / 4;
+    int r0 = j->row0 + (int)((long)units * tid / nthr) * 4;
+    int r1 = j->row0 + (int)((long)units * (tid + 1) / nthr) * 4;
+    if (r0 < r1) j->fn(j->w, NULL, j->act, j->y, 1, r0, r1);
+}
+#endif
+
 void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) {
     const kern_fn fn = pick(W->dtype);
     if (!fn) {
@@ -464,7 +481,14 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
         uint8_t *buf = scratch_get(qb + 2 * fb);
         pf_act act = {W->cols, n, (int8_t *)buf, (float *)(buf + qb), (float *)(buf + qb + fb)};
         kern_quant_act(X, n, W->cols, (int8_t *)act.q, (float *)act.d, (float *)act.fsum);
-        nm_inference_matmul(pool->metal, W, &act, Y);
+        int gpu_rows = nm_inference_split_begin(pool->metal, W, &act);
+        if (gpu_rows) {
+            metal_split_job job = {fn, W, &act, Y, gpu_rows};
+            kern_pool_run(pool, metal_split_cpu, &job, threads_for(W, n, pool));
+            nm_inference_split_finish(pool->metal, Y);
+        } else {
+            nm_inference_matmul(pool->metal, W, &act, Y);
+        }
         if (kern_stats_enabled())
             kern_stats_add(W->rows, W->cols, W->dtype, n, now_sec() - t0, weight_bytes(W));
         return;
