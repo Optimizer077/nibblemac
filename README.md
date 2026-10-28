@@ -46,6 +46,24 @@ match at **18.5061** (WikiText-2, 8 x 512-token chunks).
 
 **[Full results, ranges, memory, correctness evidence, limitations and reproduction](docs/MAC_BENCHMARKS.md).**
 
+### Public runtime comparison
+
+Same-Mac follow-up, three rounds, same prompt IDs and generation length:
+
+| Runtime | Prose 64: decode | Chat 36: decode | Context 512: decode |
+|---|---:|---:|---:|
+| nibblemac CPU SDOT, 6 threads | 193.3 tok/s | 204.3 tok/s | 139.5 tok/s |
+| nibblemac Metal head-only, 6 CPU threads | 122.1 tok/s | 120.4 tok/s | 112.2 tok/s |
+| llama.cpp Metal, public Q4_K_M | 148.2 tok/s | 150.4 tok/s | 150.0 tok/s |
+| MLX-LM Q4/group-32, synchronized adapter | 169.6 tok/s | 157.5 tok/s | 153.7 tok/s |
+
+Public GPU runtimes lead prefill: **1019–2063 tok/s**, versus CPU **716–808 tok/s**.
+WikiText PPL: **18.5061 nibblemac / 18.2005 llama.cpp / 20.5333 MLX**. Quantization,
+cache precision and model provenance differ. Timings are noisy (CPU chat range
+73.7–216.2 tok/s); this is not an equal-quality backend comparison or a blanket win.
+The earlier table is a separate historical run, not a contemporaneous control.
+**[Public baseline details, ranges, request time, memory and reproduction](docs/PUBLIC_BASELINES.md).**
+
 **Not implemented yet:** GPU-resident full attention, efficient large-tile prefill GEMM, full-model
 Metal execution, and macOS library/wheel packaging. The Pi engine's Python package does **not**
 automatically use the new Metal runtime.
@@ -144,8 +162,9 @@ fit in cache. No speedup over llama.cpp, MLX, or the original Pi engine is claim
    every small operation. **Partial:** persistent DeltaNet buffers and single-submit MLP graph
    are implemented as opt-in experiments; full attention and inter-layer residency remain future work.
 4. Tune decode for packed-weight bandwidth and prefill for tiled SIMD-group matrix operations.
-5. Benchmark against llama.cpp Metal and MLX using the same model, quantization, prompts,
-   contexts, power conditions, and quality checks. Only retain proven improvements.
+5. Benchmark against llama.cpp Metal and MLX. **Initial public-runtime comparison done:**
+   same prompt IDs and quality protocol, but different quantizers/cache precision. Matched
+   weight/precision comparisons and isolated timing remain open; retain only proven improvements.
 6. Port speculative decoding, prefix reuse, and state checkpointing with explicit correctness gates.
 
 The original standalone kernels use fp32 inputs and reductions and do **not** promise bit-identical

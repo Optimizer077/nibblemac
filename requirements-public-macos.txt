@@ -1,0 +1,8 @@
+# Optional public-runtime comparison; install into the project-local .venv only.
+-r requirements-macos.txt
+mlx-lm==0.32.2
+mlx==0.32.4
+mlx-metal==0.32.4
+transformers==5.21.0
+cmake==4.4.4
+ninja==1.13.2

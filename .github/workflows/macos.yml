@@ -33,5 +33,7 @@ jobs:
         run: python -m pip install -r requirements-macos.txt
       - name: Test inference benchmark configurations
         run: python tests/test_inference_harness.py
+      - name: Test public baseline setup and result validation (offline, no GPU)
+        run: python tests/test_public_baselines.py
       # Hosted macOS VMs need not expose a Metal GPU. Actual GPU correctness and
       # performance must be checked separately on a physical Apple Silicon Mac.

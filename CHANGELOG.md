@@ -7,6 +7,14 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ### Real inference, optimization and measurements
 
+- Add a same-Mac public comparison: pinned llama.cpp Metal / Unsloth Q4_K_M and MLX-LM
+  affine Q4/group-32, 36 throughput runs plus matched WikiText quality checks. Public GPU
+  runtimes lead prefill; CPU leads short-prompt decode medians but not the 512-token case.
+  Preserve wide timing ranges and disclose unequal quantization/cache/provenance; no blanket win.
+- Record PPL 18.5061 / 18.2005 / 20.5333 (nibblemac / llama / MLX), verified model hashes,
+  reproducible adapters, offline recorder tests and three exact MLX native-API token checks.
+  See `docs/PUBLIC_BASELINES.md`; no upstream llama.cpp sources changed or submitted.
+
 - Follow-up: implement opt-in persistent shared Metal DeltaNet state with exact rollback/replay,
   and single-submit Q4K MLP graphs with GPU quantization/SiLU and no CPU intermediate transfers.
 - Add an exact four-token packed-weight reuse variant; preserve its negative prefill tuning result.

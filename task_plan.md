@@ -30,6 +30,12 @@
 - [ ] Tiled prefill GEMM, decode bandwidth tuning, command-buffer batching and profiling.
 - [x] Initial end-to-end logits / generated tokens / perplexity / state / speculation correctness gates.
 - [ ] Apples-to-apples llama.cpp Metal and MLX baselines; publish sourced measurements only.
+- [x] Initial public-runtime comparison: same prompt IDs, 36 repeated throughput runs and matched
+  8x512 WikiText scoring; pinned public GGUF and official-checkpoint MLX conversion.
+- [x] Publish ranges, request-compute time, memory, PPL and explicit quantization/cache differences
+  in `docs/PUBLIC_BASELINES.md`; verify MLX adapter tokens against its native generation API.
+- [ ] Match weights/precision across public backends and isolate timing variability before any
+  equal-quality or stable runtime-superiority claim.
 - [ ] Native `.dylib`, Python package and CLI integration; retain legacy APIs until migration is tested.
 
 ## Archived upstream task plan: pinfer (Pi 4 native LLM runtime + split-core OS)
