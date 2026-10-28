@@ -9,6 +9,7 @@
 #define PF_OPS_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 /* A weight matrix W [rows][cols], row-major, y = W x. `dtype` is a pq_dtype; for
  * quantized dtypes `data` points at the packed layout defined in FORMAT.md. */
@@ -23,6 +24,13 @@ typedef struct pf_pool pf_pool; /* opaque; NULL means "run on the calling thread
 pf_pool *pf_pool_create(int n_threads);
 void pf_pool_destroy(pf_pool *pool);
 int pf_pool_threads(const pf_pool *pool);
+/* Mutable recurrence storage: optional persistent shared Metal buffers. Initially
+ * zero; release through this pool before pool_destroy (not directly with free). */
+void *pf_pool_state_alloc(pf_pool *pool, size_t bytes);
+void pf_pool_state_free(pf_pool *pool, void *state);
+/* Optional fused MLP; returns 1 if computed, 0 if this backend declines. */
+int pf_pool_mlp(pf_pool *pool, const pf_mat *gate, const pf_mat *up, const pf_mat *down,
+                const float *x, float *y, int n);
 /* Upload an immutable subset once, bounded to 512 MiB including scratch. 0 success,
  * -1 unavailable/error. The reference backend rejects enabled GPU use. */
 int pf_pool_gpu_enable(pf_pool *pool, const pf_mat *const *weights, int count, float share);

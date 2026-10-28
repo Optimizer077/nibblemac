@@ -7,6 +7,16 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ### Real inference, optimization and measurements
 
+- Follow-up: implement opt-in persistent shared Metal DeltaNet state with exact rollback/replay,
+  and single-submit Q4K MLP graphs with GPU quantization/SiLU and no CPU intermediate transfers.
+- Add an exact four-token packed-weight reuse variant; preserve its negative prefill tuning result.
+- In a separate, noisier 45-run comparison, MLP grouping improves broad-offload generation by 20–23%
+  (16.7–17.2 -> 20.4–20.8 tok/s medians), but remains slower than CPU and head-only offload. GPU
+  DeltaNet adds latency here; no new default enabled. Detailed ranges: `docs/METAL_GRAPHS.md`.
+- Pass exact graph kernel tests for all four variants, 90 synthetic graph model cases and real
+  state-byte/token/logit/speculation gates. WikiText PPL remains 18.5061. Optional sanitizer runtime
+  stalled before CLI help and is explicitly not counted as a pass; diagnostic preserved.
+
 - Repository made public at the user's request.
 - Add native macOS model builds: original NEON baseline, Apple SDOT CPU kernels, and experimental
   hybrid Q4K/A8 Metal inference. Port pool idle/wakeup/QoS behavior without Linux affinity/futex APIs.

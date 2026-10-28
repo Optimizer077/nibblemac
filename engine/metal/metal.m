@@ -13,8 +13,14 @@
 @property(nonatomic, strong) id<MTLComputePipelineState> q4k_a8;
 @property(nonatomic, strong) id<MTLComputePipelineState> q4k_a8_row;
 @property(nonatomic, strong) id<MTLComputePipelineState> q4k_a8_packed;
+@property(nonatomic, strong) id<MTLComputePipelineState> q4k_a8_packed4;
+@property(nonatomic, strong) id<MTLComputePipelineState> quant_a8;
+@property(nonatomic, strong) id<MTLComputePipelineState> silu_mul;
+@property(nonatomic, strong) id<MTLComputePipelineState> lin_rule;
+@property(nonatomic, strong) id<MTLComputePipelineState> lin_apply;
 @property(nonatomic) BOOL useRowKernel;
 @property(nonatomic) BOOL usePackedKernel;
+@property(nonatomic) BOOL useBatchKernel;
 @end
 @implementation NMContext
 @end
@@ -54,17 +60,30 @@ nm_metal *nm_metal_create(const char *path, char *error, size_t size) {
         if (!c.q4k_a8_row) { fail(error, size, err.localizedDescription); return NULL; }
         c.q4k_a8_packed = [c.device newComputePipelineStateWithFunction:[library newFunctionWithName:@"nm_q4k_a8_packed"] error:&err];
         if (!c.q4k_a8_packed) { fail(error, size, err.localizedDescription); return NULL; }
+        c.q4k_a8_packed4 = [c.device newComputePipelineStateWithFunction:[library newFunctionWithName:@"nm_q4k_a8_packed4"] error:&err];
+        if (!c.q4k_a8_packed4) { fail(error, size, err.localizedDescription); return NULL; }
+        c.quant_a8 = [c.device newComputePipelineStateWithFunction:[library newFunctionWithName:@"nm_quant_a8"] error:&err];
+        c.silu_mul = [c.device newComputePipelineStateWithFunction:[library newFunctionWithName:@"nm_silu_mul"] error:&err];
+        c.lin_rule = [c.device newComputePipelineStateWithFunction:[library newFunctionWithName:@"nm_lin_rule"] error:&err];
+        c.lin_apply = [c.device newComputePipelineStateWithFunction:[library newFunctionWithName:@"nm_lin_apply"] error:&err];
+        if (!c.quant_a8 || !c.silu_mul || !c.lin_rule || !c.lin_apply) {
+            fail(error, size, err.localizedDescription ?: @"Graph kernel compilation failed"); return NULL;
+        }
         const char *variant = getenv("NM_METAL_KERNEL");
         if (!variant) variant = "packed";
-        if (variant && strcmp(variant, "row") && strcmp(variant, "simd") && strcmp(variant, "packed")) {
-            fail(error, size, @"NM_METAL_KERNEL must be row, simd or packed"); return NULL;
+        if (strcmp(variant, "row") && strcmp(variant, "simd") && strcmp(variant, "packed") && strcmp(variant, "packed4")) {
+            fail(error, size, @"NM_METAL_KERNEL must be row, simd, packed or packed4"); return NULL;
         }
         c.useRowKernel = variant && strcmp(variant, "simd");
-        c.usePackedKernel = variant && !strcmp(variant, "packed");
+        c.usePackedKernel = !strcmp(variant, "packed") || !strcmp(variant, "packed4");
+        c.useBatchKernel = !strcmp(variant, "packed4");
         if (c.f32.threadExecutionWidth != 32 || c.q4k.threadExecutionWidth != 32 ||
             c.q4k_a8.threadExecutionWidth != 32 || c.q4k_a8.maxTotalThreadsPerThreadgroup < 128 ||
             c.q4k_a8_row.threadExecutionWidth != 32 || c.q4k_a8_row.maxTotalThreadsPerThreadgroup < 128 ||
             c.q4k_a8_packed.threadExecutionWidth != 32 || c.q4k_a8_packed.maxTotalThreadsPerThreadgroup < 128 ||
+            c.q4k_a8_packed4.threadExecutionWidth != 32 || c.q4k_a8_packed4.maxTotalThreadsPerThreadgroup < 128 ||
+            c.quant_a8.threadExecutionWidth != 32 || c.lin_rule.maxTotalThreadsPerThreadgroup < 128 ||
+            c.lin_apply.maxTotalThreadsPerThreadgroup < 128 || c.silu_mul.maxTotalThreadsPerThreadgroup < 128 ||
             c.f32.maxTotalThreadsPerThreadgroup < 128 || c.q4k.maxTotalThreadsPerThreadgroup < 128) {
             fail(error, size, @"Kernels require 32-lane SIMD groups and 128-thread threadgroups");
             return NULL;
@@ -72,6 +91,160 @@ nm_metal *nm_metal_create(const char *path, char *error, size_t size) {
         c.queue = [c.device newCommandQueue];
         if (!c.queue) { fail(error, size, @"Unable to create Metal command queue"); return NULL; }
         return (nm_metal *)CFBridgingRetain(c);
+    }
+}
+
+static void encode_a8(NMContext *c, id<MTLComputeCommandEncoder> encoder,
+                      uint32_t rows, uint32_t cols, uint32_t batch,
+                      id<MTLBuffer> w, id<MTLBuffer> q, id<MTLBuffer> d, id<MTLBuffer> fs, id<MTLBuffer> y) {
+    BOOL tile = c.useBatchKernel && batch >= 4;
+    [encoder setComputePipelineState:tile ? c.q4k_a8_packed4 : c.usePackedKernel ? c.q4k_a8_packed :
+                                       c.useRowKernel ? c.q4k_a8_row : c.q4k_a8];
+    [encoder setBuffer:w offset:0 atIndex:0];
+    [encoder setBuffer:q offset:0 atIndex:1];
+    [encoder setBuffer:y offset:0 atIndex:2];
+    const uint32_t shape[] = {rows, cols, batch};
+    [encoder setBytes:shape length:sizeof shape atIndex:3];
+    [encoder setBuffer:d offset:0 atIndex:4];
+    [encoder setBuffer:fs offset:0 atIndex:5];
+    uint32_t rows_per_group = c.useRowKernel ? 128 : 16;
+    [encoder dispatchThreadgroups:MTLSizeMake(((uint64_t)rows + rows_per_group - 1) / rows_per_group, tile ? (batch + 3) / 4 : batch, 1)
+                     threadsPerThreadgroup:MTLSizeMake(128, 1, 1)];
+}
+
+static BOOL fits_weights(NMContext *c, id<MTLBuffer> w, uint32_t rows, uint32_t cols) {
+    uint64_t tiles = c.usePackedKernel ? (((uint64_t)rows + 31) / 32) * 8 : rows / 4;
+    return w && w.device == c.device && tiles * (cols / 256) <= w.length / 576;
+}
+
+static BOOL fits_buffer(NMContext *c, nm_buffer *handle, uint64_t elements, uint32_t width) {
+    id<MTLBuffer> b = (__bridge id<MTLBuffer>)handle;
+    return b && b.device == c.device && elements <= b.length / width;
+}
+
+static int complete(id<MTLCommandBuffer> command, char *error, size_t size) {
+    [command commit];
+    [command waitUntilCompleted];
+    return command.status == MTLCommandBufferStatusCompleted ? 0 :
+        fail(error, size, command.error.localizedDescription ?: @"GPU graph execution failed");
+}
+
+static void encode_quant(NMContext *c, id<MTLComputeCommandEncoder> encoder, uint32_t cols, uint32_t batch,
+                          nm_buffer *input, const nm_mlp_buffers *b) {
+    [encoder setComputePipelineState:c.quant_a8];
+    [encoder setBuffer:(__bridge id<MTLBuffer>)input offset:0 atIndex:0];
+    [encoder setBuffer:(__bridge id<MTLBuffer>)b->q offset:0 atIndex:1];
+    [encoder setBuffer:(__bridge id<MTLBuffer>)b->d offset:0 atIndex:2];
+    [encoder setBuffer:(__bridge id<MTLBuffer>)b->fs offset:0 atIndex:3];
+    const uint32_t shape[] = {0, cols, batch};
+    [encoder setBytes:shape length:sizeof shape atIndex:4];
+    [encoder dispatchThreadgroups:MTLSizeMake(cols / 32, batch, 1) threadsPerThreadgroup:MTLSizeMake(32, 1, 1)];
+}
+
+int nm_metal_mlp(nm_metal *context, uint32_t hidden, uint32_t ffn, uint32_t batch,
+                  nm_buffer *wg, nm_buffer *wu, nm_buffer *wd, const nm_mlp_buffers *b,
+                  char *error, size_t size) {
+    @autoreleasepool {
+        NMContext *c = (__bridge NMContext *)context;
+        if (!c || !b || !hidden || !ffn || !batch || batch > 64 || hidden % 256 || ffn % 256)
+            return fail(error, size, @"MLP needs hidden/ffn divisible by 256 and batch 1..64");
+        uint64_t h = (uint64_t)hidden * batch, f = (uint64_t)ffn * batch, maximum = MAX(h, f);
+        if (!fits_weights(c, (__bridge id<MTLBuffer>)wg, ffn, hidden) ||
+            !fits_weights(c, (__bridge id<MTLBuffer>)wu, ffn, hidden) ||
+            !fits_weights(c, (__bridge id<MTLBuffer>)wd, hidden, ffn) ||
+            !fits_buffer(c, b->x, h, 4) || !fits_buffer(c, b->gate, f, 4) || !fits_buffer(c, b->up, f, 4) ||
+            !fits_buffer(c, b->y, h, 4) || !fits_buffer(c, b->q, maximum, 1) ||
+            !fits_buffer(c, b->d, maximum / 32, 4) || !fits_buffer(c, b->fs, maximum / 32, 4) || f > UINT32_MAX)
+            return fail(error, size, @"MLP buffers are missing, wrong-device, or too small");
+        nm_buffer *handles[] = {wg, wu, wd, b->x, b->gate, b->up, b->q, b->d, b->fs, b->y};
+        for (unsigned i = 3; i < 10; i++) for (unsigned j = 0; j < i; j++)
+            if (handles[i] == handles[j]) return fail(error, size, @"MLP workspace must not alias weights or itself");
+        id<MTLCommandBuffer> command = [c.queue commandBuffer];
+        id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
+        if (!command || !encoder) return fail(error, size, @"Unable to encode MLP graph");
+        encode_quant(c, encoder, hidden, batch, b->x, b);
+        [encoder memoryBarrierWithScope:MTLBarrierScopeBuffers];
+        encode_a8(c, encoder, ffn, hidden, batch, (__bridge id<MTLBuffer>)wg,
+                  (__bridge id<MTLBuffer>)b->q, (__bridge id<MTLBuffer>)b->d,
+                  (__bridge id<MTLBuffer>)b->fs, (__bridge id<MTLBuffer>)b->gate);
+        encode_a8(c, encoder, ffn, hidden, batch, (__bridge id<MTLBuffer>)wu,
+                  (__bridge id<MTLBuffer>)b->q, (__bridge id<MTLBuffer>)b->d,
+                  (__bridge id<MTLBuffer>)b->fs, (__bridge id<MTLBuffer>)b->up);
+        [encoder memoryBarrierWithScope:MTLBarrierScopeBuffers];
+        [encoder setComputePipelineState:c.silu_mul];
+        [encoder setBuffer:(__bridge id<MTLBuffer>)b->gate offset:0 atIndex:0];
+        [encoder setBuffer:(__bridge id<MTLBuffer>)b->up offset:0 atIndex:1];
+        uint32_t count = (uint32_t)f;
+        [encoder setBytes:&count length:sizeof count atIndex:2];
+        [encoder dispatchThreadgroups:MTLSizeMake((f + 127) / 128, 1, 1) threadsPerThreadgroup:MTLSizeMake(128, 1, 1)];
+        [encoder memoryBarrierWithScope:MTLBarrierScopeBuffers];
+        encode_quant(c, encoder, ffn, batch, b->gate, b);
+        [encoder memoryBarrierWithScope:MTLBarrierScopeBuffers];
+        encode_a8(c, encoder, hidden, ffn, batch, (__bridge id<MTLBuffer>)wd,
+                  (__bridge id<MTLBuffer>)b->q, (__bridge id<MTLBuffer>)b->d,
+                  (__bridge id<MTLBuffer>)b->fs, (__bridge id<MTLBuffer>)b->y);
+        [encoder endEncoding];
+        return complete(command, error, size);
+    }
+}
+
+static BOOL valid_lin(NMContext *c, const nm_lin_shape *s, const nm_lin_buffers *b, BOOL apply) {
+    if (!c || !s || !b || !s->heads || s->heads > 256 || !s->rep || s->heads % s->rep ||
+        !s->dk || s->dk > 256 || !s->dv || s->dv > 512 || s->dv % 32 || s->keep > 64 ||
+        !fits_buffer(c, b->state, (uint64_t)s->heads * s->dk * s->dv, 4)) return NO;
+    uint64_t width = s->dk + s->dv + 1;
+    if (s->keep && !fits_buffer(c, b->pend, (uint64_t)s->keep * s->heads * width, 4)) return NO;
+    if (!apply && (!s->n || s->n > 64 || s->logged > 1 ||
+        s->qkv_stride < 2 * (s->heads / s->rep) * s->dk + s->heads * s->dv ||
+        s->o_stride < s->heads * s->dv ||
+        !fits_buffer(c, b->qkv, (uint64_t)s->n * s->qkv_stride, 4) ||
+        !fits_buffer(c, b->decay, (uint64_t)s->n * s->heads, 4) ||
+        !fits_buffer(c, b->beta, (uint64_t)s->n * s->heads, 4) ||
+        !fits_buffer(c, b->output, (uint64_t)s->n * s->o_stride, 4) ||
+        !fits_buffer(c, b->log, s->logged ? (uint64_t)s->n * s->heads * width : 1, 4) ||
+        !fits_buffer(c, b->pend, s->keep ? (uint64_t)s->keep * s->heads * width : 1, 4) ||
+        !fits_buffer(c, b->work, s->logged ? (uint64_t)s->heads * s->dk * s->dv : 1, 4))) return NO;
+    if (apply) return !s->keep || b->state != b->pend;
+    nm_buffer *handles[] = {b->state, b->qkv, b->decay, b->beta, b->output, b->log, b->pend, b->work};
+    for (unsigned i = 0; i < 8; i++) for (unsigned j = 0; j < i; j++)
+        if (handles[i] && handles[i] == handles[j]) return NO;
+    return YES;
+}
+
+int nm_metal_lin_rule(nm_metal *context, const nm_lin_shape *s, const nm_lin_buffers *b,
+                      char *error, size_t size) {
+    @autoreleasepool {
+        NMContext *c = (__bridge NMContext *)context;
+        if (!valid_lin(c, s, b, NO)) return fail(error, size, @"Invalid DeltaNet buffers or shape");
+        id<MTLCommandBuffer> command = [c.queue commandBuffer];
+        id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
+        if (!command || !encoder) return fail(error, size, @"Unable to encode DeltaNet");
+        [encoder setComputePipelineState:c.lin_rule];
+        nm_buffer *handles[] = {b->state, b->qkv, b->decay, b->beta, b->output, b->log, b->pend, b->work};
+        for (unsigned i = 0; i < 8; i++) [encoder setBuffer:(__bridge id<MTLBuffer>)handles[i] offset:0 atIndex:i];
+        [encoder setBytes:s length:sizeof *s atIndex:8];
+        [encoder dispatchThreadgroups:MTLSizeMake((s->dv + 127) / 128, s->heads, 1) threadsPerThreadgroup:MTLSizeMake(128, 1, 1)];
+        [encoder endEncoding];
+        return complete(command, error, size);
+    }
+}
+
+int nm_metal_lin_apply(nm_metal *context, const nm_lin_shape *s, const nm_lin_buffers *b,
+                       char *error, size_t size) {
+    @autoreleasepool {
+        NMContext *c = (__bridge NMContext *)context;
+        if (!valid_lin(c, s, b, YES)) return fail(error, size, @"Invalid DeltaNet replay buffers or shape");
+        if (!s->keep) return 0;
+        id<MTLCommandBuffer> command = [c.queue commandBuffer];
+        id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
+        if (!command || !encoder) return fail(error, size, @"Unable to encode DeltaNet replay");
+        [encoder setComputePipelineState:c.lin_apply];
+        [encoder setBuffer:(__bridge id<MTLBuffer>)b->state offset:0 atIndex:0];
+        [encoder setBuffer:(__bridge id<MTLBuffer>)b->pend offset:0 atIndex:1];
+        [encoder setBytes:s length:sizeof *s atIndex:2];
+        [encoder dispatchThreadgroups:MTLSizeMake((s->dv + 127) / 128, s->heads, 1) threadsPerThreadgroup:MTLSizeMake(128, 1, 1)];
+        [encoder endEncoding];
+        return complete(command, error, size);
     }
 }
 
@@ -97,18 +270,7 @@ int nm_metal_matmul_a8(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t
         id<MTLCommandBuffer> command = [c.queue commandBuffer];
         id<MTLComputeCommandEncoder> encoder = [command computeCommandEncoder];
         if (!command || !encoder) return fail(error, size, @"Unable to create Q4K/A8 encoder");
-        [encoder setComputePipelineState:c.usePackedKernel ? c.q4k_a8_packed :
-                                           c.useRowKernel ? c.q4k_a8_row : c.q4k_a8];
-        [encoder setBuffer:w offset:0 atIndex:0];
-        [encoder setBuffer:q offset:0 atIndex:1];
-        [encoder setBuffer:y offset:0 atIndex:2];
-        const uint32_t shape[] = {rows, cols, batch};
-        [encoder setBytes:shape length:sizeof shape atIndex:3];
-        [encoder setBuffer:d offset:0 atIndex:4];
-        [encoder setBuffer:fs offset:0 atIndex:5];
-        uint32_t rows_per_group = c.useRowKernel ? 128 : 16;
-        [encoder dispatchThreadgroups:MTLSizeMake(((uint64_t)rows + rows_per_group - 1) / rows_per_group, batch, 1)
-                         threadsPerThreadgroup:MTLSizeMake(128, 1, 1)];
+        encode_a8(c, encoder, rows, cols, batch, w, q, d, fs, y);
         [encoder endEncoding]; [command commit]; [command waitUntilCompleted];
         if (command.status != MTLCommandBufferStatusCompleted)
             return fail(error, size, command.error.localizedDescription ?: @"Q4K/A8 execution failed");

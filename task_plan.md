@@ -21,6 +21,12 @@
 - [x] Complete 54-run repeated real-model throughput benchmark and real state / WikiText quality gates.
 - [x] Publish median/range/peak-RSS tables and all tuning records in `docs/MAC_BENCHMARKS.md`.
 - [ ] GPU-resident attention, KV cache, DeltaNet state and fused elementwise operations.
+- [x] Initial persistent shared Metal DeltaNet state with exact speculative logs/replay and CPU snapshots.
+- [x] Single-submit GPU MLP: quantize -> gate/up -> SiLU*up -> quantize -> down, with no CPU intermediates.
+- [x] Experimental four-token packed-weight reuse tile; retain the negative performance finding.
+- [x] Complete 45-run comparison of per-op GPU, MLP graph and MLP+DeltaNet graph; publish raw records.
+- [x] Document 20–23% broad-GPU MLP benefit, CPU superiority, slower standalone GPU recurrence and timing variability.
+- [ ] Full GPU attention/inter-layer graph and efficient SIMD-group prefill GEMM (small `packed4` tile is not this).
 - [ ] Tiled prefill GEMM, decode bandwidth tuning, command-buffer batching and profiling.
 - [x] Initial end-to-end logits / generated tokens / perplexity / state / speculation correctness gates.
 - [ ] Apples-to-apples llama.cpp Metal and MLX baselines; publish sourced measurements only.

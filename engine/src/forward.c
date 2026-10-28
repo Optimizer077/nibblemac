@@ -47,6 +47,7 @@ static void act_task(void *arg, int tid, int nthr) {
 
 /* SwiGLU: down(silu(gate x) * up x), ctx->xn -> ctx->out. */
 void pf_mlp(pinfer_ctx *ctx, const pf_layer *L, int n) {
+    if (pf_pool_mlp(ctx->pool, &L->gate, &L->up, &L->down, ctx->xn, ctx->out, n)) return;
     pf_matmul(ctx->pool, &L->gate, ctx->xn, ctx->ta, n);
     pf_matmul(ctx->pool, &L->up, ctx->xn, ctx->tb, n);
     const double ts = pf_stats_now();

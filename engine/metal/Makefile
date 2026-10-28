@@ -5,7 +5,7 @@ CFLAGS := -O3 -g -std=c11 -Wall -Wextra -Werror -ffp-contract=off -mmacosx-versi
 OBJCFLAGS := $(CFLAGS) -fobjc-arc
 FRAMEWORKS := -framework Foundation -framework Metal
 
-.PHONY: all test bench test-a8
+.PHONY: all test bench test-a8 test-graphs graph-tools
 all: $(OUT)/nibblemac_metal $(OUT)/kernels.metal
 
 $(OUT):
@@ -40,3 +40,16 @@ $(OUT)/check_a8: $(OUT)/check_a8.o $(OUT)/kern_quant.o $(OUT)/kern_act.o $(OUT)/
 	$(CC) $(OBJCFLAGS) $^ $(FRAMEWORKS) -o $@
 test-a8: all $(OUT)/check_a8
 	$(OUT)/check_a8 $(OUT)/kernels.metal
+
+$(OUT)/check_graphs.o: check_graphs.c metal.h ../src/kern.h ../src/forward.h | $(OUT)
+	$(CC) $(CFLAGS) -I../include -c $< -o $@
+$(OUT)/kern_lin.o: ../src/kern_lin.c ../src/kern.h | $(OUT)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OUT)/forward_ops.o: ../src/forward_ops.c ../src/forward.h | $(OUT)
+	$(CC) $(CFLAGS) -I../include -c $< -o $@
+$(OUT)/check_graphs: $(OUT)/check_graphs.o $(OUT)/kern_lin.o $(OUT)/forward_ops.o $(OUT)/kern_quant.o $(OUT)/kern_act.o $(OUT)/metal.o
+	$(CC) $(OBJCFLAGS) $^ $(FRAMEWORKS) -o $@
+test-graphs: all $(OUT)/check_graphs
+	$(OUT)/check_graphs $(OUT)/kernels.metal
+
+graph-tools: all $(OUT)/check_graphs $(OUT)/check_a8

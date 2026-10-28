@@ -1,0 +1,73 @@
+{
+  "kind": "exact_gpu_graph_gates",
+  "valid": true,
+  "runs": [
+    {
+      "variant": "simd",
+      "returncode": 0,
+      "stdout": "PASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=64\nPASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected\nPASS exact single-submit MLP hidden=256 ffn=768 batch=1 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=1: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=3: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=7 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=7: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=64 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=64: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=1 zero=0\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=8 zero=0\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=1\nPASS exact persistent DeltaNet heads=16 rep=1 dk=128 dv=128 batch=1: recurrence/log/pending/replay/restore\nPASS exact persistent DeltaNet heads=2 rep=1 dk=256 dv=512 batch=3: recurrence/log/pending/replay/restore\nPASS all GPU graph numerical, persistence and invalid-input gates\n",
+      "stderr": ""
+    },
+    {
+      "variant": "row",
+      "returncode": 0,
+      "stdout": "PASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=64\nPASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected\nPASS exact single-submit MLP hidden=256 ffn=768 batch=1 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=1: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=3: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=7 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=7: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=64 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=64: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=1 zero=0\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=8 zero=0\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=1\nPASS exact persistent DeltaNet heads=16 rep=1 dk=128 dv=128 batch=1: recurrence/log/pending/replay/restore\nPASS exact persistent DeltaNet heads=2 rep=1 dk=256 dv=512 batch=3: recurrence/log/pending/replay/restore\nPASS all GPU graph numerical, persistence and invalid-input gates\n",
+      "stderr": ""
+    },
+    {
+      "variant": "packed",
+      "returncode": 0,
+      "stdout": "PASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=64\nPASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected\nPASS exact single-submit MLP hidden=256 ffn=768 batch=1 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=1: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=3: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=7 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=7: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=64 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=64: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=1 zero=0\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=8 zero=0\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=1\nPASS exact persistent DeltaNet heads=16 rep=1 dk=128 dv=128 batch=1: recurrence/log/pending/replay/restore\nPASS exact persistent DeltaNet heads=2 rep=1 dk=256 dv=512 batch=3: recurrence/log/pending/replay/restore\nPASS all GPU graph numerical, persistence and invalid-input gates\n",
+      "stderr": ""
+    },
+    {
+      "variant": "packed4",
+      "returncode": 0,
+      "stdout": "PASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=64\nPASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected\nPASS exact single-submit MLP hidden=256 ffn=768 batch=1 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=1: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=3: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=7 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=7: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=256 ffn=768 batch=64 zero=0\nPASS exact persistent DeltaNet heads=4 rep=2 dk=32 dv=64 batch=64: recurrence/log/pending/replay/restore\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=1 zero=0\nPASS exact single-submit MLP hidden=1024 ffn=3584 batch=8 zero=0\nPASS exact single-submit MLP hidden=256 ffn=768 batch=3 zero=1\nPASS exact persistent DeltaNet heads=16 rep=1 dk=128 dv=128 batch=1: recurrence/log/pending/replay/restore\nPASS exact persistent DeltaNet heads=2 rep=1 dk=256 dv=512 batch=3: recurrence/log/pending/replay/restore\nPASS all GPU graph numerical, persistence and invalid-input gates\n",
+      "stderr": ""
+    }
+  ],
+  "source_sha256": {
+    "engine/metal/inference.h": "a2b3df05154c65559c424b47b3f98f868e0d6ca45387cf54992142d1424a03a9",
+    "engine/metal/check.c": "673cf49d10509faa13c90506f84e7f3e25242164b6a4076a98a9b4c27161c4b6",
+    "engine/metal/Makefile": "272d16c0e1b364df001b4af10bb5ca8be7a9a97d3cbcf07ab6c005ee496af855",
+    "engine/metal/metal.m": "94a4631f1270752428d7b37933116f15aef5d4d8c9111c80c65a3eed64b90301",
+    "engine/metal/inference.c": "9e065811a744908794f0fe87dc0bd25c832e9f51fcb9fb51e2eec2df6eca4557",
+    "engine/metal/check_a8.c": "93db6d703d05dc15c47d4a587f02bc4c87c777cc0f17bfb7b9e26849e601a3c4",
+    "engine/metal/check_graphs.c": "f23c80e7ed23d6daede74303cee8c9b0d36b8adb4166052d984e697e4edee648",
+    "engine/metal/metal.h": "b5b8323631130ba955c856a87f9a0e18cbf72d3400fab27ba1d2caca6a3d2804",
+    "engine/metal/kernels.metal": "7795456d97297b3c863c40ddc68eb3d4ca66c41d6173e8ba8a048773f6589f89",
+    "engine/src/gpu.c": "1e770692a665d3ca00d341e32887a0e1f726225dd42d84d62d510c2abb8b1521",
+    "engine/src/mtp.c": "201b061d6a251eb9a2ab65e83aea29a94bb50fcbe8a49fb525434ff8af4aa453",
+    "engine/src/spec.c": "3f1ef5130d14d24ac3a8998e1dc0b359898fbc0984ab34c1af3f25e89f629008",
+    "engine/src/matvec_ref.c": "32be031901ba1121f1774786a1321e2598852bb7fba54ac00347fbc91dcde4db",
+    "engine/src/model.c": "1f820a0fb85335f0ab88daabbdbb4a87327f199bb389fca0c3a5c1b928c02c4d",
+    "engine/src/ngram.c": "0d67fdbb188ae9c0905f24a2baeedd4533826e21937ef66111b8f3047529becf",
+    "engine/src/forward_lin.c": "c4be4c6970d7539c2542654ad635956d2b9ef9df9a9244f9d4b0f1b884d34cd2",
+    "engine/src/state.c": "31660842bed54e6acbf44022b50c29ea92b2e9da63b3a20b8e3c4b1a1807abdf",
+    "engine/src/kern_act.c": "a3f29293e236b78104eb63516ef50c327fa4ec9db497687aa1c7db7883f4435e",
+    "engine/src/kern_lin.c": "a266c7c7b099edc6039dac2deb7b2de80a76fe359954bcb1ed0e057f1eb8e085",
+    "engine/src/kern_stats.c": "9a9b22025715dbd79ecf40b0368029f2ec7cf12627846a60d8086b999c42d299",
+    "engine/src/forward.c": "d5bda6788254c6e62435677a5019349c526f18269982819124f812214c6688bb",
+    "engine/src/matvec_fast.c": "dd33d3ac566d359d414678697d4bfc5b1490c5b6ca019ec0cff5eaa4b61a354b",
+    "engine/src/kern.h": "d0c05ec5417a6fe7172298e290443206de10e46072f8cb5d23e99beb608589bf",
+    "engine/src/spec.h": "e4c0bfc3911a68ef5e5802e9d5da07aae0e8eb75e9bfa0351633de7141aecefc",
+    "engine/src/mtp.h": "f42bcd369b61ce4df51d18d7fe266992f0508163524948f25c2c82842a2e0bc8",
+    "engine/src/forward_stats.c": "5c29febeaa889e3e2a93c2b907c1fc9f7ae96dca805a3e75f0c845436658e63f",
+    "engine/src/kern_float.c": "be80d2908b7fd70a5f6fb16ed9deaebe8dbc1dee85df80c52c7ac2c43162e52c",
+    "engine/src/gpu.h": "5c7b0e499d091ce4c1cffed2ed608163bb53375466021cb65a188692be5b46a4",
+    "engine/src/pq_format.h": "a18439e35091146008f217475fc637df2f3ef16111ac53548d6afe4d8a569180",
+    "engine/src/forward_attn.c": "3522730f752263b3009904339a1d90371acb537870e7b78acce686e87c85e75a",
+    "engine/src/ngram.h": "5a0ac97cb447f514fd3c32e70b4b2ad32452f6adf8cbb3ecf68f5d4c45bb0da4",
+    "engine/src/spec_adapt.c": "897b74eadb2e050a422805d5c06df737f7bbcdc11158b8e8c8744fa619be9e5e",
+    "engine/src/model.h": "d561bb604dd8c7a1f3b0d0e9e14232cbabeff341ca1e33e24dcbe99ed50c7c7f",
+    "engine/src/forward_kv.c": "6528508b1da6457a5e3532c6ec1a146447cca8231aa8b5a747e60194a892321b",
+    "engine/src/pinfer.c": "2ff8f6227ab5542b8263e3724df6201ad3d70c8e7835d072ec6e06abe0799dd2",
+    "engine/src/ops.h": "405decfe000da8e4d0e46ebc1d3f1419dd6aec1852c52111167877f6635f2a88",
+    "engine/src/pq_quant.h": "562bbdb8ba85bc1a341a98435dddf732f34e92cacbd17bc88b682994c4f8ef8e",
+    "engine/src/gpu_v3d.c": "f1ec668dd28231f47c9a0f6c51994d8f49cd77c64d8d4d0cc372b9f73a7e3dbd",
+    "engine/src/forward_ops.c": "0275fca8a3da89d9579b7d6f0012b5e6a6532acb14fb2eed11cb94c4bc09e57a",
+    "engine/src/kern_quant.c": "a077316869fdbc596b98f3265535e220e861c5365a54627871e53dcd9ab2d87d",
+    "engine/src/forward.h": "419b71264c1cea7781036d8c6b0bc1f536f151532cf3c77e792e2bab4e5273ea"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "kind": "optional_sanitizer_runtime_diagnostic",
+  "valid": false,
+  "notes": [
+    "Synthetic CPU sanitizer suite timed out after 120 seconds without output.",
+    "The same instrumented executable also timed out on --help after 15 seconds, before any model was loaded.",
+    "This record is not a passing sanitizer gate."
+  ],
+  "runs": [
+    {
+      "timeout_seconds": 10,
+      "stdout": "",
+      "stderr": "==18942==AddressSanitizer: libc interceptors initialized\n"
+    }
+  ],
+  "elapsed_seconds": 10.004251291014953
+}

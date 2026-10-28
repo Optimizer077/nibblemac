@@ -2,6 +2,15 @@
 
 ## 2026-10-28 — Apple M2 Pro / nibblemac
 
+Follow-up graph session: persistent shared DeltaNet and single-submit MLP are exact but still
+experimental. MLP grouping improves the slow broad-Q4K-offload median decode from
+17.16/17.03/16.73 to 20.75/20.43/20.53 tok/s (prose64/chat36/context512), 20–23%; adding per-layer
+GPU recurrence is slower. CPU and head-only controls were noisier in this later session, so no
+cross-session regression/speedup claim is made. Raw valid/exact record:
+`bench/results/metal/graph-final-20261028T064355.952875Z.json`.
+Architecture, ranges, all correctness evidence and incomplete optional sanitizer check:
+[docs/METAL_GRAPHS.md](docs/METAL_GRAPHS.md). Keep graph flags off by default.
+
 This section is Mac-only; the older Pi notebook follows unchanged. Full protocol, ranges,
 memory and limitations: [docs/MAC_BENCHMARKS.md](docs/MAC_BENCHMARKS.md).
 

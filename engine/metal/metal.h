@@ -1,4 +1,4 @@
-/* nibblemac's experimental standalone Metal backend. Not yet wired into pinfer.
+/* nibblemac's experimental Metal backend, standalone and hybrid inference.
  * Handles are private, buffers use shared unified memory, calls are synchronous.
  * A context and its buffers must be used from a single thread at a time.
  * All functions report errors rather than silently switching to a CPU backend. */
@@ -42,5 +42,23 @@ int nm_metal_matmul(nm_metal *context, uint32_t dtype, uint32_t rows, uint32_t c
 int nm_metal_matmul_a8(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t batch,
                        nm_buffer *w, nm_buffer *q, nm_buffer *d, nm_buffer *fs,
                        nm_buffer *y, char *error, size_t error_size);
+
+/* One submission: fp32 input -> A8 -> gate/up -> SiLU*up -> A8 -> down -> fp32.
+ * Workspace is caller-owned; no CPU intermediate activations or waits. All
+ * weight handles must come from nm_metal_a8_weights for this context. */
+typedef struct { nm_buffer *x, *gate, *up, *q, *d, *fs, *y; } nm_mlp_buffers;
+int nm_metal_mlp(nm_metal *context, uint32_t hidden, uint32_t ffn, uint32_t batch,
+                  nm_buffer *wg, nm_buffer *wu, nm_buffer *wd, const nm_mlp_buffers *buffers,
+                  char *error, size_t error_size);
+
+/* Chunk-major DeltaNet state matches kern_lin.c exactly. Persistent shared S
+ * remains CPU-visible after each synchronous call (save/load/reset need no
+ * mirrored-state synchronization). Logs use the upstream layout. */
+typedef struct { uint32_t n, heads, rep, dk, dv, qkv_stride, o_stride, keep, logged; } nm_lin_shape;
+typedef struct { nm_buffer *state, *qkv, *decay, *beta, *output, *log, *pend, *work; } nm_lin_buffers;
+int nm_metal_lin_rule(nm_metal *context, const nm_lin_shape *shape, const nm_lin_buffers *buffers,
+                      char *error, size_t error_size);
+int nm_metal_lin_apply(nm_metal *context, const nm_lin_shape *shape, const nm_lin_buffers *buffers,
+                       char *error, size_t error_size);
 
 #endif

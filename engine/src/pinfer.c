@@ -65,7 +65,13 @@ static void set_dims(pinfer_ctx *c) {
 static int alloc_buffers(pinfer_ctx *c) {
     const size_t B = PF_MAX_BATCH, kvw = (size_t)c->n_kv * c->hd;
     c->conv = alloc_layer_state(c, 0, ((size_t)(c->conv_k - 1) * c->conv_dim + 1) * sizeof(float));
-    c->rec = alloc_layer_state(c, 0, (size_t)c->lv_heads * c->lk_dim * c->lv_dim * sizeof(float));
+    c->rec = calloc((size_t)c->n_layers, sizeof(float *));
+    if (c->rec)
+        for (int l = 0; l < c->n_layers; l++) {
+            if (c->model.layers[l].is_full) continue;
+            c->rec[l] = pf_pool_state_alloc(c->pool, (size_t)c->lv_heads * c->lk_dim * c->lv_dim * sizeof(float));
+            if (!c->rec[l]) return PINFER_E_NOMEM;
+        }
     c->kc = alloc_layer_state(c, 1, pf_kv_bytes(c));
     c->vc = alloc_layer_state(c, 1, pf_kv_bytes(c));
     if (!c->conv || !c->rec || !c->kc || !c->vc) return PINFER_E_NOMEM;
@@ -148,12 +154,9 @@ pinfer_ctx *pinfer_load(const char *path, const pinfer_params *params, int *err)
                         "head_dim %d not supported\n", c->lv_dim, c->hd);
                 rc = PINFER_E_FORMAT;
             } else {
-                rc = alloc_buffers(c);
+                c->pool = pf_pool_create(p.n_threads);
+                rc = c->pool ? alloc_buffers(c) : PINFER_E_NOMEM;
             }
-        }
-        if (rc == PINFER_OK) {
-            c->pool = pf_pool_create(p.n_threads);
-            if (!c->pool) rc = PINFER_E_NOMEM;
         }
         if (rc == PINFER_OK && p.gpu_split > 0.0f) rc = enable_gpu(c, p.gpu_split);
     }
@@ -170,7 +173,10 @@ void pinfer_free(pinfer_ctx *c) {
     pf_spec_free(c);
     int nl = c->n_layers;
     free_layer_state(c->conv, nl);
-    free_layer_state(c->rec, nl);
+    if (c->rec) {
+        for (int l = 0; l < nl; l++) pf_pool_state_free(c->pool, c->rec[l]);
+        free(c->rec);
+    }
     free_layer_state(c->kc, nl);
     free_layer_state(c->vc, nl);
     float *bufs[] = {c->x, c->xn, c->out, c->ta, c->tb, c->tc, c->to, c->ba, c->aa,

@@ -27,9 +27,24 @@ class ConfigurationTests(unittest.TestCase):
     def test_default_kernel_is_measured_packed_variant(self):
         self.assertEqual(config("metal:4:67108864")["metal_kernel"], "packed")
 
+    def test_graph_modes(self):
+        for mode, mlp, rec in (("none", False, False), ("mlp", True, False),
+                               ("rec", False, True), ("graph", True, True)):
+            with self.subTest(mode=mode):
+                value = config(f"metal:4:67108864:packed:{mode}")
+                self.assertEqual(value["metal_mlp"], mlp)
+                self.assertEqual(value["metal_recurrence"], rec)
+
+    def test_tiled_variant_preserves_explicit_selection(self):
+        value = config("metal:4:0:packed4:mlp")
+        self.assertEqual(value["metal_kernel"], "packed4")
+        self.assertTrue(value["metal_mlp"])
+        self.assertFalse(value["metal_recurrence"])
+
     def test_malformed(self):
         for value in ("cuda:4", "cpu:0", "cpu:9", "cpu:x", "cpu:4:123", "metal:4",
-                      "metal:4:-1", "metal:4:10:unknown", "cpu-spec5:4", "cpu", "cpu:4:1:row:extra"):
+                      "metal:4:-1", "metal:4:10:unknown", "cpu-spec5:4", "cpu", "cpu:4:1:row:extra",
+                      "metal:4:1:packed:unknown"):
             with self.subTest(value=value), self.assertRaises(argparse.ArgumentTypeError):
                 config(value)
 

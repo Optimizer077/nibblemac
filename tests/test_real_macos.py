@@ -28,6 +28,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--quality-chunks", type=int, default=2)
     ap.add_argument("--skip-quality", action="store_true")
+    ap.add_argument("--graphs", action="store_true", help="Enable single-submit MLP and persistent GPU DeltaNet for Metal")
+    ap.add_argument("--kernel", choices=("simd", "row", "packed", "packed4"), default="packed")
     args = ap.parse_args()
     if args.quality_chunks < 1:
         ap.error("--quality-chunks must be positive")
@@ -39,7 +41,8 @@ def main() -> int:
     out.parent.mkdir(parents=True, exist_ok=True)
     record = {"kind": "real_model_correctness_and_quality", "valid": False,
               "model_sha256": sha256(model), "source_sha256": source_hashes(),
-              "test_sha256": sha256(Path(__file__)), "runs": []}
+              "test_sha256": sha256(Path(__file__)), "metal_graphs": args.graphs,
+              "metal_kernel": args.kernel, "runs": []}
     work = ROOT / "build/real-macos-gates"
     work.mkdir(parents=True, exist_ok=True)
     lock = (ROOT / "build/macos-bench.lock").open("a")
@@ -51,9 +54,11 @@ def main() -> int:
             argv += ["-n", str(generate), "--ids", ",".join(map(str, ids if tokens is None else tokens))]
         argv += list(extra)
         env = os.environ.copy()
-        for key in ("NM_METAL_MIN_BYTES", "NM_METAL_KERNEL", "PF_FWD_STATS", "PF_KERN_STATS"):
+        for key in ("NM_METAL_MIN_BYTES", "NM_METAL_KERNEL", "PF_FWD_STATS", "PF_KERN_STATS", "NM_METAL_MLP", "NM_METAL_RECURRENCE"):
             env.pop(key, None)
-        env.update(NM_METAL_MIN_BYTES=minimum, NM_METAL_KERNEL="packed")
+        env.update(NM_METAL_MIN_BYTES=minimum, NM_METAL_KERNEL=args.kernel)
+        if backend == "metal" and args.graphs:
+            env.update(NM_METAL_MLP="1", NM_METAL_RECURRENCE="1")
         p = subprocess.run(argv, cwd=ROOT, env=env, capture_output=True, text=True, timeout=240)
         item = {"name": name, "backend": backend, "binary_sha256": sha256(binary),
                 "returncode": p.returncode, "stdout": p.stdout.replace(str(ROOT), "<repo>"),
@@ -98,9 +103,17 @@ def main() -> int:
             state = td / "prefix.state"
             item, _ = run("cpu", "save CPU prefix state", ["--save-state", str(state)], tokens=ids[:32], generate=1)
             item["exact"] = True
+            gpu_state = td / "gpu-prefix.state"
+            item, _ = run("metal", "save GPU prefix state", ["--save-state", str(gpu_state)], tokens=ids[:32], generate=1)
+            item.update(exact=state.read_bytes() == gpu_state.read_bytes(),
+                        state_sha256=sha256(gpu_state), cpu_state_sha256=sha256(state))
+            if not item["exact"]:
+                raise ValueError("GPU-saved state bytes differ from CPU-saved state")
+            print("PASS GPU/CPU prefix state bytes match exactly", flush=True)
             for backend in ("cpu", "metal"):
                 for name, extra, prompt in [
                     ("restore CPU prefix state", ["--load-state", str(state)], ids[32:]),
+                    ("restore GPU prefix state", ["--load-state", str(gpu_state)], ids[32:]),
                     ("checkpoint rewind", ["--rewind-at", "32"], ids),
                     ("speculative k=3", ["--spec", "3"], ids),
                     ("adaptive speculative k<=4", ["--spec", "4", "--adaptive"], ids),

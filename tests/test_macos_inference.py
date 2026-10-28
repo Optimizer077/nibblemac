@@ -29,6 +29,9 @@ def main() -> int:
     args = parser.parse_args()
     target = {"q4k": Q4K_G32, "q4": Q4_G32, "q8": Q8_G32}[args.quant]
     results = {"kind": "synthetic_full_model_correctness", "quantization": args.quant,
+               "metal_mlp": os.environ.get("NM_METAL_MLP", "0"),
+               "metal_recurrence": os.environ.get("NM_METAL_RECURRENCE", "0"),
+               "metal_kernel": os.environ.get("NM_METAL_KERNEL", "packed"),
                "valid": False, "runs": []}
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
     output = ROOT / f"bench/results/metal/model-gates-{stamp}.json"

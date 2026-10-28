@@ -22,6 +22,12 @@ pf_pool *pf_pool_create(int n_threads) {
 void pf_pool_destroy(pf_pool *pool) { free(pool); }
 
 int pf_pool_threads(const pf_pool *pool) { (void)pool; return 1; }
+void *pf_pool_state_alloc(pf_pool *pool, size_t bytes) { (void)pool; return calloc(1, bytes); }
+void pf_pool_state_free(pf_pool *pool, void *state) { (void)pool; free(state); }
+int pf_pool_mlp(pf_pool *pool, const pf_mat *gate, const pf_mat *up, const pf_mat *down,
+                const float *x, float *y, int n) {
+    (void)pool; (void)gate; (void)up; (void)down; (void)x; (void)y; (void)n; return 0;
+}
 int pf_pool_gpu_enable(pf_pool *pool, const pf_mat *const *weights, int count, float share) {
     (void)pool; (void)weights; (void)count; (void)share;
     return -1;

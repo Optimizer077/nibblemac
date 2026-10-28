@@ -14,6 +14,9 @@ test-metal:
 test-a8:
 	$(MAKE) -C engine/metal test-a8
 
+test-graphs:
+	$(MAKE) -C engine/metal test-graphs
+
 bench-metal:
 	python3 tools/bench_metal.py
 
@@ -51,4 +54,4 @@ test-qemu: all
 clean:
 	rm -rf build
 
-.PHONY: all test-qemu clean metal test-metal test-a8 bench-metal cpu-reference mac-infer mac-cpu mac-cpu-baseline
+.PHONY: all test-qemu clean metal test-metal test-a8 test-graphs bench-metal cpu-reference mac-infer mac-cpu mac-cpu-baseline

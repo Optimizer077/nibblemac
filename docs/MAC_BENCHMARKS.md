@@ -2,6 +2,10 @@
 
 Measured on 2026-10-28. **These are full-model tokens/sec, not kernel estimates.**
 
+Subsequent architectural work and separate measurements:
+[persistent DeltaNet and single-submit MLP experiments](METAL_GRAPHS.md). Tables below preserve
+the initial optimization round rather than silently replacing its baseline.
+
 ## Outcome
 
 - **Recommended measured configuration: six-thread CPU SDOT**, not the current Metal hybrid.

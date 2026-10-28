@@ -21,6 +21,8 @@ models on macOS; it is not yet fully GPU-resident and is not packaged as a nativ
 - Native threaded NEON inference with Apple Silicon SDOT integer dot products.
 - Experimental model execution using exact Q4K/A8 Metal kernels and a bounded immutable weight cache.
 - GPU-friendly, coalesced packed-weight layout without requantizing or expanding to fp16.
+- Opt-in single-submit GPU MLP graph with GPU activation quantization/SiLU and no CPU intermediate copies.
+- Opt-in persistent shared GPU DeltaNet state, including speculative logs/replay and CPU-visible snapshots.
 - Real-model tokens/sec recording with exact-output gates, separate prefill/decode and repeated rounds.
 
 **Important:** the first full-model sweep found that CPU SDOT is faster than the current Metal
@@ -44,7 +46,7 @@ match at **18.5061** (WikiText-2, 8 x 512-token chunks).
 
 **[Full results, ranges, memory, correctness evidence, limitations and reproduction](docs/MAC_BENCHMARKS.md).**
 
-**Not implemented yet:** GPU-resident attention and DeltaNet, tiled prefill GEMM, fused/full-graph
+**Not implemented yet:** GPU-resident full attention, efficient large-tile prefill GEMM, full-model
 Metal execution, and macOS library/wheel packaging. The Pi engine's Python package does **not**
 automatically use the new Metal runtime.
 
@@ -61,6 +63,7 @@ make cpu-reference   # Build the legacy scalar inference tools, not a Metal mode
 make mac-cpu         # Native NEON/SDOT model runner
 make mac-infer       # Experimental CPU/Metal hybrid model runner
 make test-a8         # Exact Q4K/A8 Metal vs NEON checks on Apple Silicon
+make test-graphs     # Exact GPU MLP graph and persistent DeltaNet checks
 ```
 
 ### Real model setup and tokens/sec
@@ -90,6 +93,32 @@ Metal configurations take a thread count, minimum matrix size in bytes, and kern
 `simd` (first baseline), `row`, or `packed` (coalesced). Smaller offloads were slower in tuning;
 the experimental default uses the packed kernel and a 64 MiB threshold (the vocabulary head).
 
+### Experimental GPU graphs
+
+These are architectural experiments, **not new recommended defaults**. A single MLP submission
+keeps intermediate activations on the GPU, reducing three host waits to one. DeltaNet can use a
+persistent shared Metal state buffer without per-token state-matrix upload/download. CPU state
+save/load/reset/rewind still work because each call completes before returning.
+
+```sh
+# Both graph features (still a CPU/Metal hybrid, not a complete GPU execution graph):
+NM_METAL_MLP=1 NM_METAL_RECURRENCE=1 \
+  build/macos-metal/engine/pinfer_run -m models/qwen35-0.8b-q4k.pq --ids 1,2,3 -n 32
+
+# Compare on identical model and prompts; flags are explicit in every result record:
+.venv/bin/python tools/bench_inference_macos.py --config cpu:6 \
+  --config metal:4:0:packed:none --config metal:4:0:packed:mlp \
+  --config metal:4:0:packed:graph --rounds 3 --generate 128
+python3 tools/check_graphs_macos.py
+.venv/bin/python tests/test_real_macos.py --graphs --quality-chunks 8
+```
+
+Graph mode after the kernel name is `none` (default), `mlp`, `rec`, or `graph` (both).
+`packed4` is an additional opt-in kernel that reuses packed weights over a four-token tile;
+it preserves exact arithmetic but was slower in the first prefill sweep. Broad GPU offload and
+per-layer DeltaNet submissions remain slower than CPU; fewer waits alone do not establish a win.
+See [the GPU graph experiments report](docs/METAL_GRAPHS.md) for architecture, evidence and limitations.
+
 Additional gates:
 
 ```sh
@@ -112,7 +141,8 @@ fit in cache. No speedup over llama.cpp, MLX, or the original Pi engine is claim
 2. Integrate a selectable backend with the existing loader and oracle. **Initial hybrid done:**
    Metal Q4K/A8, CPU BF16/Q8/Q4/F32 and non-matmul operations; real-model parity gates.
 3. Keep activations, attention KV cache, and recurrent state on the GPU; avoid waiting after
-   every small operation. Fuse normalization, activation, and residual operations when measured.
+   every small operation. **Partial:** persistent DeltaNet buffers and single-submit MLP graph
+   are implemented as opt-in experiments; full attention and inter-layer residency remain future work.
 4. Tune decode for packed-weight bandwidth and prefill for tiled SIMD-group matrix operations.
 5. Benchmark against llama.cpp Metal and MLX using the same model, quantization, prompts,
    contexts, power conditions, and quality checks. Only retain proven improvements.

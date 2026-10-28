@@ -24,6 +24,8 @@ jobs:
         run: make -s -C engine/macos BACKEND=cpu CPU=apple-m2 CC="xcrun clang -arch arm64"
       - name: Cross-compile hybrid model backend for Apple Silicon
         run: make -s -C engine/macos BACKEND=metal CPU=apple-m2 CC="xcrun clang -arch arm64"
+      - name: Cross-compile GPU graph correctness tools (no hosted GPU required)
+        run: make -s -C engine/metal graph-tools OUT=../../build/metal-arm64 CC="xcrun clang -arch arm64"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'

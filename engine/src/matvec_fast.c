@@ -240,6 +240,33 @@ void pf_pool_destroy(pf_pool *pool) {
 }
 
 int pf_pool_threads(const pf_pool *pool) { return pool ? pool->n : 1; }
+void *pf_pool_state_alloc(pf_pool *pool, size_t bytes) {
+#ifdef NM_INFERENCE_METAL
+    if (pool && nm_inference_recurrence_enabled(pool->metal))
+        return nm_inference_state_alloc(pool->metal, bytes);
+#else
+    (void)pool;
+#endif
+    return calloc(1, bytes);
+}
+void pf_pool_state_free(pf_pool *pool, void *state) {
+#ifdef NM_INFERENCE_METAL
+    if (pool && nm_inference_recurrence_enabled(pool->metal)) {
+        nm_inference_state_free(pool->metal, state); return;
+    }
+#else
+    (void)pool;
+#endif
+    free(state);
+}
+int pf_pool_mlp(pf_pool *pool, const pf_mat *gate, const pf_mat *up, const pf_mat *down,
+                const float *x, float *y, int n) {
+#ifdef NM_INFERENCE_METAL
+    return pool ? nm_inference_mlp(pool->metal, gate, up, down, x, y, n) : 0;
+#else
+    (void)pool; (void)gate; (void)up; (void)down; (void)x; (void)y; (void)n; return 0;
+#endif
+}
 int pf_pool_gpu_enable(pf_pool *pool, const pf_mat *const *weights, int count, float share) {
     if (!pool || pool->gpu) return -1;
     pool->gpu = pf_gpu_create(weights, count, share);
@@ -502,10 +529,22 @@ void pf_pool_run(pf_pool *pool, pf_task fn, void *arg, int max_threads) {
     kern_pool_run(pool, fn, arg, max_threads);
 }
 
-void pf_lin_rule(pf_pool *pool, const pf_lin_args *a) { kern_lin_rule(pool, a); }
+void pf_lin_rule(pf_pool *pool, const pf_lin_args *a) {
+#ifdef NM_INFERENCE_METAL
+    if (pool && nm_inference_recurrence_enabled(pool->metal)) {
+        nm_inference_lin_rule(pool->metal, a); return;
+    }
+#endif
+    kern_lin_rule(pool, a);
+}
 
 void pf_lin_apply(pf_pool *pool, float *S, const float *log, int keep, int heads, int dk,
                   int dv) {
+#ifdef NM_INFERENCE_METAL
+    if (pool && nm_inference_recurrence_enabled(pool->metal)) {
+        nm_inference_lin_apply(pool->metal, S, log, keep, heads, dk, dv); return;
+    }
+#endif
     kern_lin_apply(pool, S, log, keep, heads, dk, dv);
 }
 

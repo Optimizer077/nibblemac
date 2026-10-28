@@ -1,7 +1,128 @@
 #include <metal_stdlib>
 using namespace metal;
+#pragma clang fp contract(off)
 
 struct Shape { uint rows, cols, batch; };
+
+// Same 32-column activation quantization as kern_act.c. Reduction of integer
+// sums is exact; precise divides avoid reciprocal approximations changing codes.
+kernel void nm_quant_a8(device const float *x [[buffer(0)]],
+                         device char *q [[buffer(1)]], device float *d [[buffer(2)]],
+                         device float *fs [[buffer(3)]], constant Shape &s [[buffer(4)]],
+                         uint2 group [[threadgroup_position_in_grid]],
+                         uint lane [[thread_index_in_simdgroup]]) {
+    size_t base = size_t(group.y) * s.cols + group.x * 32;
+    float v = x[base + lane];
+    float maximum = simd_max(abs(v));
+    float inverse = maximum > 0.0f ? precise::divide(127.0f, maximum) : 0.0f;
+    int code = int(rint(v * inverse));
+    size_t a = size_t(group.x) * s.batch + group.y;
+    q[a * 32 + lane] = char(clamp(code, -127, 127));
+    int total = simd_sum(code);
+    if (lane == 0) {
+        float scale = precise::divide(maximum, 127.0f);
+        d[a] = scale;
+        fs[a] = scale * float(total);
+    }
+}
+
+inline float nm_exp_exact(float x) {
+    x = clamp(x, -87.0f, 88.0f);
+    float exponent = rint(x * 1.44269504088896341f);
+    float r = x - exponent * 0.693145751953125f;
+    r = r - exponent * 1.428606765330187e-06f;
+    float p = 1.9875691500e-4f;
+    p = p * r + 1.3981999507e-3f;
+    p = p * r + 8.3334519073e-3f;
+    p = p * r + 4.1665795894e-2f;
+    p = p * r + 1.6666665459e-1f;
+    p = p * r + 5.0000001201e-1f;
+    float y = p * (r * r) + r;
+    y = y + 1.0f;
+    return y * as_type<float>(uint(int(exponent) + 127) << 23);
+}
+
+kernel void nm_silu_mul(device float *gate [[buffer(0)]], device const float *up [[buffer(1)]],
+                         constant uint &count [[buffer(2)]], uint i [[thread_position_in_grid]]) {
+    if (i < count) gate[i] = precise::divide(gate[i], 1.0f + nm_exp_exact(-gate[i])) * up[i];
+}
+
+struct LinShape { uint n, heads, rep, dk, dv, qkv_stride, o_stride, keep, logged; };
+inline size_t state_index(constant LinShape &s, uint h, uint i, uint j) {
+    return size_t(h) * s.dk * s.dv + size_t(j / 32) * s.dk * 32 + i * 32 + j % 32;
+}
+
+kernel void nm_lin_rule(device float *S [[buffer(0)]], device const float *qkv [[buffer(1)]],
+                         device const float *decay [[buffer(2)]], device const float *beta [[buffer(3)]],
+                         device float *output [[buffer(4)]], device float *log [[buffer(5)]],
+                         device const float *pend [[buffer(6)]], device float *work [[buffer(7)]],
+                         constant LinShape &s [[buffer(8)]], uint2 pos [[thread_position_in_grid]]) {
+    uint j = pos.x, h = pos.y;
+    if (j >= s.dv) return;
+    uint kh = h / s.rep, kd = (s.heads / s.rep) * s.dk;
+    size_t width = s.dk + s.dv + 1;
+    // Deferred speculative updates replay in the same order as kern_lin.c.
+    for (uint i = 0; i < s.dk; i++) {
+        size_t cell = state_index(s, h, i, j);
+        float value = S[cell];
+        for (uint t = 0; t < s.keep; t++) {
+            size_t u = (size_t(t) * s.heads + h) * width;
+            value = value * pend[u + s.dk + s.dv];
+            value = value + pend[u + i] * pend[u + s.dk + j];
+        }
+        if (s.keep) S[cell] = value;
+    }
+    for (uint t = 0; t < s.n; t++) {
+        device const float *in = qkv + size_t(t) * s.qkv_stride;
+        device const float *q = in + kh * s.dk;
+        device const float *k = in + kd + kh * s.dk;
+        float v = in[2 * kd + h * s.dv + j];
+        float d = decay[size_t(t) * s.heads + h];
+        device float *dest = s.logged && t > 0 ? work : S;
+        device const float *src = s.logged && t == 1 ? S : dest;
+        float kv = 0.0f;
+        for (uint i = 0; i < s.dk; i++) {
+            size_t cell = state_index(s, h, i, j);
+            float value = src[cell] * d;
+            dest[cell] = value;
+            kv = kv + value * k[i];
+        }
+        float delta = (v - kv) * beta[size_t(t) * s.heads + h];
+        float o = 0.0f;
+        for (uint i = 0; i < s.dk; i++) {
+            size_t cell = state_index(s, h, i, j);
+            float value = dest[cell] + k[i] * delta;
+            dest[cell] = value;
+            o = o + value * q[i];
+        }
+        output[size_t(t) * s.o_stride + h * s.dv + j] = o;
+        if (s.logged && t > 0) {
+            size_t u = (size_t(t) * s.heads + h) * width;
+            log[u + s.dk + j] = delta;
+            if (j == 0) {
+                for (uint i = 0; i < s.dk; i++) log[u + i] = k[i];
+                log[u + s.dk + s.dv] = d;
+            }
+        }
+    }
+}
+
+kernel void nm_lin_apply(device float *S [[buffer(0)]], device const float *pend [[buffer(1)]],
+                          constant LinShape &s [[buffer(2)]], uint2 pos [[thread_position_in_grid]]) {
+    uint j = pos.x, h = pos.y;
+    if (j >= s.dv) return;
+    size_t width = s.dk + s.dv + 1;
+    for (uint i = 0; i < s.dk; i++) {
+        size_t cell = state_index(s, h, i, j);
+        float value = S[cell];
+        for (uint t = 0; t < s.keep; t++) {
+            size_t u = (size_t(t) * s.heads + h) * width;
+            value = value * pend[u + s.dk + s.dv];
+            value = value + pend[u + i] * pend[u + s.dk + j];
+        }
+        S[cell] = value;
+    }
+}
 
 // Four SIMD groups per threadgroup, one row per SIMD group. Keep all reductions
 // in fp32. These are correctness-first baselines, not a tiled prefill GEMM.
@@ -175,4 +296,48 @@ kernel void nm_q4k_a8_packed(device const uchar *w [[buffer(0)]],
         }
     }
     y[size_t(position.y) * s.rows + row] = acc;
+}
+
+// Small prefill/verification tile: one packed row is reused across four token
+// vectors. Chronological block accumulation is unchanged for each output.
+kernel void nm_q4k_a8_packed4(device const uchar *w [[buffer(0)]],
+                               device const char *q [[buffer(1)]], device float *y [[buffer(2)]],
+                               constant Shape &s [[buffer(3)]], device const float *d [[buffer(4)]],
+                               device const float *fs [[buffer(5)]], uint2 position [[thread_position_in_grid]]) {
+    uint row = position.x, first = position.y * 4;
+    if (row >= s.rows) return;
+    uint r = row % 32, ri = r % 4;
+    float acc[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    for (uint b = 0; b < s.cols / 256; b++) {
+        device const uchar *block = w + (size_t(row / 32) * (s.cols / 256) + b) * 4608;
+        device const uchar *sb = block + (r / 4) * 64;
+        float D = float(reinterpret_cast<device const half *>(sb)[ri]);
+        float M = float(reinterpret_cast<device const half *>(sb + 8)[ri]);
+        #pragma unroll
+        for (uint k = 0; k < 8; k++) {
+            int sums[4] = {0, 0, 0, 0};
+            size_t base = size_t(b * 8 + k) * s.batch + first;
+            #pragma unroll
+            for (uint j = 0; j < 4; j++) {
+                uchar4 v = *reinterpret_cast<device const uchar4 *>(block + 512 + (k * 4 + j) * 128 + r * 4);
+                int4 lo = int4(v & 15), hi = int4(v >> 4);
+                #pragma unroll
+                for (uint t = 0; t < 4; t++) if (first + t < s.batch) {
+                    device const char *x = q + (base + t) * 32;
+                    char4 x0 = *reinterpret_cast<device const char4 *>(x + j * 4);
+                    char4 x1 = *reinterpret_cast<device const char4 *>(x + 16 + j * 4);
+                    int4 p = lo * int4(x0) + hi * int4(x1);
+                    sums[t] += p.x + p.y + p.z + p.w;
+                }
+            }
+            float scale = D * float(unpack6(sb + 16, k * 4 + ri));
+            float offset = M * float(unpack6(sb + 40, k * 4 + ri));
+            #pragma unroll
+            for (uint t = 0; t < 4; t++) if (first + t < s.batch) {
+                acc[t] = fma(float(sums[t]), scale * d[base + t], acc[t]);
+                acc[t] = fma(-offset, fs[base + t], acc[t]);
+            }
+        }
+    }
+    for (uint t = 0; t < 4; t++) if (first + t < s.batch) y[size_t(first + t) * s.rows + row] = acc[t];
 }
