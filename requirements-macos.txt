@@ -1,0 +1,4 @@
+# Model conversion, tokenization and full-model gates; kernel tests need none of these.
+numpy==2.4.6
+tokenizers==0.23.3
+Jinja2==3.1.6

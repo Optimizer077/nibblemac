@@ -11,11 +11,18 @@
 - [x] Record three-round local GPU microbenchmark baseline (raw JSON in `bench/results/metal/`).
 - [x] Create private `Optimizer077/nibblemac` GitHub repository; preserve `nibblepi` as `upstream`.
 - [x] Push the Mac/Metal foundation (`be1fed0`) and preserved upstream history to the new `origin`.
-- [ ] Add real-model fixtures and a backend selection contract without breaking `ops.h` semantics.
-- [ ] Integrate Metal model execution; add BF16/Q8/Q4 support as required by real tensors.
+- [x] Make `Optimizer077/nibblemac` public at the user's request.
+- [x] Add real-model fixtures and selectable native builds without breaking `ops.h` semantics.
+- [x] Integrate experimental hybrid model execution: Metal Q4K/A8, CPU BF16/Q8/Q4/F32 and remaining ops.
+- [x] Native Mac thread pool, exact CPU SDOT kernels, and no-SDOT baseline for measured A/B tests.
+- [x] Exact GPU Q4K/A8 kernels: first SIMD baseline, row-per-lane and coalesced packed layout.
+- [x] Pinned official checkpoint download, verified LFS hashes, Q4K conversion (335 tensors, MTP present).
+- [x] 30 synthetic full-model gates; actual model tuning confirms CPU/Metal plain tokens/logits agree.
+- [x] Complete 54-run repeated real-model throughput benchmark and real state / WikiText quality gates.
+- [x] Publish median/range/peak-RSS tables and all tuning records in `docs/MAC_BENCHMARKS.md`.
 - [ ] GPU-resident attention, KV cache, DeltaNet state and fused elementwise operations.
 - [ ] Tiled prefill GEMM, decode bandwidth tuning, command-buffer batching and profiling.
-- [ ] End-to-end logits / generated tokens / perplexity / state / speculation correctness gates.
+- [x] Initial end-to-end logits / generated tokens / perplexity / state / speculation correctness gates.
 - [ ] Apples-to-apples llama.cpp Metal and MLX baselines; publish sourced measurements only.
 - [ ] Native `.dylib`, Python package and CLI integration; retain legacy APIs until migration is tested.
 

@@ -243,4 +243,16 @@ int pf_gpu_finish(pf_gpu *g, float *y) {
         memcpy(y + (size_t)v * g->full_rows, src + (size_t)v * g->gpu_rows, (size_t)g->gpu_rows * 4);
     return 0;
 }
+#else
+#include "gpu.h"
+#include <stddef.h>
+pf_gpu *pf_gpu_create(const pf_mat *const *w, int n, float s) {
+    (void)w; (void)n; (void)s; return NULL;
+}
+void pf_gpu_destroy(pf_gpu *g) { (void)g; }
+int pf_gpu_rows(const pf_gpu *g, const pf_mat *w) { (void)g; (void)w; return 0; }
+int pf_gpu_begin(pf_gpu *g, const pf_mat *w, const pf_act *a, int n) {
+    (void)g; (void)w; (void)a; (void)n; return -1;
+}
+int pf_gpu_finish(pf_gpu *g, float *y) { (void)g; (void)y; return -1; }
 #endif

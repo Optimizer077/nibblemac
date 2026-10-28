@@ -5,6 +5,25 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 
 ## 2026-10-28 — nibblemac foundation
 
+### Real inference, optimization and measurements
+
+- Repository made public at the user's request.
+- Add native macOS model builds: original NEON baseline, Apple SDOT CPU kernels, and experimental
+  hybrid Q4K/A8 Metal inference. Port pool idle/wakeup/QoS behavior without Linux affinity/futex APIs.
+- Add exact integer-activation GPU kernels, row-per-lane mapping, lossless coalesced code repacking,
+  bounded immutable weight cache, explicit offload threshold/variant and failure reporting.
+- Pin and hash-verify official Qwen3.5-0.8B downloads; convert 335 tensors to a 436.5 MB Q4K model locally.
+- Measure 54 real-model runs: CPU SDOT six-thread median decode 196.5–210.0 tok/s and prefill 769–791
+  tok/s. Adaptive CPU speculation reaches 228.3 tok/s on prose but is slower on chat. Optimized Metal
+  hybrid improves 31–35% over its first version to 118.9–124.1 tok/s, still slower than CPU.
+- Preserve slow broad-offload results, raw outputs/IDs, source/binary/model hashes, power and thermal
+  metadata; add locked correctness-gated inference benchmark tooling and CI cross-compiles.
+- Pass 63 exact GPU kernel cases, 90 synthetic quantized full-model configurations and real
+  token/logit/batch/state/rewind/speculation gates. WikiText-2 perplexity matches across all three
+  backends: 18.5061, 8 x 512 context, 2040 scored tokens. Full detail: `docs/MAC_BENCHMARKS.md`.
+
+### Initial foundation
+
 - Start an Apple Silicon / Metal derivative while retaining nibblepi history, Apache-2.0 license,
   attribution and historical Pi results (`README.nibblepi.md`). No Pi access or changes.
 - Add standalone Objective-C / C Metal runtime with shared buffers, explicit errors, runtime
@@ -20,7 +39,8 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
 - Create private `Optimizer077/nibblemac` GitHub repository, with the original project retained as `upstream`.
 - Publish foundation commit `be1fed0` and preserved upstream history to the new private repository;
   `main` tracks `origin/main`. Initial workflow-scope push rejection resolved through user authorization.
-- Metal kernels are not yet integrated into model inference; no Mac token-throughput claims.
+- At the initial foundation stage, kernels were standalone; the later hybrid integration and real
+  model measurements are recorded above. Full GPU-resident model execution remains future work.
 
 ## 0.2.0 (unreleased)
 - ABI: `pinfer_params.kv_dtype` and `pinfer_spec_params.adaptive` (added after 0.1.0) make this

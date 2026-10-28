@@ -11,11 +11,23 @@ metal:
 test-metal:
 	$(MAKE) -C engine/metal test
 
+test-a8:
+	$(MAKE) -C engine/metal test-a8
+
 bench-metal:
 	python3 tools/bench_metal.py
 
 cpu-reference:
 	$(MAKE) -C engine host
+
+mac-infer:
+	$(MAKE) -C engine/macos BACKEND=metal
+
+mac-cpu:
+	$(MAKE) -C engine/macos BACKEND=cpu
+
+mac-cpu-baseline:
+	$(MAKE) -C engine/macos BACKEND=cpu-baseline
 
 # Cross-compile Pi 4 binaries. Run inside WSL Ubuntu from the project root:
 #   make            -> build/aarch64/*
@@ -39,4 +51,4 @@ test-qemu: all
 clean:
 	rm -rf build
 
-.PHONY: all test-qemu clean metal test-metal bench-metal cpu-reference
+.PHONY: all test-qemu clean metal test-metal test-a8 bench-metal cpu-reference mac-infer mac-cpu mac-cpu-baseline

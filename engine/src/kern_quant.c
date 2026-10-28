@@ -68,11 +68,15 @@ INLINE void q8_block(const int8_t *q, float32x4_t d4, int blk, const pf_act *A, 
         const int8x16_t x0 = vld1q_s8(xb + 32 * v), x1 = vld1q_s8(xb + 32 * v + 16);
         int32x4_t s[4];
         for (int i = 0; i < 4; i++) {
+#if defined(__APPLE__) && defined(__ARM_FEATURE_DOTPROD) && !defined(NM_NO_DOTPROD)
+            s[i] = vdotq_s32(vdotq_s32(vdupq_n_s32(0), w[i][0], x0), w[i][1], x1);
+#else
             int16x8_t a = vmull_s8(vget_low_s8(w[i][0]), vget_low_s8(x0));
             a = vmlal_high_s8(a, w[i][0], x0);
             int16x8_t b = vmull_s8(vget_low_s8(w[i][1]), vget_low_s8(x1));
             b = vmlal_high_s8(b, w[i][1], x1);
             s[i] = vpadalq_s16(vpaddlq_s16(a), b);
+#endif
         }
         const int32x4_t t = vpaddq_s32(vpaddq_s32(s[0], s[1]), vpaddq_s32(s[2], s[3]));
         acc[v] = vfmaq_f32(acc[v], vcvtq_f32_s32(t), vmulq_n_f32(d4, db[v]));
@@ -114,6 +118,12 @@ INLINE void q4_block(const uint8_t *q, float32x4_t d4, float32x4_t o4, int blk,
 #pragma GCC unroll 8
     for (int v = 0; v < nv; v++) {
         const int8x16_t x0 = vld1q_s8(xb + 32 * v), x1 = vld1q_s8(xb + 32 * v + 16);
+#if defined(__APPLE__) && defined(__ARM_FEATURE_DOTPROD) && !defined(NM_NO_DOTPROD)
+        int32x4_t s[4];
+        for (int i = 0; i < 4; i++)
+            s[i] = vdotq_s32(vdotq_s32(vdupq_n_s32(0), lo[i], x0), hi[i], x1);
+        const int32x4_t t = vpaddq_s32(vpaddq_s32(s[0], s[1]), vpaddq_s32(s[2], s[3]));
+#else
         int16x8_t s[4];
         for (int i = 0; i < 4; i++) {
             int16x8_t a = vmull_s8(vget_low_s8(lo[i]), vget_low_s8(x0));
@@ -123,6 +133,7 @@ INLINE void q4_block(const uint8_t *q, float32x4_t d4, float32x4_t o4, int blk,
         }
         const int32x4_t t = vpaddlq_s16(vpaddq_s16(vpaddq_s16(s[0], s[1]),
                                                    vpaddq_s16(s[2], s[3])));
+#endif
         acc[v] = vfmaq_f32(acc[v], vcvtq_f32_s32(t), vmulq_n_f32(d4, db[v]));
         acc[v] = vfmsq_n_f32(acc[v], o4, fs[v]);
     }

@@ -20,6 +20,10 @@ uint64_t nm_metal_recommended_memory(nm_metal *context);
 nm_buffer *nm_metal_buffer_create(nm_metal *context, size_t bytes);
 void nm_metal_buffer_destroy(nm_buffer *buffer);
 void *nm_metal_buffer_contents(nm_buffer *buffer);
+/* Upload immutable Q4K weights once, repacking without requantization when the
+ * selected A8 kernel uses a GPU-coalesced layout. Input remains upstream .pq. */
+nm_buffer *nm_metal_a8_weights(nm_metal *context, uint32_t rows, uint32_t cols,
+                               const void *packed, size_t bytes);
 
 /* W [rows,cols], X [batch,cols], Y [batch,rows]. For Q4K: rows % 4 == 0,
  * cols % 256 == 0, W has rows/4 * cols/256 * 576 bytes (engine/FORMAT.md).
@@ -31,5 +35,12 @@ int nm_metal_matmul(nm_metal *context, uint32_t dtype, uint32_t rows, uint32_t c
                     uint32_t batch, nm_buffer *weights, nm_buffer *inputs,
                     nm_buffer *outputs, uint32_t repeats, double *gpu_seconds,
                     char *error, size_t error_size);
+
+/* Exact upstream Q4K/A8 arithmetic: block-major int8 X, fp32 per-block scales
+ * and scaled sums. Integer dot products, ordered explicit FMA scale/correction.
+ * W stays packed; caller performs the same activation quantization as NEON. */
+int nm_metal_matmul_a8(nm_metal *context, uint32_t rows, uint32_t cols, uint32_t batch,
+                       nm_buffer *w, nm_buffer *q, nm_buffer *d, nm_buffer *fs,
+                       nm_buffer *y, char *error, size_t error_size);
 
 #endif

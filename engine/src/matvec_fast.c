@@ -15,7 +15,9 @@
  */
 #define _GNU_SOURCE
 #include <limits.h>
+#ifdef __linux__
 #include <linux/futex.h>
+#endif
 #include <pthread.h>
 #include <sched.h>
 #include <stdalign.h>
@@ -32,6 +34,9 @@
 #include "pq_format.h"
 #include "pq_quant.h"
 #include "gpu.h"
+#ifdef NM_INFERENCE_METAL
+#include "../metal/inference.h"
+#endif
 
 #define MAX_THREADS 8
 #define SPIN_SEC 0.05 /* idle spin before a worker sleeps (see worker_main) */
@@ -67,6 +72,13 @@ struct pf_pool {
     char pad[60];
     pf_gpu *gpu;
     int gpu_paused;
+#ifdef __APPLE__
+    pthread_mutex_t sleep_lock;
+    pthread_cond_t sleep_cv;
+#endif
+#ifdef NM_INFERENCE_METAL
+    nm_inference *metal;
+#endif
 };
 
 static inline void cpu_pause(void) { __asm__ volatile("yield" ::: "memory"); }
@@ -78,11 +90,38 @@ static double now_sec(void) {
 }
 
 static void pin_to(int cpu) {
+#ifdef __APPLE__
+    (void)cpu;
+    /* macOS schedules heterogeneous cores; Linux affinity APIs do not apply. */
+    pthread_set_qos_class_self_np(QOS_CLASS_USER_INITIATED, 0);
+#else
     if (cpu < 0) return;
     cpu_set_t set;
     CPU_ZERO(&set);
     CPU_SET(cpu, &set);
     pthread_setaffinity_np(pthread_self(), sizeof set, &set);
+#endif
+}
+
+static void wait_generation(pf_pool *pool, uint32_t seen) {
+#ifdef __APPLE__
+    pthread_mutex_lock(&pool->sleep_lock);
+    while (atomic_load(&pool->gen) == seen)
+        pthread_cond_wait(&pool->sleep_cv, &pool->sleep_lock);
+    pthread_mutex_unlock(&pool->sleep_lock);
+#else
+    syscall(SYS_futex, &pool->gen, FUTEX_WAIT_PRIVATE, seen, NULL, NULL, 0);
+#endif
+}
+
+static void wake_workers(pf_pool *pool) {
+#ifdef __APPLE__
+    pthread_mutex_lock(&pool->sleep_lock);
+    pthread_cond_broadcast(&pool->sleep_cv);
+    pthread_mutex_unlock(&pool->sleep_lock);
+#else
+    syscall(SYS_futex, &pool->gen, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
+#endif
 }
 
 static void run_job(const job_t *j, int tid) {
@@ -121,7 +160,7 @@ static void *worker_main(void *p) {
         if (g == seen) { /* idle for a while: sleep until the next job */
             atomic_fetch_add(&pool->sleepers, 1);
             while ((g = atomic_load(&pool->gen)) == seen)
-                syscall(SYS_futex, &pool->gen, FUTEX_WAIT_PRIVATE, seen, NULL, NULL, 0);
+                wait_generation(pool, seen);
             atomic_fetch_sub(&pool->sleepers, 1);
         }
         seen = g;
@@ -135,21 +174,43 @@ static void *worker_main(void *p) {
 pf_pool *pf_pool_create(int n_threads) {
     /* Worker t is pinned to the t-th CPU of the caller's mask (CPU t when the mask holds
      * every CPU); the caller's own mask is left as it is. */
-    cpu_set_t allowed;
     long ncpu = sysconf(_SC_NPROCESSORS_ONLN);
+#ifdef __APPLE__
+    const int have = 0;
+#else
+    cpu_set_t allowed;
     const int have = pthread_getaffinity_np(pthread_self(), sizeof allowed, &allowed) == 0;
     if (have && CPU_COUNT(&allowed) > 0) ncpu = CPU_COUNT(&allowed);
+#endif
     /* more threads than cores would make spinning workers share a core */
     if (n_threads <= 0 || n_threads > ncpu) n_threads = (int)ncpu;
     if (n_threads > MAX_THREADS) n_threads = MAX_THREADS;
     int cpus[MAX_THREADS];
     for (int t = 0, c = 0; t < n_threads; t++) {
+#ifdef __APPLE__
+        (void)c; (void)have;
+        cpus[t] = -1;
+#else
         while (have && c < CPU_SETSIZE && !CPU_ISSET(c, &allowed)) c++;
         cpus[t] = !have ? t : c < CPU_SETSIZE ? c++ : -1;
+#endif
     }
     pf_pool *pool = aligned_alloc(64, (sizeof(pf_pool) + 63) & ~(size_t)63);
     if (!pool) return NULL;
     memset(pool, 0, sizeof *pool);
+#ifdef __APPLE__
+    if (pthread_mutex_init(&pool->sleep_lock, NULL)) { free(pool); return NULL; }
+    if (pthread_cond_init(&pool->sleep_cv, NULL)) {
+        pthread_mutex_destroy(&pool->sleep_lock); free(pool); return NULL;
+    }
+#endif
+#ifdef NM_INFERENCE_METAL
+    pool->metal = nm_inference_create();
+    if (!pool->metal) {
+        pthread_cond_destroy(&pool->sleep_cv); pthread_mutex_destroy(&pool->sleep_lock);
+        free(pool); return NULL;
+    }
+#endif
     pool->n = n_threads;
     for (int t = 1; t < n_threads; t++) {
         pool->args[t] = (worker_arg){pool, t, cpus[t]};
@@ -165,9 +226,16 @@ void pf_pool_destroy(pf_pool *pool) {
     if (!pool) return;
     atomic_store(&pool->quit, 1);
     atomic_fetch_add(&pool->gen, 1);
-    syscall(SYS_futex, &pool->gen, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
+    wake_workers(pool);
     for (int t = 1; t < pool->n; t++) pthread_join(pool->th[t], NULL);
     pf_gpu_destroy(pool->gpu);
+#ifdef NM_INFERENCE_METAL
+    nm_inference_destroy(pool->metal);
+#endif
+#ifdef __APPLE__
+    pthread_cond_destroy(&pool->sleep_cv);
+    pthread_mutex_destroy(&pool->sleep_lock);
+#endif
     free(pool);
 }
 
@@ -188,7 +256,7 @@ static void dispatch(pf_pool *pool, const job_t *job) {
     atomic_store_explicit(&pool->done, 0, memory_order_relaxed);
     atomic_fetch_add(&pool->gen, 1); /* seq_cst: publishes job, pairs with sleepers check */
     if (atomic_load(&pool->sleepers) > 0)
-        syscall(SYS_futex, &pool->gen, FUTEX_WAKE_PRIVATE, INT_MAX, NULL, NULL, 0);
+        wake_workers(pool);
     run_job(&pool->job, 0);
     while (atomic_load_explicit(&pool->done, memory_order_acquire) < pool->n - 1) cpu_pause();
 }
@@ -237,7 +305,11 @@ static size_t weight_bytes(const pf_mat *W) {
  * every thread. Small matrices use fewer threads so each moves >= MIN_BYTES_PER_THREAD. */
 int kern_auto_threads = 1;
 static const int N1_CAP[] = {
+#ifdef __APPLE__
+    [PQ_F32] = 8, [PQ_BF16] = 8, [PQ_Q8_G32] = 8, [PQ_Q4_G32] = 8, [PQ_Q4K_G32] = 8,
+#else
     [PQ_F32] = 2, [PQ_BF16] = 2, [PQ_Q8_G32] = 1, [PQ_Q4_G32] = 3, [PQ_Q4K_G32] = 3,
+#endif
 };
 
 static int threads_for(const pf_mat *W, int n, const pf_pool *pool) {
@@ -358,6 +430,19 @@ void pf_matmul(pf_pool *pool, const pf_mat *W, const float *X, float *Y, int n) 
     }
     if (n <= 0) return;
     const double t0 = kern_stats_enabled() ? now_sec() : 0.0;
+#ifdef NM_INFERENCE_METAL
+    if (pool && nm_inference_wants(pool->metal, W, n)) {
+        const size_t qb = ((size_t)n * W->cols + 63) & ~(size_t)63;
+        const size_t fb = (size_t)n * (W->cols / 32) * sizeof(float);
+        uint8_t *buf = scratch_get(qb + 2 * fb);
+        pf_act act = {W->cols, n, (int8_t *)buf, (float *)(buf + qb), (float *)(buf + qb + fb)};
+        kern_quant_act(X, n, W->cols, (int8_t *)act.q, (float *)act.d, (float *)act.fsum);
+        nm_inference_matmul(pool->metal, W, &act, Y);
+        if (kern_stats_enabled())
+            kern_stats_add(W->rows, W->cols, W->dtype, n, now_sec() - t0, weight_bytes(W));
+        return;
+    }
+#endif
     const int quant = W->dtype >= PQ_Q8_G32, cols = W->cols, nb = cols / KERN_ACT_BLOCK;
     group_job gj; /* only st[0..ng] are set (no zeroing of the whole array per call) */
     gj.fn = fn, gj.W = W, gj.X = X, gj.Y = Y, gj.ng = 1, gj.units = (W->rows + 3) / 4;

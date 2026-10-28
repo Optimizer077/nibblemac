@@ -5,7 +5,7 @@ CFLAGS := -O3 -g -std=c11 -Wall -Wextra -Werror -ffp-contract=off -mmacosx-versi
 OBJCFLAGS := $(CFLAGS) -fobjc-arc
 FRAMEWORKS := -framework Foundation -framework Metal
 
-.PHONY: all test bench
+.PHONY: all test bench test-a8
 all: $(OUT)/nibblemac_metal $(OUT)/kernels.metal
 
 $(OUT):
@@ -29,3 +29,14 @@ test: all
 
 bench: all
 	$(OUT)/nibblemac_metal bench $(OUT)/kernels.metal
+
+$(OUT)/check_a8.o: check_a8.c metal.h ../src/kern.h | $(OUT)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OUT)/kern_quant.o: ../src/kern_quant.c ../src/kern.h | $(OUT)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OUT)/kern_act.o: ../src/kern_act.c ../src/kern.h | $(OUT)
+	$(CC) $(CFLAGS) -c $< -o $@
+$(OUT)/check_a8: $(OUT)/check_a8.o $(OUT)/kern_quant.o $(OUT)/kern_act.o $(OUT)/metal.o
+	$(CC) $(OBJCFLAGS) $^ $(FRAMEWORKS) -o $@
+test-a8: all $(OUT)/check_a8
+	$(OUT)/check_a8 $(OUT)/kernels.metal

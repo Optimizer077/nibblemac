@@ -1,5 +1,28 @@
 # Notes and findings
 
+## 2026-10-28 — Apple M2 Pro / nibblemac
+
+This section is Mac-only; the older Pi notebook follows unchanged. Full protocol, ranges,
+memory and limitations: [docs/MAC_BENCHMARKS.md](docs/MAC_BENCHMARKS.md).
+
+Real Qwen3.5-0.8B Q4K, three-round median, 128 generated IDs / 127 timed decode steps:
+
+| Backend | Prose 64 decode | Chat 36 decode | Context 512 decode |
+|---|---:|---:|---:|
+| Original NEON port, 4 threads | 170.3 | 170.8 | 161.7 |
+| CPU SDOT, 6 threads | 210.0 | 208.3 | 196.5 |
+| Adaptive CPU MTP, 4 threads | 228.3 | 178.9 | 220.3 |
+| First Metal hybrid, 4 CPU threads | 90.4 | 91.7 | 90.4 |
+| Coalesced Metal hybrid, 4 CPU threads | 118.9 | 124.1 | 119.9 |
+
+All rates in tok/s. `valid=true` source:
+`bench/results/metal/final-20261028T061717.868349Z.json`.
+CPU SDOT six-thread prefill 769–791 tok/s. **CPU currently wins; keep Metal opt-in.**
+SDOT integer sums preserve the original floating-point arithmetic; all CPU/GPU plain logits
+and tokens checked in the benchmark are exact. WikiText-2 PPL 18.5061 for all three backends
+(8 x 512, 2040 scored): `bench/results/metal/real-gates-20261028T061914.533172Z.json`.
+These are not comparisons against llama.cpp/MLX, nor cold-load application latency measurements.
+
 ## 2026-10-21 — PC environment
 - Windows 11, PC on wired Ethernet (Realtek 2.5GbE), Wi-Fi off.
 - Present: git, OpenSSH (ssh/scp), Python 3.13, uv, QEMU (`qemu-system-aarch64`).

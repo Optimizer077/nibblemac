@@ -1,0 +1,72 @@
+{
+  "kind": "exact_Q4K_A8_kernel_gates",
+  "valid": true,
+  "source_sha256": {
+    "Makefile": "47d1b65e1aabca623cfc77e78ca17e53206d18ff8d42609544dd258d284f60b9",
+    "engine/include/pinfer.h": "04f586c53a98811eb0def08dec0af1f65132e00c3ec8a0f7c58bc2c0f1545796",
+    "engine/macos/Makefile": "5cd22ec5d677a7c8502a036aac5f1320fa54b46760d14cbaed91edbaff7e8851",
+    "engine/metal/Makefile": "cad77af751a5e196a01a49ba80c8fb3aeb44c4ce741f9c9ab384f91434cc8068",
+    "engine/metal/check.c": "673cf49d10509faa13c90506f84e7f3e25242164b6a4076a98a9b4c27161c4b6",
+    "engine/metal/check_a8.c": "93db6d703d05dc15c47d4a587f02bc4c87c777cc0f17bfb7b9e26849e601a3c4",
+    "engine/metal/inference.c": "146dcb91e30b2ee97c15d5f89c1a5783a3dc2ec9da78cfb5a711a541310cd5a6",
+    "engine/metal/inference.h": "f638b6f3053ba8b70bda1a346b8738a9e4cc52b65bc761ca1e40e9f968dab094",
+    "engine/metal/kernels.metal": "de2a59ec15fad9801555757c829a667917c8fec03fc89d3a32937c7825c1e592",
+    "engine/metal/metal.h": "31f7d051266cb99a7013d100b011c290129cbd3ab435342fe75767a8b8834b17",
+    "engine/metal/metal.m": "773264e69385d8bfc6030a90125d76a3a776fff3312b33f48f139aabee37c3f5",
+    "engine/src/forward.c": "38731433a91f8ce90bb6266b0ecd2783129b7aae14a18b0e5ae3b26b0df0006c",
+    "engine/src/forward.h": "419b71264c1cea7781036d8c6b0bc1f536f151532cf3c77e792e2bab4e5273ea",
+    "engine/src/forward_attn.c": "3522730f752263b3009904339a1d90371acb537870e7b78acce686e87c85e75a",
+    "engine/src/forward_kv.c": "6528508b1da6457a5e3532c6ec1a146447cca8231aa8b5a747e60194a892321b",
+    "engine/src/forward_lin.c": "c4be4c6970d7539c2542654ad635956d2b9ef9df9a9244f9d4b0f1b884d34cd2",
+    "engine/src/forward_ops.c": "0275fca8a3da89d9579b7d6f0012b5e6a6532acb14fb2eed11cb94c4bc09e57a",
+    "engine/src/forward_stats.c": "5c29febeaa889e3e2a93c2b907c1fc9f7ae96dca805a3e75f0c845436658e63f",
+    "engine/src/gpu.c": "1e770692a665d3ca00d341e32887a0e1f726225dd42d84d62d510c2abb8b1521",
+    "engine/src/gpu.h": "5c7b0e499d091ce4c1cffed2ed608163bb53375466021cb65a188692be5b46a4",
+    "engine/src/gpu_v3d.c": "f1ec668dd28231f47c9a0f6c51994d8f49cd77c64d8d4d0cc372b9f73a7e3dbd",
+    "engine/src/kern.h": "d0c05ec5417a6fe7172298e290443206de10e46072f8cb5d23e99beb608589bf",
+    "engine/src/kern_act.c": "a3f29293e236b78104eb63516ef50c327fa4ec9db497687aa1c7db7883f4435e",
+    "engine/src/kern_float.c": "be80d2908b7fd70a5f6fb16ed9deaebe8dbc1dee85df80c52c7ac2c43162e52c",
+    "engine/src/kern_lin.c": "a266c7c7b099edc6039dac2deb7b2de80a76fe359954bcb1ed0e057f1eb8e085",
+    "engine/src/kern_quant.c": "a077316869fdbc596b98f3265535e220e861c5365a54627871e53dcd9ab2d87d",
+    "engine/src/kern_stats.c": "9a9b22025715dbd79ecf40b0368029f2ec7cf12627846a60d8086b999c42d299",
+    "engine/src/matvec_fast.c": "34afb09b0642cd949e53917cfc6b6755c6f55a64ee623f523647aedf263f54d1",
+    "engine/src/matvec_ref.c": "fe1ebf261e96e7eb7109719b9a217355a82790ad95cb827f623ada40380d8859",
+    "engine/src/model.c": "1f820a0fb85335f0ab88daabbdbb4a87327f199bb389fca0c3a5c1b928c02c4d",
+    "engine/src/model.h": "d561bb604dd8c7a1f3b0d0e9e14232cbabeff341ca1e33e24dcbe99ed50c7c7f",
+    "engine/src/mtp.c": "201b061d6a251eb9a2ab65e83aea29a94bb50fcbe8a49fb525434ff8af4aa453",
+    "engine/src/mtp.h": "f42bcd369b61ce4df51d18d7fe266992f0508163524948f25c2c82842a2e0bc8",
+    "engine/src/ngram.c": "0d67fdbb188ae9c0905f24a2baeedd4533826e21937ef66111b8f3047529becf",
+    "engine/src/ngram.h": "5a0ac97cb447f514fd3c32e70b4b2ad32452f6adf8cbb3ecf68f5d4c45bb0da4",
+    "engine/src/ops.h": "9b93ec2750399cba3bfe024609bab7e25e756d61055c7ecabf08e5df04dac6a1",
+    "engine/src/pinfer.c": "112e51010765669600b46d0664f4c05e5fd0df5090cf201a8a2d3e3324940679",
+    "engine/src/pq_format.h": "a18439e35091146008f217475fc637df2f3ef16111ac53548d6afe4d8a569180",
+    "engine/src/pq_quant.h": "562bbdb8ba85bc1a341a98435dddf732f34e92cacbd17bc88b682994c4f8ef8e",
+    "engine/src/spec.c": "3f1ef5130d14d24ac3a8998e1dc0b359898fbc0984ab34c1af3f25e89f629008",
+    "engine/src/spec.h": "e4c0bfc3911a68ef5e5802e9d5da07aae0e8eb75e9bfa0351633de7141aecefc",
+    "engine/src/spec_adapt.c": "897b74eadb2e050a422805d5c06df737f7bbcdc11158b8e8c8744fa619be9e5e",
+    "engine/src/state.c": "31660842bed54e6acbf44022b50c29ea92b2e9da63b3a20b8e3c4b1a1807abdf",
+    "tools/bench_inference_macos.py": "ad565eaaf8c20d644030ebf228f5024e3e70cdb3469365396edceab06fb17452",
+    "tools/convert.py": "226ea46bbc6659e3c4435c18616b86cd296fea9d36922c0b5fd23b11d05dd57c",
+    "tools/quant.py": "bb5f3ac9dd91002a136537b00c58e69857ad6e1cd892b5d78fa18353066f2f2f"
+  },
+  "runs": [
+    {
+      "variant": "simd",
+      "returncode": 0,
+      "stdout": "PASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=64\nPASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected\n",
+      "stderr": ""
+    },
+    {
+      "variant": "row",
+      "returncode": 0,
+      "stdout": "PASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=64\nPASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected\n",
+      "stderr": ""
+    },
+    {
+      "variant": "packed",
+      "returncode": 0,
+      "stdout": "PASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=1\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=2\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=3\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=7\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=8\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=31\nPASS exact Q4K/A8 NEON==Metal rows=4 cols=256 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=20 cols=768 batch=64\nPASS exact Q4K/A8 NEON==Metal rows=128 cols=3584 batch=64\nPASS 12 Q4K/A8 invalid buffer, shape and upload cases rejected\n",
+      "stderr": ""
+    }
+  ]
+}

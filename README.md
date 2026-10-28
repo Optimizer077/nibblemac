@@ -9,7 +9,8 @@ The first development machine is an **M2 Pro, 16 GPU cores, 16 GB unified memory
 
 ## Current status
 
-This is an **early Metal foundation**, not yet a full Metal-backed chatbot.
+This is an **experimental CPU / Metal hybrid inference engine**. It runs real Qwen3.5 `.pq`
+models on macOS; it is not yet fully GPU-resident and is not packaged as a native chatbot.
 
 - Working native C / Objective-C Metal runtime and C API.
 - F32 and packed `.pq` Q4K matrix-vector / batched matrix-vector kernels.
@@ -17,10 +18,35 @@ This is an **early Metal foundation**, not yet a full Metal-backed chatbot.
 - Runtime shader compilation: full Xcode and the offline Metal compiler are not required.
 - Deterministic numerical tests, invalid-input checks, and recorded microbenchmarks.
 - The inherited scalar CPU inference tools now build on macOS.
+- Native threaded NEON inference with Apple Silicon SDOT integer dot products.
+- Experimental model execution using exact Q4K/A8 Metal kernels and a bounded immutable weight cache.
+- GPU-friendly, coalesced packed-weight layout without requantizing or expanding to fp16.
+- Real-model tokens/sec recording with exact-output gates, separate prefill/decode and repeated rounds.
 
-**Not implemented yet:** Metal integration into the model forward pass, GPU attention and
-DeltaNet, tiled prefill GEMM, macOS library/wheel packaging, and end-to-end Mac performance
-comparisons. The Pi engine's Python package does **not** use this new Metal runtime.
+**Important:** the first full-model sweep found that CPU SDOT is faster than the current Metal
+hybrid for this small model. Metal is opt-in; a GPU is not automatically an optimization.
+Raw tuning runs are in `bench/results/metal/`; no llama.cpp/MLX speedup is claimed.
+
+### Measured on the M2 Pro
+
+Real Qwen3.5-0.8B Q4K, median of three rounds, 128 generated IDs (127 timed steps):
+
+| Configuration | Prose 64: decode | Chat 36: decode | Context 512: decode |
+|---|---:|---:|---:|
+| Original NEON port, 4 threads | 170.3 tok/s | 170.8 tok/s | 161.7 tok/s |
+| **CPU SDOT, 6 threads** | **210.0 tok/s** | **208.3 tok/s** | **196.5 tok/s** |
+| CPU adaptive speculation, 4 threads | 228.3 tok/s | 178.9 tok/s | 220.3 tok/s |
+| Optimized Metal hybrid, 4 CPU threads | 118.9 tok/s | 124.1 tok/s | 119.9 tok/s |
+
+CPU SDOT prefill: **769–791 tok/s**. Metal hybrid improved **31–35%** over the first GPU
+implementation but remains slower than CPU here. Plain CPU, SDOT and hybrid perplexity all
+match at **18.5061** (WikiText-2, 8 x 512-token chunks).
+
+**[Full results, ranges, memory, correctness evidence, limitations and reproduction](docs/MAC_BENCHMARKS.md).**
+
+**Not implemented yet:** GPU-resident attention and DeltaNet, tiled prefill GEMM, fused/full-graph
+Metal execution, and macOS library/wheel packaging. The Pi engine's Python package does **not**
+automatically use the new Metal runtime.
 
 ## Quickstart
 
@@ -32,6 +58,43 @@ make                 # Build the Metal test/benchmark tool on macOS
 make test-metal      # Numerical and validation tests on the actual GPU
 make bench-metal     # Correctness-gated, three-round microbenchmark + JSON record
 make cpu-reference   # Build the legacy scalar inference tools, not a Metal model runner
+make mac-cpu         # Native NEON/SDOT model runner
+make mac-infer       # Experimental CPU/Metal hybrid model runner
+make test-a8         # Exact Q4K/A8 Metal vs NEON checks on Apple Silicon
+```
+
+### Real model setup and tokens/sec
+
+The checkpoint download is about 1.75 GB; the converted Q4K model is about 436.5 MB.
+Weights and build outputs are ignored by git. The source revision and LFS hashes are pinned.
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-macos.txt
+python3 tools/setup_model_macos.py
+.venv/bin/python tools/convert.py models/Qwen3.5-0.8B models/qwen35-0.8b-q4k.pq --quant q4k
+make mac-cpu-baseline mac-cpu mac-infer
+.venv/bin/python tools/bench_inference_macos.py \
+  --config cpu-baseline:4 --config cpu:4 --config metal:4:67108864:packed \
+  --rounds 3 --cases prose64,chat,long512 --generate 128
+```
+
+This records **real model** throughput, generated text/IDs, peak RSS, raw logs, source and
+binary hashes, model provenance and exactness against the quantized CPU reference. Prompt
+processing and generated-token rates are separate; load, tokenizer and warmup are excluded.
+The CLI intentionally ignores EOS for fixed-length benchmarks (not a live-chat latency claim).
+
+`cpu-baseline` retains the original SMULL/SMLAL kernels; `cpu` enables SDOT. Append `-spec4`
+to a configuration, e.g. `cpu-spec4:4`, and pass `--adaptive` to test exact adaptive speculation.
+Metal configurations take a thread count, minimum matrix size in bytes, and kernel variant:
+`simd` (first baseline), `row`, or `packed` (coalesced). Smaller offloads were slower in tuning;
+the experimental default uses the packed kernel and a 64 MiB threshold (the vocabulary head).
+
+Additional gates:
+
+```sh
+.venv/bin/python tests/test_macos_inference.py   # Synthetic logits/hidden/tokens/speculation
+.venv/bin/python tests/test_real_macos.py --quality-chunks 8  # Real logits/tokens/state/PPL
 ```
 
 Results go to `bench/results/metal/`. `python3 tools/bench_metal.py --rounds 1` runs a shorter
@@ -39,15 +102,15 @@ measurement. Test failures and failed benchmark runs are retained with `valid=fa
 The harness records source hashes, revision, compiler, chip, OS, and best-effort power/thermal
 status without recording machine serial numbers or usernames.
 
-These are **synthetic resident-buffer kernel measurements, not tokens/sec**. Repeated-dispatch
+`make bench-metal` produces **synthetic resident-buffer kernel measurements, not tokens/sec**. Repeated-dispatch
 GPU throughput and single-submit wall-clock latency are reported separately. Small weights may
 fit in cache. No speedup over llama.cpp, MLX, or the original Pi engine is claimed.
 
 ## Design direction
 
 1. Establish correctness and native Metal measurement infrastructure. **Initial foundation done.**
-2. Integrate a selectable backend with the existing loader and scalar oracle; add BF16/Q8/Q4
-   support where required by real models, and compare model logits and generated tokens.
+2. Integrate a selectable backend with the existing loader and oracle. **Initial hybrid done:**
+   Metal Q4K/A8, CPU BF16/Q8/Q4/F32 and non-matmul operations; real-model parity gates.
 3. Keep activations, attention KV cache, and recurrent state on the GPU; avoid waiting after
    every small operation. Fuse normalization, activation, and residual operations when measured.
 4. Tune decode for packed-weight bandwidth and prefill for tiled SIMD-group matrix operations.
@@ -55,16 +118,19 @@ fit in cache. No speedup over llama.cpp, MLX, or the original Pi engine is claim
    contexts, power conditions, and quality checks. Only retain proven improvements.
 6. Port speculative decoding, prefix reuse, and state checkpointing with explicit correctness gates.
 
-The baseline uses fp32 inputs and reductions with fast math disabled. It does **not** promise
-bit-identical output to the Pi kernels: those quantize activations to int8 and use different
-reduction ordering. Model-level agreement must be measured before enabling a Metal backend.
+The original standalone kernels use fp32 inputs and reductions and do **not** promise bit-identical
+Pi output. The newer inference kernels instead consume the CPU's int8 activations, use exact integer
+dots and the CPU's chronological FMA/correction order. Fast math stays disabled. Tests compare these
+paths bit-for-bit, but this is agreement with the quantized engine—not a new fp32 teacher evaluation.
 
 ## Source map
 
 | Path | Purpose |
 |---|---|
 | `engine/metal/` | New Metal C API, runtime, shaders, correctness/benchmark executable |
+| `engine/macos/` | Native scalar-multiply baseline, SDOT CPU and hybrid model builds |
 | `tools/bench_metal.py` | Local correctness-gated benchmark recorder |
+| `tools/bench_inference_macos.py` | Real-model throughput, output agreement and raw measurement records |
 | `engine/src/`, `engine/include/` | Inherited inference core, `.pq` loader, C API |
 | `tools/convert.py`, `tools/quant.py` | Upstream model conversion and quantization |
 | `engine/FORMAT.md` | Packed model/tensor format |
