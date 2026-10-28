@@ -10,7 +10,7 @@
 - [x] Build inherited scalar CPU CLI tools on macOS (Linux V3D guard, Darwin RSS units).
 - [x] Record three-round local GPU microbenchmark baseline (raw JSON in `bench/results/metal/`).
 - [x] Create private `Optimizer077/nibblemac` GitHub repository; preserve `nibblepi` as `upstream`.
-- [ ] Push the Mac/Metal foundation and preserved upstream history to the new `origin`.
+- [x] Push the Mac/Metal foundation (`be1fed0`) and preserved upstream history to the new `origin`.
 - [ ] Add real-model fixtures and a backend selection contract without breaking `ops.h` semantics.
 - [ ] Integrate Metal model execution; add BF16/Q8/Q4 support as required by real tensors.
 - [ ] GPU-resident attention, KV cache, DeltaNet state and fused elementwise operations.

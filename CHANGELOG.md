@@ -18,6 +18,8 @@ Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `d
   fields, and convert Darwin peak RSS bytes correctly.
 - Add Mac build targets, active roadmap, development rules and explicit experimental limitations.
 - Create private `Optimizer077/nibblemac` GitHub repository, with the original project retained as `upstream`.
+- Publish foundation commit `be1fed0` and preserved upstream history to the new private repository;
+  `main` tracks `origin/main`. Initial workflow-scope push rejection resolved through user authorization.
 - Metal kernels are not yet integrated into model inference; no Mac token-throughput claims.
 
 ## 0.2.0 (unreleased)
