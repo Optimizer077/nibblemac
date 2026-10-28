@@ -1,4 +1,4 @@
 /* Compile the independently written DRM client into AArch64 builds only. */
-#ifdef __aarch64__
+#if defined(__aarch64__) && defined(__linux__)
 #include "../gpu/v3d.c"
 #endif

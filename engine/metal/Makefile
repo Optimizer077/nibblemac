@@ -1,0 +1,31 @@
+ROOT := $(abspath ../..)
+OUT := $(ROOT)/build/metal
+CC := xcrun clang
+CFLAGS := -O3 -g -std=c11 -Wall -Wextra -Werror -ffp-contract=off -mmacosx-version-min=13.0
+OBJCFLAGS := $(CFLAGS) -fobjc-arc
+FRAMEWORKS := -framework Foundation -framework Metal
+
+.PHONY: all test bench
+all: $(OUT)/nibblemac_metal $(OUT)/kernels.metal
+
+$(OUT):
+	mkdir -p $@
+
+$(OUT)/metal.o: metal.m metal.h Makefile | $(OUT)
+	$(CC) $(OBJCFLAGS) -c $< -o $@
+
+$(OUT)/check.o: check.c metal.h Makefile | $(OUT)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT)/nibblemac_metal: $(OUT)/metal.o $(OUT)/check.o
+	$(CC) $(OBJCFLAGS) $^ $(FRAMEWORKS) -o $@
+
+# Runtime compilation requires only Command Line Tools, not the offline Metal toolchain.
+$(OUT)/kernels.metal: kernels.metal | $(OUT)
+	cp $< $@
+
+test: all
+	$(OUT)/nibblemac_metal test $(OUT)/kernels.metal
+
+bench: all
+	$(OUT)/nibblemac_metal bench $(OUT)/kernels.metal

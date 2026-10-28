@@ -1,4 +1,14 @@
-# Contributing to nibblepi / pinfer
+# Contributing to nibblemac
+
+For active macOS / Metal work, follow [AGENTS.md](AGENTS.md) and the quickstart in
+[README.md](README.md). Run `make test-metal` and `make cpu-reference` before submitting
+changes; use `python3 tools/bench_metal.py` for GPU timing. Keep experimental kernel
+numerical agreement separate from end-to-end model correctness. Hardware-less CI can
+compile the Metal host runtime but cannot validate GPU execution.
+
+## Archived upstream nibblepi / pinfer guidance
+
+The following rules and results refer to the original Pi deployment, not this Mac.
 
 This project measures one physical board. The rules below keep every number reproducible, every change to
 the Pi reversible, and the engine's output exact. They are the project rules from [CLAUDE.md](CLAUDE.md),

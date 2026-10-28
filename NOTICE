@@ -1,0 +1,12 @@
+nibblemac
+
+Derived from nibblepi / pinfer by Optimizer077:
+https://github.com/Optimizer077/nibblepi
+Upstream starting revision: 7a395e5
+
+The upstream Apache License, Version 2.0 is retained in LICENSE.
+Original source history and attribution are retained.
+
+This derivative adds an experimental macOS / Apple Metal runtime, kernels,
+tests and benchmark infrastructure, and changes macOS build compatibility.
+These additions are not part of the original Raspberry Pi implementation.

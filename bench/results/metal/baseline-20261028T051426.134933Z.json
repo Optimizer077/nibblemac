@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "kind": "synthetic_metal_microbenchmark_not_model_inference",
+  "timestamp_utc": "20261028T051426.134933Z",
+  "valid": true,
+  "revision": "7a395e5c51681569623c65b8a05d0d9771638335",
+  "dirty": true,
+  "source_sha256": {
+    "tools/bench_metal.py": "98cc3afa2dac00b52bcee4d25bba05b38afd81c7973b568a7398e951bdeed89e",
+    "Makefile": "8be4dd0480ebc1606b2aa4599ba12207fe14b5c23af89b9e8bc25a56ab42972e",
+    "engine/metal/Makefile": "32898fd74318e335fac890e51bf9d0497e147b2f4356b90458bdbb2c42333c24",
+    "engine/metal/check.c": "673cf49d10509faa13c90506f84e7f3e25242164b6a4076a98a9b4c27161c4b6",
+    "engine/metal/kernels.metal": "b7f0be3881b598814c77a9191d32eccbf3981b8cbe31f893611d99cdd75ac143",
+    "engine/metal/metal.h": "cbb6e21ce6a71575f4de79e054f958c71b35521163956bb4204cd1918283570e",
+    "engine/metal/metal.m": "fd05069637f4be2576ae36aee99860a19b2b83ccfd2fbfc4531e96fb376237f9"
+  },
+  "hardware": {
+    "chip": "Apple M2 Pro",
+    "memory_bytes": "17179869184",
+    "os_version": "27.2",
+    "os_build": "26B118",
+    "architecture": "arm64",
+    "compiler": "Apple clang version 17.0.0 (clang-1700.6.3.2)",
+    "power_state": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=38076515)\t96%; charging; 0:27 remaining present: true",
+    "thermal_state": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded"
+  },
+  "notes": [
+    "Fast math disabled; fp32 activations; packed .pq Q4K weights.",
+    "Resident synthetic buffers; no model, tokenization or tokens/sec measurement.",
+    "Repeated dispatches in one submission are not single-request latency.",
+    "Small weights may be cache-resident; no DRAM bandwidth claim is made.",
+    "Thermal telemetry is best-effort; unrelated GPU workloads are not controlled."
+  ],
+  "steps": [
+    {
+      "name": "build",
+      "returncode": 0,
+      "stdout": "/Library/Developer/CommandLineTools/usr/bin/make -C engine/metal all\nmake[1]: Nothing to be done for `all'.\n",
+      "stderr": ""
+    },
+    {
+      "name": "correctness",
+      "returncode": 0,
+      "stdout": "PASS dtype=0 rows=1 cols=1 batch=1 zero=0 max_abs_error=1.23322e-10\nPASS dtype=0 rows=3 cols=33 batch=3 zero=0 max_abs_error=3.04987e-07\nPASS dtype=0 rows=7 cols=255 batch=8 zero=0 max_abs_error=1.69129e-06\nPASS dtype=0 rows=129 cols=1025 batch=3 zero=0 max_abs_error=4.12702e-06\nPASS dtype=4 rows=4 cols=256 batch=1 zero=0 max_abs_error=7.67098e-07\nPASS dtype=4 rows=12 cols=768 batch=3 zero=0 max_abs_error=2.36933e-06\nPASS dtype=4 rows=128 cols=1024 batch=8 zero=0 max_abs_error=9.19575e-06\nPASS dtype=0 rows=7 cols=33 batch=3 zero=1 max_abs_error=0\nPASS dtype=4 rows=12 cols=512 batch=3 zero=1 max_abs_error=0\nPASS Q4K analytical layout: all 64 sub-scales/minima, both nibble halves, multiple tiles\nPASS 14 invalid argument/buffer cases rejected\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    },
+    {
+      "name": "benchmark-1",
+      "returncode": 0,
+      "stdout": "{\"dtype\":\"f32\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":14680064,\"single_wall_ms\":0.571000,\"single_gpu_ms\":0.104500,\"repeated_wall_ms_per_dispatch\":0.106367,\"repeated_gpu_ms_per_dispatch\":0.099778,\"gflops\":73.563795,\"max_abs_error\":4.54996253e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.730000,\"single_gpu_ms\":0.233250,\"repeated_wall_ms_per_dispatch\":0.200433,\"repeated_gpu_ms_per_dispatch\":0.185563,\"gflops\":39.555578,\"max_abs_error\":8.82711697e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":1024,\"cols\":3584,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.706000,\"single_gpu_ms\":0.169667,\"repeated_wall_ms_per_dispatch\":0.212767,\"repeated_gpu_ms_per_dispatch\":0.202825,\"gflops\":36.188991,\"max_abs_error\":3.1882118e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":8,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.981000,\"single_gpu_ms\":0.812000,\"repeated_wall_ms_per_dispatch\":0.737433,\"repeated_gpu_ms_per_dispatch\":0.731425,\"gflops\":80.281992,\"max_abs_error\":1.07481897e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":248320,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":143032320,\"single_wall_ms\":5.063000,\"single_gpu_ms\":4.831375,\"repeated_wall_ms_per_dispatch\":4.979433,\"repeated_gpu_ms_per_dispatch\":4.970943,\"gflops\":102.306414,\"max_abs_error\":1.20040402e-05,\"correct\":true}\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    },
+    {
+      "name": "benchmark-2",
+      "returncode": 0,
+      "stdout": "{\"dtype\":\"f32\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":14680064,\"single_wall_ms\":0.550000,\"single_gpu_ms\":0.106500,\"repeated_wall_ms_per_dispatch\":0.121533,\"repeated_gpu_ms_per_dispatch\":0.115850,\"gflops\":63.358066,\"max_abs_error\":4.54996253e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.698000,\"single_gpu_ms\":0.232500,\"repeated_wall_ms_per_dispatch\":0.258200,\"repeated_gpu_ms_per_dispatch\":0.242901,\"gflops\":30.218156,\"max_abs_error\":8.82711697e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":1024,\"cols\":3584,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.235000,\"single_gpu_ms\":0.074250,\"repeated_wall_ms_per_dispatch\":0.083400,\"repeated_gpu_ms_per_dispatch\":0.077638,\"gflops\":94.542353,\"max_abs_error\":3.1882118e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":8,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":2.187000,\"single_gpu_ms\":2.014667,\"repeated_wall_ms_per_dispatch\":0.728133,\"repeated_gpu_ms_per_dispatch\":0.722312,\"gflops\":81.294808,\"max_abs_error\":1.07481897e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":248320,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":143032320,\"single_wall_ms\":5.194000,\"single_gpu_ms\":5.007250,\"repeated_wall_ms_per_dispatch\":4.860700,\"repeated_gpu_ms_per_dispatch\":4.854442,\"gflops\":104.761658,\"max_abs_error\":1.20040402e-05,\"correct\":true}\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    },
+    {
+      "name": "benchmark-3",
+      "returncode": 0,
+      "stdout": "{\"dtype\":\"f32\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":14680064,\"single_wall_ms\":0.579000,\"single_gpu_ms\":0.106250,\"repeated_wall_ms_per_dispatch\":0.106567,\"repeated_gpu_ms_per_dispatch\":0.090582,\"gflops\":81.031954,\"max_abs_error\":4.54996253e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.695000,\"single_gpu_ms\":0.232750,\"repeated_wall_ms_per_dispatch\":0.256333,\"repeated_gpu_ms_per_dispatch\":0.241387,\"gflops\":30.407672,\"max_abs_error\":8.82711697e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":1024,\"cols\":3584,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.266000,\"single_gpu_ms\":0.106750,\"repeated_wall_ms_per_dispatch\":0.111433,\"repeated_gpu_ms_per_dispatch\":0.105908,\"gflops\":69.305519,\"max_abs_error\":3.1882118e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":8,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":1.499000,\"single_gpu_ms\":0.956500,\"repeated_wall_ms_per_dispatch\":0.704500,\"repeated_gpu_ms_per_dispatch\":0.684819,\"gflops\":85.745603,\"max_abs_error\":1.07481897e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":248320,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":143032320,\"single_wall_ms\":5.019000,\"single_gpu_ms\":4.831625,\"repeated_wall_ms_per_dispatch\":4.876400,\"repeated_gpu_ms_per_dispatch\":4.868015,\"gflops\":104.469549,\"max_abs_error\":1.20040402e-05,\"correct\":true}\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    }
+  ],
+  "rounds": [
+    [
+      {
+        "dtype": "f32",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 14680064,
+        "single_wall_ms": 0.571,
+        "single_gpu_ms": 0.1045,
+        "repeated_wall_ms_per_dispatch": 0.106367,
+        "repeated_gpu_ms_per_dispatch": 0.099778,
+        "gflops": 73.563795,
+        "max_abs_error": 4.54996253e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.73,
+        "single_gpu_ms": 0.23325,
+        "repeated_wall_ms_per_dispatch": 0.200433,
+        "repeated_gpu_ms_per_dispatch": 0.185563,
+        "gflops": 39.555578,
+        "max_abs_error": 8.82711697e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 1024,
+        "cols": 3584,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.706,
+        "single_gpu_ms": 0.169667,
+        "repeated_wall_ms_per_dispatch": 0.212767,
+        "repeated_gpu_ms_per_dispatch": 0.202825,
+        "gflops": 36.188991,
+        "max_abs_error": 3.1882118e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 8,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.981,
+        "single_gpu_ms": 0.812,
+        "repeated_wall_ms_per_dispatch": 0.737433,
+        "repeated_gpu_ms_per_dispatch": 0.731425,
+        "gflops": 80.281992,
+        "max_abs_error": 1.07481897e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 248320,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 143032320,
+        "single_wall_ms": 5.063,
+        "single_gpu_ms": 4.831375,
+        "repeated_wall_ms_per_dispatch": 4.979433,
+        "repeated_gpu_ms_per_dispatch": 4.970943,
+        "gflops": 102.306414,
+        "max_abs_error": 1.20040402e-05,
+        "correct": true
+      }
+    ],
+    [
+      {
+        "dtype": "f32",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 14680064,
+        "single_wall_ms": 0.55,
+        "single_gpu_ms": 0.1065,
+        "repeated_wall_ms_per_dispatch": 0.121533,
+        "repeated_gpu_ms_per_dispatch": 0.11585,
+        "gflops": 63.358066,
+        "max_abs_error": 4.54996253e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.698,
+        "single_gpu_ms": 0.2325,
+        "repeated_wall_ms_per_dispatch": 0.2582,
+        "repeated_gpu_ms_per_dispatch": 0.242901,
+        "gflops": 30.218156,
+        "max_abs_error": 8.82711697e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 1024,
+        "cols": 3584,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.235,
+        "single_gpu_ms": 0.07425,
+        "repeated_wall_ms_per_dispatch": 0.0834,
+        "repeated_gpu_ms_per_dispatch": 0.077638,
+        "gflops": 94.542353,
+        "max_abs_error": 3.1882118e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 8,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 2.187,
+        "single_gpu_ms": 2.014667,
+        "repeated_wall_ms_per_dispatch": 0.728133,
+        "repeated_gpu_ms_per_dispatch": 0.722312,
+        "gflops": 81.294808,
+        "max_abs_error": 1.07481897e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 248320,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 143032320,
+        "single_wall_ms": 5.194,
+        "single_gpu_ms": 5.00725,
+        "repeated_wall_ms_per_dispatch": 4.8607,
+        "repeated_gpu_ms_per_dispatch": 4.854442,
+        "gflops": 104.761658,
+        "max_abs_error": 1.20040402e-05,
+        "correct": true
+      }
+    ],
+    [
+      {
+        "dtype": "f32",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 14680064,
+        "single_wall_ms": 0.579,
+        "single_gpu_ms": 0.10625,
+        "repeated_wall_ms_per_dispatch": 0.106567,
+        "repeated_gpu_ms_per_dispatch": 0.090582,
+        "gflops": 81.031954,
+        "max_abs_error": 4.54996253e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.695,
+        "single_gpu_ms": 0.23275,
+        "repeated_wall_ms_per_dispatch": 0.256333,
+        "repeated_gpu_ms_per_dispatch": 0.241387,
+        "gflops": 30.407672,
+        "max_abs_error": 8.82711697e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 1024,
+        "cols": 3584,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.266,
+        "single_gpu_ms": 0.10675,
+        "repeated_wall_ms_per_dispatch": 0.111433,
+        "repeated_gpu_ms_per_dispatch": 0.105908,
+        "gflops": 69.305519,
+        "max_abs_error": 3.1882118e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 8,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 1.499,
+        "single_gpu_ms": 0.9565,
+        "repeated_wall_ms_per_dispatch": 0.7045,
+        "repeated_gpu_ms_per_dispatch": 0.684819,
+        "gflops": 85.745603,
+        "max_abs_error": 1.07481897e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 248320,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 143032320,
+        "single_wall_ms": 5.019,
+        "single_gpu_ms": 4.831625,
+        "repeated_wall_ms_per_dispatch": 4.8764,
+        "repeated_gpu_ms_per_dispatch": 4.868015,
+        "gflops": 104.469549,
+        "max_abs_error": 1.20040402e-05,
+        "correct": true
+      }
+    ]
+  ]
+}

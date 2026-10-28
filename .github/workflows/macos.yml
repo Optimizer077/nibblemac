@@ -1,0 +1,22 @@
+name: macOS build
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build inherited scalar CPU tools
+        run: make cpu-reference
+      - name: Compile Metal host runtime
+        run: make metal
+      - name: Test benchmark gating and failure records (no GPU required)
+        run: python3 tests/test_bench_metal.py
+      # Hosted macOS VMs need not expose a Metal GPU. Actual GPU correctness and
+      # performance must be checked separately on a physical Apple Silicon Mac.

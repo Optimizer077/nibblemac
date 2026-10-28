@@ -1,4 +1,25 @@
-# Task plan: pinfer (Pi 4 native LLM runtime + split-core OS)
+# Task plan: nibblemac (Apple Silicon / Metal)
+
+## Active Mac roadmap (2026-10-28)
+
+- [x] Preserve nibblepi source history and license; original remote renamed `upstream`.
+- [x] Detect initial hardware: Apple M2 Pro, 16 GPU cores, 16 GB unified memory.
+- [x] Build native Metal foundation without requiring offline shader tools.
+- [x] Add packed `.pq` Q4K and F32 baseline kernels with shared resident buffers.
+- [x] Test scalar-oracle agreement, row tails, batch indexing, zero inputs, invalid arguments.
+- [x] Build inherited scalar CPU CLI tools on macOS (Linux V3D guard, Darwin RSS units).
+- [x] Record three-round local GPU microbenchmark baseline (raw JSON in `bench/results/metal/`).
+- [x] Create private `Optimizer077/nibblemac` GitHub repository; preserve `nibblepi` as `upstream`.
+- [ ] Push the Mac/Metal foundation and preserved upstream history to the new `origin`.
+- [ ] Add real-model fixtures and a backend selection contract without breaking `ops.h` semantics.
+- [ ] Integrate Metal model execution; add BF16/Q8/Q4 support as required by real tensors.
+- [ ] GPU-resident attention, KV cache, DeltaNet state and fused elementwise operations.
+- [ ] Tiled prefill GEMM, decode bandwidth tuning, command-buffer batching and profiling.
+- [ ] End-to-end logits / generated tokens / perplexity / state / speculation correctness gates.
+- [ ] Apples-to-apples llama.cpp Metal and MLX baselines; publish sourced measurements only.
+- [ ] Native `.dylib`, Python package and CLI integration; retain legacy APIs until migration is tested.
+
+## Archived upstream task plan: pinfer (Pi 4 native LLM runtime + split-core OS)
 
 Design: [docs/design.md](docs/design.md). Findings: [notes.md](notes.md).
 Running under `/loop` (self-paced, 2026-10-21): "get SOTA optimization whatever way it is but

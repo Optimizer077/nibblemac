@@ -1,7 +1,24 @@
 # Changelog
 
-All changes to this project **and to the Pi** are recorded here, newest first.
+Changes to nibblemac are recorded first; older sections are inherited Pi project history.
 Details for each day: `docs/journal/YYYY-MM-DD.md`. Pi configuration changes: `docs/pi-state.md`.
+
+## 2026-10-28 — nibblemac foundation
+
+- Start an Apple Silicon / Metal derivative while retaining nibblepi history, Apache-2.0 license,
+  attribution and historical Pi results (`README.nibblepi.md`). No Pi access or changes.
+- Add standalone Objective-C / C Metal runtime with shared buffers, explicit errors, runtime
+  shader compilation, F32 and direct packed `.pq` Q4K batched matvec kernels.
+- Add deterministic GPU numerical checks, zero/tail/batch tests, analytical Q4K layout checks,
+  14 invalid-input cases and six benchmark-recorder regression tests.
+- Add local, correctness-gated JSON benchmark recording with source hashes and power/thermal metadata.
+- Record an actual M2 Pro three-round microbenchmark baseline; inherited scalar synthetic model
+  regression checks pass for plain decoding and speculative k=1,2,3 on three dimension variants.
+- Fix macOS scalar CLI compilation: gate Linux V3D by OS as well as ISA, expose Darwin rusage
+  fields, and convert Darwin peak RSS bytes correctly.
+- Add Mac build targets, active roadmap, development rules and explicit experimental limitations.
+- Create private `Optimizer077/nibblemac` GitHub repository, with the original project retained as `upstream`.
+- Metal kernels are not yet integrated into model inference; no Mac token-throughput claims.
 
 ## 0.2.0 (unreleased)
 - ABI: `pinfer_params.kv_dtype` and `pinfer_spec_params.adaptive` (added after 0.1.0) make this

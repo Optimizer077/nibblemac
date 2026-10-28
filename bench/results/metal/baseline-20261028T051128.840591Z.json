@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "kind": "synthetic_metal_microbenchmark_not_model_inference",
+  "timestamp_utc": "20261028T051128.840591Z",
+  "valid": true,
+  "revision": "7a395e5c51681569623c65b8a05d0d9771638335",
+  "dirty": true,
+  "source_sha256": {
+    "tools/bench_metal.py": "98cc3afa2dac00b52bcee4d25bba05b38afd81c7973b568a7398e951bdeed89e",
+    "Makefile": "a0e1d2013a2afe88aef4cd8913631773b969cfd8280e3d792f4fe5acc3d575d5",
+    "engine/metal/Makefile": "ec131793cba5aa1050e35504cec2d5c0666972288e7aa9716fc61d8e726a5aad",
+    "engine/metal/check.c": "2e5ffd237299bc802c590be06102dfc92e49fbe64f6bb663b145ef6e953cf7ae",
+    "engine/metal/kernels.metal": "b7f0be3881b598814c77a9191d32eccbf3981b8cbe31f893611d99cdd75ac143",
+    "engine/metal/metal.h": "cbb6e21ce6a71575f4de79e054f958c71b35521163956bb4204cd1918283570e",
+    "engine/metal/metal.m": "fd05069637f4be2576ae36aee99860a19b2b83ccfd2fbfc4531e96fb376237f9"
+  },
+  "hardware": {
+    "chip": "Apple M2 Pro",
+    "memory_bytes": "17179869184",
+    "os_version": "27.2",
+    "os_build": "26B118",
+    "architecture": "arm64",
+    "compiler": "Apple clang version 17.0.0 (clang-1700.6.3.2)",
+    "power_state": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=38076515)\t95%; charging; 0:31 remaining present: true",
+    "thermal_state": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded"
+  },
+  "notes": [
+    "Fast math disabled; fp32 activations; packed .pq Q4K weights.",
+    "Resident synthetic buffers; no model, tokenization or tokens/sec measurement.",
+    "Repeated dispatches in one submission are not single-request latency.",
+    "Small weights may be cache-resident; no DRAM bandwidth claim is made.",
+    "Thermal telemetry is best-effort; unrelated GPU workloads are not controlled."
+  ],
+  "steps": [
+    {
+      "name": "build",
+      "returncode": 0,
+      "stdout": "/Library/Developer/CommandLineTools/usr/bin/make -C engine/metal all\nmake[1]: Nothing to be done for `all'.\n",
+      "stderr": ""
+    },
+    {
+      "name": "correctness",
+      "returncode": 0,
+      "stdout": "PASS dtype=0 rows=1 cols=1 batch=1 zero=0 max_abs_error=1.23322e-10\nPASS dtype=0 rows=3 cols=33 batch=3 zero=0 max_abs_error=3.04987e-07\nPASS dtype=0 rows=7 cols=255 batch=8 zero=0 max_abs_error=1.69129e-06\nPASS dtype=0 rows=129 cols=1025 batch=3 zero=0 max_abs_error=4.12702e-06\nPASS dtype=4 rows=4 cols=256 batch=1 zero=0 max_abs_error=7.67098e-07\nPASS dtype=4 rows=12 cols=768 batch=3 zero=0 max_abs_error=2.36933e-06\nPASS dtype=4 rows=128 cols=1024 batch=8 zero=0 max_abs_error=9.19575e-06\nPASS dtype=0 rows=7 cols=33 batch=3 zero=1 max_abs_error=0\nPASS dtype=4 rows=12 cols=512 batch=3 zero=1 max_abs_error=0\nPASS 14 invalid argument/buffer cases rejected\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    },
+    {
+      "name": "benchmark-1",
+      "returncode": 0,
+      "stdout": "{\"dtype\":\"f32\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":14680064,\"single_wall_ms\":0.550000,\"single_gpu_ms\":0.105625,\"repeated_wall_ms_per_dispatch\":0.116900,\"repeated_gpu_ms_per_dispatch\":0.099336,\"gflops\":73.890873,\"max_abs_error\":4.54996253e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.694000,\"single_gpu_ms\":0.232667,\"repeated_wall_ms_per_dispatch\":0.244433,\"repeated_gpu_ms_per_dispatch\":0.227537,\"gflops\":32.258560,\"max_abs_error\":8.82711697e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":1024,\"cols\":3584,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.641000,\"single_gpu_ms\":0.124625,\"repeated_wall_ms_per_dispatch\":0.112667,\"repeated_gpu_ms_per_dispatch\":0.106329,\"gflops\":69.031219,\"max_abs_error\":3.1882118e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":8,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":1.801000,\"single_gpu_ms\":1.255250,\"repeated_wall_ms_per_dispatch\":0.766600,\"repeated_gpu_ms_per_dispatch\":0.748050,\"gflops\":78.497769,\"max_abs_error\":1.07481897e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":248320,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":143032320,\"single_wall_ms\":6.558000,\"single_gpu_ms\":6.356875,\"repeated_wall_ms_per_dispatch\":4.877467,\"repeated_gpu_ms_per_dispatch\":4.869694,\"gflops\":104.433526,\"max_abs_error\":1.20040402e-05,\"correct\":true}\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    },
+    {
+      "name": "benchmark-2",
+      "returncode": 0,
+      "stdout": "{\"dtype\":\"f32\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":14680064,\"single_wall_ms\":0.662000,\"single_gpu_ms\":0.103417,\"repeated_wall_ms_per_dispatch\":0.094733,\"repeated_gpu_ms_per_dispatch\":0.075657,\"gflops\":97.017293,\"max_abs_error\":4.54996253e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.730000,\"single_gpu_ms\":0.170042,\"repeated_wall_ms_per_dispatch\":0.152933,\"repeated_gpu_ms_per_dispatch\":0.135021,\"gflops\":54.362218,\"max_abs_error\":8.82711697e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":1024,\"cols\":3584,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.675000,\"single_gpu_ms\":0.094375,\"repeated_wall_ms_per_dispatch\":0.111533,\"repeated_gpu_ms_per_dispatch\":0.091850,\"gflops\":79.913250,\"max_abs_error\":3.1882118e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":8,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":1.362000,\"single_gpu_ms\":0.812625,\"repeated_wall_ms_per_dispatch\":0.776733,\"repeated_gpu_ms_per_dispatch\":0.754638,\"gflops\":77.812534,\"max_abs_error\":1.07481897e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":248320,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":143032320,\"single_wall_ms\":5.096000,\"single_gpu_ms\":4.831875,\"repeated_wall_ms_per_dispatch\":4.866900,\"repeated_gpu_ms_per_dispatch\":4.859356,\"gflops\":104.655721,\"max_abs_error\":1.20040402e-05,\"correct\":true}\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    },
+    {
+      "name": "benchmark-3",
+      "returncode": 0,
+      "stdout": "{\"dtype\":\"f32\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":14680064,\"single_wall_ms\":0.289000,\"single_gpu_ms\":0.102917,\"repeated_wall_ms_per_dispatch\":0.106933,\"repeated_gpu_ms_per_dispatch\":0.100258,\"gflops\":73.211191,\"max_abs_error\":4.54996253e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.389000,\"single_gpu_ms\":0.231875,\"repeated_wall_ms_per_dispatch\":0.237667,\"repeated_gpu_ms_per_dispatch\":0.231425,\"gflops\":31.716677,\"max_abs_error\":8.82711697e-06,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":1024,\"cols\":3584,\"batch\":1,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":0.222000,\"single_gpu_ms\":0.074708,\"repeated_wall_ms_per_dispatch\":0.078933,\"repeated_gpu_ms_per_dispatch\":0.073303,\"gflops\":100.133068,\"max_abs_error\":3.1882118e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":3584,\"cols\":1024,\"batch\":8,\"repeats\":30,\"weight_bytes\":2064384,\"single_wall_ms\":2.247000,\"single_gpu_ms\":1.770125,\"repeated_wall_ms_per_dispatch\":0.800267,\"repeated_gpu_ms_per_dispatch\":0.785554,\"gflops\":74.750104,\"max_abs_error\":1.07481897e-05,\"correct\":true}\n{\"dtype\":\"q4k\",\"rows\":248320,\"cols\":1024,\"batch\":1,\"repeats\":30,\"weight_bytes\":143032320,\"single_wall_ms\":5.002000,\"single_gpu_ms\":4.831500,\"repeated_wall_ms_per_dispatch\":4.877733,\"repeated_gpu_ms_per_dispatch\":4.871308,\"gflops\":104.398926,\"max_abs_error\":1.20040402e-05,\"correct\":true}\n",
+      "stderr": "Metal: Apple M2 Pro; recommended working set: 11.84 GiB\n"
+    }
+  ],
+  "rounds": [
+    [
+      {
+        "dtype": "f32",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 14680064,
+        "single_wall_ms": 0.55,
+        "single_gpu_ms": 0.105625,
+        "repeated_wall_ms_per_dispatch": 0.1169,
+        "repeated_gpu_ms_per_dispatch": 0.099336,
+        "gflops": 73.890873,
+        "max_abs_error": 4.54996253e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.694,
+        "single_gpu_ms": 0.232667,
+        "repeated_wall_ms_per_dispatch": 0.244433,
+        "repeated_gpu_ms_per_dispatch": 0.227537,
+        "gflops": 32.25856,
+        "max_abs_error": 8.82711697e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 1024,
+        "cols": 3584,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.641,
+        "single_gpu_ms": 0.124625,
+        "repeated_wall_ms_per_dispatch": 0.112667,
+        "repeated_gpu_ms_per_dispatch": 0.106329,
+        "gflops": 69.031219,
+        "max_abs_error": 3.1882118e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 8,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 1.801,
+        "single_gpu_ms": 1.25525,
+        "repeated_wall_ms_per_dispatch": 0.7666,
+        "repeated_gpu_ms_per_dispatch": 0.74805,
+        "gflops": 78.497769,
+        "max_abs_error": 1.07481897e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 248320,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 143032320,
+        "single_wall_ms": 6.558,
+        "single_gpu_ms": 6.356875,
+        "repeated_wall_ms_per_dispatch": 4.877467,
+        "repeated_gpu_ms_per_dispatch": 4.869694,
+        "gflops": 104.433526,
+        "max_abs_error": 1.20040402e-05,
+        "correct": true
+      }
+    ],
+    [
+      {
+        "dtype": "f32",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 14680064,
+        "single_wall_ms": 0.662,
+        "single_gpu_ms": 0.103417,
+        "repeated_wall_ms_per_dispatch": 0.094733,
+        "repeated_gpu_ms_per_dispatch": 0.075657,
+        "gflops": 97.017293,
+        "max_abs_error": 4.54996253e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.73,
+        "single_gpu_ms": 0.170042,
+        "repeated_wall_ms_per_dispatch": 0.152933,
+        "repeated_gpu_ms_per_dispatch": 0.135021,
+        "gflops": 54.362218,
+        "max_abs_error": 8.82711697e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 1024,
+        "cols": 3584,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.675,
+        "single_gpu_ms": 0.094375,
+        "repeated_wall_ms_per_dispatch": 0.111533,
+        "repeated_gpu_ms_per_dispatch": 0.09185,
+        "gflops": 79.91325,
+        "max_abs_error": 3.1882118e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 8,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 1.362,
+        "single_gpu_ms": 0.812625,
+        "repeated_wall_ms_per_dispatch": 0.776733,
+        "repeated_gpu_ms_per_dispatch": 0.754638,
+        "gflops": 77.812534,
+        "max_abs_error": 1.07481897e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 248320,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 143032320,
+        "single_wall_ms": 5.096,
+        "single_gpu_ms": 4.831875,
+        "repeated_wall_ms_per_dispatch": 4.8669,
+        "repeated_gpu_ms_per_dispatch": 4.859356,
+        "gflops": 104.655721,
+        "max_abs_error": 1.20040402e-05,
+        "correct": true
+      }
+    ],
+    [
+      {
+        "dtype": "f32",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 14680064,
+        "single_wall_ms": 0.289,
+        "single_gpu_ms": 0.102917,
+        "repeated_wall_ms_per_dispatch": 0.106933,
+        "repeated_gpu_ms_per_dispatch": 0.100258,
+        "gflops": 73.211191,
+        "max_abs_error": 4.54996253e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.389,
+        "single_gpu_ms": 0.231875,
+        "repeated_wall_ms_per_dispatch": 0.237667,
+        "repeated_gpu_ms_per_dispatch": 0.231425,
+        "gflops": 31.716677,
+        "max_abs_error": 8.82711697e-06,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 1024,
+        "cols": 3584,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 0.222,
+        "single_gpu_ms": 0.074708,
+        "repeated_wall_ms_per_dispatch": 0.078933,
+        "repeated_gpu_ms_per_dispatch": 0.073303,
+        "gflops": 100.133068,
+        "max_abs_error": 3.1882118e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 3584,
+        "cols": 1024,
+        "batch": 8,
+        "repeats": 30,
+        "weight_bytes": 2064384,
+        "single_wall_ms": 2.247,
+        "single_gpu_ms": 1.770125,
+        "repeated_wall_ms_per_dispatch": 0.800267,
+        "repeated_gpu_ms_per_dispatch": 0.785554,
+        "gflops": 74.750104,
+        "max_abs_error": 1.07481897e-05,
+        "correct": true
+      },
+      {
+        "dtype": "q4k",
+        "rows": 248320,
+        "cols": 1024,
+        "batch": 1,
+        "repeats": 30,
+        "weight_bytes": 143032320,
+        "single_wall_ms": 5.002,
+        "single_gpu_ms": 4.8315,
+        "repeated_wall_ms_per_dispatch": 4.877733,
+        "repeated_gpu_ms_per_dispatch": 4.871308,
+        "gflops": 104.398926,
+        "max_abs_error": 1.20040402e-05,
+        "correct": true
+      }
+    ]
+  ]
+}

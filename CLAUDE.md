@@ -1,4 +1,8 @@
-# pinfer project rules
+# nibblemac / legacy pinfer project rules
+
+**Mac development:** follow `AGENTS.md` and the active macOS section in `task_plan.md`.
+The instructions below are archived upstream Pi rules. They do not authorize Pi access
+or require routing local Mac benchmarks through the Pi harness.
 
 Pi-4-native Qwen inference engine + split-core Linux. Design: `docs/design.md`.
 Plan: `task_plan.md`. Findings: `notes.md`.

@@ -45,6 +45,9 @@
  * comparing this file with the last row of --dump-logits checks that path bit for bit.
  */
 #define _POSIX_C_SOURCE 200809L
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE 1
+#endif
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -426,7 +429,11 @@ int main(int argc, char **argv) {
     double decode_tps = n_gen > 1 ? (n_gen - 1) / t_decode : 0.0;
     struct rusage ru;
     getrusage(RUSAGE_SELF, &ru);
+#ifdef __APPLE__
+    double rss_mb = ru.ru_maxrss / (1024.0 * 1024.0);  /* Darwin reports bytes */
+#else
     double rss_mb = ru.ru_maxrss / 1024.0;  /* Linux reports KiB */
+#endif
     printf("load %.3f s | warm-up %.3f s | prefill %d tok in %.3f s = %.3f tok/s | decode %d tok "
            "in %.3f s = %.3f tok/s | peak RSS %.1f MB | matvec=%s threads=%d\n",
            t_load, t_warm, n_prompt, t_prefill, prefill_tps, n_gen > 1 ? n_gen - 1 : 0,

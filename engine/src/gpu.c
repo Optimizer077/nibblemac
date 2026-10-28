@@ -1,7 +1,7 @@
 /* Opt-in V3D 4.2 Q4 matmul. BOs are DRM shmem/MMU objects, not CMA allocations.
  * Private to one context/pool; all jobs finish before its caller reuses scratch.
  */
-#ifdef __aarch64__
+#if defined(__aarch64__) && defined(__linux__)
 #define _POSIX_C_SOURCE 200809L
 #include "gpu.h"
 #include "pq_quant.h"
